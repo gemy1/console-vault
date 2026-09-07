@@ -1,3 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* UNIVERSAL RTL & CAIRO FONT TYPOGRAPHY */
+html[dir="rtl"],
+html[lang="ar"],
+body[dir="rtl"],
+.rtl-mode,
+[dir="rtl"] {
+  direction: rtl !important;
+  text-align: right;
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+}
+
+/* Ensure all elements, text, inputs, buttons use Cairo in RTL mode */
+html[dir="rtl"] *,
+body[dir="rtl"] *,
+.rtl-mode *,
+[dir="rtl"] *,
+html[dir="rtl"] [class*="css-text"],
+body[dir="rtl"] [class*="css-text"],
+.rtl-mode [class*="css-text"],
+[dir="rtl"] [class*="css-text"],
+[dir="rtl"] div[dir="auto"],
+.rtl-mode div[dir="auto"],
+[dir="rtl"] [class*="r-fontFamily"],
+.rtl-mode [class*="r-fontFamily"] {
+  font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Form inputs in RTL mode */
+html[dir="rtl"] input,
+html[dir="rtl"] textarea,
+html[dir="rtl"] select,
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select,
+.rtl-mode input,
+.rtl-mode textarea,
+.rtl-mode select {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Monospace code / credential preservation in RTL */
+html[dir="rtl"] .monospace-code,
+html[dir="rtl"] code,
+html[dir="rtl"] pre,
+[dir="rtl"] .monospace-code,
+[dir="rtl"] code,
+[dir="rtl"] pre {
+  direction: ltr !important;
+  text-align: left !important;
+  font-family: monospace, Courier, monospace !important;
+}
+

@@ -1,13 +1,13 @@
 import React, { useState, useCallback } from "react";
 import {
   View,
-  Text,
   Pressable,
   StyleSheet,
   Platform,
   Dimensions,
   LayoutChangeEvent,
 } from "react-native";
+import { VaultText as Text } from "../common/VaultText";
 import Svg, { Path, Defs, LinearGradient, Stop } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -94,7 +94,7 @@ export function CurvedBottomTabBar({
   insets: navInsets,
 }: BottomTabBarProps) {
   const { colors } = useVaultTheme();
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const hookInsets = useSafeAreaInsets();
   const insets = navInsets || hookInsets;
 
@@ -131,7 +131,9 @@ export function CurvedBottomTabBar({
   const activeIndex = state.index;
   const numTabs = state.routes.length || 3;
   const slotWidth = layoutWidth / numTabs;
-  const activeCenterX = slotWidth * (activeIndex + 0.5);
+  const activeCenterX = isRTL
+    ? layoutWidth - slotWidth * (activeIndex + 0.5)
+    : slotWidth * (activeIndex + 0.5);
 
   // Wave dome curve parameters: perfectly smooth, organic bell-curve dome
   const yBase = 18;
@@ -200,7 +202,7 @@ export function CurvedBottomTabBar({
       </View>
 
       {/* Interactive Tab Buttons */}
-      <View style={styles.tabsRow}>
+      <View style={[styles.tabsRow, { flexDirection: Platform.OS !== 'web' && isRTL ? 'row-reverse' : 'row' }]}>
         {state.routes.map((route, index) => {
           const isFocused = index === state.index;
           const config = TAB_CONFIGS[route.name] || {

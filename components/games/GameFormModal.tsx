@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   Modal,
@@ -11,6 +10,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from 'expo-haptics';
 import {
   Gamepad2,

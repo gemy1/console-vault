@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Platform, I18nManager } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { VaultStorage } from '../services/storage';
 import { Language, TRANSLATIONS, TranslationKey } from '../constants/translations';
@@ -21,23 +22,92 @@ const LanguageContext = createContext<LanguageContextType>({
   t: (key: TranslationKey) => key,
 });
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en');
+const getStoredLanguage = (): Language => {
+  try {
+    const saved = VaultStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (saved === 'en' || saved === 'ar') {
+      return saved;
+    }
+  } catch {}
+  return 'en';
+};
 
-  // Load persisted language
+// Immediate DOM sync on web before component tree mounts
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  try {
+    const initialLang = getStoredLanguage();
+    const isRtl = initialLang === 'ar';
+    document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+    document.documentElement.lang = initialLang;
+    if (document.body) {
+      document.body.dir = isRtl ? 'rtl' : 'ltr';
+    }
+    if (isRtl) {
+      document.documentElement.classList.add('rtl-mode');
+      if (document.body) document.body.classList.add('rtl-mode');
+    } else {
+      document.documentElement.classList.remove('rtl-mode');
+      if (document.body) document.body.classList.remove('rtl-mode');
+    }
+  } catch {}
+}
+
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguageState] = useState<Language>(getStoredLanguage);
+
+  // Load persisted language (ensures native AsyncStorage hydration is caught)
   useEffect(() => {
     try {
       const saved = VaultStorage.getItem(LANGUAGE_STORAGE_KEY);
       if (saved === 'en' || saved === 'ar') {
-        setLanguageState(saved);
+        setLanguageState((prev) => (prev !== saved ? saved : prev));
       }
     } catch {}
   }, []);
+
+  // Sync RTL attributes and Cairo font class
+  useEffect(() => {
+    const isRtlMode = language === 'ar';
+    try {
+      if (I18nManager.isRTL !== isRtlMode) {
+        I18nManager.allowRTL(isRtlMode);
+        I18nManager.forceRTL(isRtlMode);
+      }
+    } catch {}
+
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.dir = isRtlMode ? 'rtl' : 'ltr';
+      document.documentElement.lang = language;
+      if (document.body) {
+        document.body.dir = isRtlMode ? 'rtl' : 'ltr';
+      }
+      if (isRtlMode) {
+        document.documentElement.classList.add('rtl-mode');
+        if (document.body) document.body.classList.add('rtl-mode');
+      } else {
+        document.documentElement.classList.remove('rtl-mode');
+        if (document.body) document.body.classList.remove('rtl-mode');
+      }
+    }
+  }, [language]);
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     try {
       VaultStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const isRtl = lang === 'ar';
+        document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+        document.documentElement.lang = lang;
+        if (document.body) document.body.dir = isRtl ? 'rtl' : 'ltr';
+        if (isRtl) {
+          document.documentElement.classList.add('rtl-mode');
+          if (document.body) document.body.classList.add('rtl-mode');
+        } else {
+          document.documentElement.classList.remove('rtl-mode');
+          if (document.body) document.body.classList.remove('rtl-mode');
+        }
+      }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
   }, []);

@@ -108,18 +108,51 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export function VaultThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>('dark');
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    try {
+      const saved = VaultStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'light' || saved === 'dark') {
+        return saved;
+      }
+    } catch {}
+    return 'dark';
+  });
 
+  // Re-verify on mount for async hydration (native environments)
   useEffect(() => {
-    const saved = VaultStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === 'light' || saved === 'dark') {
-      setThemeState(saved);
-    }
+    try {
+      const saved = VaultStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'light' || saved === 'dark') {
+        setThemeState((prev) => (prev !== saved ? saved : prev));
+      }
+    } catch {}
   }, []);
+
+  // Synchronize document background color on web
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      try {
+        const bg = theme === 'dark' ? '#080C16' : '#F5F7FB';
+        document.documentElement.style.backgroundColor = bg;
+        if (document.body) {
+          document.body.style.backgroundColor = bg;
+        }
+      } catch {}
+    }
+  }, [theme]);
 
   const setTheme = (mode: ThemeMode) => {
     setThemeState(mode);
-    VaultStorage.setItem(THEME_STORAGE_KEY, mode);
+    try {
+      VaultStorage.setItem(THEME_STORAGE_KEY, mode);
+      if (typeof document !== 'undefined') {
+        const bg = mode === 'dark' ? '#080C16' : '#F5F7FB';
+        document.documentElement.style.backgroundColor = bg;
+        if (document.body) {
+          document.body.style.backgroundColor = bg;
+        }
+      }
+    } catch {}
   };
 
   const toggleTheme = () => {

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Pressable, Image, StyleSheet, Platform } from 'react-native';
+import { VaultText as Text } from '../common/VaultText';
 import { Gamepad2, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { Game } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
@@ -17,6 +18,7 @@ interface GameCardProps {
 export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
   const isLocked = game.status === 'Locked';
 
@@ -26,6 +28,7 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
       style={({ pressed }) => [
         styles.card,
         isLocked && styles.cardLocked,
+        isNativeRTL && { flexDirection: 'row-reverse' },
         pressed && styles.cardPressed,
       ]}
     >
@@ -39,13 +42,13 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
       )}
 
       {/* DETAILS */}
-      <View style={styles.details}>
+      <View style={[styles.details, isRTL ? { marginRight: 14, marginLeft: 0 } : { marginLeft: 14 }]}>
         <Text style={[styles.title, isRTL && styles.rtlText]} numberOfLines={1}>
           {game.title}
         </Text>
 
         {/* PILLS */}
-        <View style={styles.pillRow}>
+        <View style={[styles.pillRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           <View
             style={[
               styles.typeBadge,
@@ -115,9 +118,12 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
                   onSellerPress();
                 }
               }}
-              style={styles.sellerLink}
+              style={[styles.sellerLink, isNativeRTL && { flexDirection: 'row-reverse' }]}
             >
-              <Text style={styles.sellerName}>{t('sellerLabelPrefix')} {sellerName}</Text>
+              <Text style={[styles.sellerName, isRTL && styles.rtlText]}>
+                <Text>{t('sellerLabelPrefix')} </Text>
+                <Text>{sellerName}</Text>
+              </Text>
               {isRTL ? (
                 <ChevronLeft size={11} color={styles.sellerChevron.color} strokeWidth={2.4} />
               ) : (
@@ -129,7 +135,7 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
       </View>
 
       {/* CIRCULAR ARROW ACTION */}
-      <View style={styles.arrowCircle}>
+      <View style={[styles.arrowCircle, isRTL ? { marginRight: 10, marginLeft: 0 } : { marginLeft: 10 }]}>
         {isRTL ? (
           <ChevronLeft size={16} color={styles.arrowIcon.color} strokeWidth={2.4} />
         ) : (

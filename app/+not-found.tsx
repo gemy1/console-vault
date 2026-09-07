@@ -1,5 +1,6 @@
 import { Link, Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { VaultText as Text } from '../components/common/VaultText';
 import { useThemedStyles } from '../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';

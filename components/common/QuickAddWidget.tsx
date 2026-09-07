@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { VaultText as Text } from './VaultText';
 import * as Haptics from 'expo-haptics';
 import { Gamepad2, ShieldCheck, Plus, Sparkles } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
@@ -23,6 +24,7 @@ export interface QuickAddWidgetProps {
 export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const handlePress = (action: QuickActionItem) => {
     try {
@@ -36,13 +38,13 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
     return (
       <View style={styles.container}>
         {tag && (
-          <View style={styles.tagRow}>
+          <View style={[styles.tagRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <Sparkles size={11} color={styles.accentIcon.color} strokeWidth={2.2} />
             <Text style={styles.tagText}>{tag.toUpperCase()}</Text>
           </View>
         )}
 
-        <View style={styles.unifiedHorizontalCard}>
+        <View style={[styles.unifiedHorizontalCard, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           {actions.map((item, index) => {
             const isGame = item.icon === 'game';
             return (
@@ -53,6 +55,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
                   onPress={() => handlePress(item)}
                   style={({ pressed }) => [
                     styles.horizontalActionHalf,
+                    isNativeRTL && { flexDirection: 'row-reverse' },
                     pressed && styles.actionHalfPressed,
                   ]}
                 >
@@ -114,13 +117,14 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
         onPress={() => handlePress(single)}
         style={({ pressed }) => [
           styles.singleCard,
+          isNativeRTL && { flexDirection: 'row-reverse' },
           isGame
             ? (isRTL ? styles.singleCardRTLGame : styles.singleCardGame)
             : (isRTL ? styles.singleCardRTLSeller : styles.singleCardSeller),
           pressed && styles.cardPressed,
         ]}
       >
-        <View style={styles.singleLeft}>
+        <View style={[styles.singleLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           <View
             style={[
               styles.iconCircleLarge,
@@ -135,7 +139,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
           </View>
 
           <View style={styles.singleTextCol}>
-            <View style={styles.singleTitleRow}>
+            <View style={[styles.singleTitleRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Text style={[styles.singleLabel, isRTL && styles.rtlText]}>{single.label}</Text>
               {tag && (
                 <View style={styles.microBadge}>
@@ -157,6 +161,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
         <View
           style={[
             styles.actionPillButton,
+            isNativeRTL && { flexDirection: 'row-reverse' },
             isGame ? styles.actionPillGame : styles.actionPillSeller,
           ]}
         >

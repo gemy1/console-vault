@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   Modal,
@@ -11,6 +10,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from 'expo-haptics';
 import { ShieldCheck, Star, Plus, X, Trash2, FileText, Pencil } from 'lucide-react-native';
 import { Seller, ContactPlatform, SellerContactMethod } from '../../types/vault';

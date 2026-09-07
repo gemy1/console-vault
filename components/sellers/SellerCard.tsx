@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { VaultText as Text } from '../common/VaultText';
 import { ShieldCheck, Star, ChevronRight, ChevronLeft, Pencil, FileText } from 'lucide-react-native';
 import { Seller } from '../../types/vault';
 import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
@@ -18,6 +19,7 @@ interface SellerCardProps {
 export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
   const contacts = getSellerContactList(seller);
   const primaryContact = contacts[0] || { platform: seller.contact_platform, value: seller.contact_link };
 
@@ -27,18 +29,18 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
       {/* TOP ROW: ICON, NAME, EDIT, RATING */}
-      <View style={styles.topRow}>
-        <View style={styles.sellerInfoRow}>
+      <View style={[styles.topRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+        <View style={[styles.sellerInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           <View style={styles.iconCircle}>
             <ShieldCheck size={22} color={styles.accentColor.color} strokeWidth={2} />
           </View>
 
-          <View style={styles.nameBlock}>
+          <View style={[styles.nameBlock, isRTL ? { marginRight: 12, marginLeft: 0 } : { marginLeft: 12 }]}>
             <Text style={[styles.sellerName, isRTL && styles.rtlText]} numberOfLines={1}>
               {seller.name}
             </Text>
 
-            <View style={styles.badgeRow}>
+            <View style={[styles.badgeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View style={styles.countBadge}>
                 <Text style={styles.countBadgeText}>
                   {gamesCount} {gamesCount === 1 ? t('gameCountSingular') : t('gameCountPlural')}
@@ -55,7 +57,7 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
         </View>
 
         {/* RIGHT SIDE: EDIT BUTTON & STAR RATING */}
-        <View style={styles.actionsRight}>
+        <View style={[styles.actionsRight, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           <Pressable
             onPress={(e) => {
               e.stopPropagation();
@@ -118,8 +120,8 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
       )}
 
       {/* BOTTOM ACTION BAR */}
-      <View style={styles.bottomBar}>
-        <View style={styles.viewGamesRow}>
+      <View style={[styles.bottomBar, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+        <View style={[styles.viewGamesRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           <Text style={styles.viewGamesText}>
             {t('viewGamesAndInfo', { count: gamesCount })}
           </Text>
@@ -137,7 +139,10 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
               openSellerContact(primaryContact.platform, primaryContact.value);
             }
           }}
-          style={({ pressed }) => [styles.quickChatBtn, pressed && styles.quickChatBtnPressed]}
+          style={({ pressed }) => [
+            styles.quickChatBtn,
+            pressed && styles.quickChatBtnPressed,
+          ]}
         >
           <PlatformIcon platform={primaryContact.platform} size={13} color={styles.quickChatText.color} />
           <Text style={styles.quickChatText}>{t('quickChatBtn')}</Text>

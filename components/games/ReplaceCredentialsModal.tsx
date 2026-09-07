@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TextInput, Pressable, Alert, StyleSheet } from 'react-native';
+import { View, Modal, TextInput, Pressable, Alert, StyleSheet } from 'react-native';
+import { VaultText as Text } from '../common/VaultText';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   TextInput,
   ScrollView,
   Pressable,
   RefreshControl,
   StyleSheet,
+  Platform,
 } from 'react-native';
+import { VaultText as Text } from '../../components/common/VaultText';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { OfflineVault } from '../../services/storage';
@@ -25,6 +26,7 @@ export default function VaultScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [games, setGames] = useState<Game[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -110,8 +112,13 @@ export default function VaultScreen() {
         />
 
         {/* SEARCH BAR */}
-        <View style={styles.searchBar}>
-          <Search size={16} color={styles.searchIcon.color} strokeWidth={2.2} style={styles.searchIconMargin} />
+        <View style={[styles.searchBar, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+          <Search
+            size={16}
+            color={styles.searchIcon.color}
+            strokeWidth={2.2}
+            style={[styles.searchIconMargin, isRTL ? { marginLeft: 8, marginRight: 0 } : { marginRight: 8 }]}
+          />
           <TextInput
             placeholder={t('searchPlaceholder')}
             placeholderTextColor={styles.searchIcon.color}
@@ -131,7 +138,7 @@ export default function VaultScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterScroll}
-          contentContainerStyle={styles.filterScrollContent}
+          contentContainerStyle={[styles.filterScrollContent, isNativeRTL && { flexDirection: 'row-reverse' }]}
         >
           {filterButtons.map((item) => {
             const isSelected = filter === item.key;

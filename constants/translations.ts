@@ -279,6 +279,26 @@ export const TRANSLATIONS = {
     biometricPromptMessage: 'Unlock PSN account credentials',
     biometricFallbackLabel: 'Use Device Passcode',
     biometricCancelLabel: 'Cancel',
+
+    // Preferences & Menu Drawer
+    menuDrawerTitle: 'Vault Menu',
+    menuDrawerSubtitle: 'Settings & Preferences',
+    menuSectionAppearance: 'APPEARANCE',
+    menuThemeDark: 'Dark Mode',
+    menuThemeDarkSub: 'OLED optimized',
+    menuThemeLight: 'Light Mode',
+    menuThemeLightSub: 'Clean & high contrast',
+    menuSectionLanguage: 'LANGUAGE',
+    menuLangEnglish: 'English',
+    menuLangEnglishSub: 'Left-to-Right (LTR)',
+    menuLangArabic: 'العربية',
+    menuLangArabicSub: 'من اليمين لليسار (RTL)',
+    menuSectionSecurity: 'SECURITY & SYSTEM',
+    menuArchitectureBtn: 'Architecture & Protocols',
+    menuArchitectureSub: 'View encryption specs and Padlock rules',
+    menuSectionAccount: 'ACCOUNT & CLOUD',
+    menuAccountGuest: 'Local Vault (Guest Mode)',
+    menuAccountGuestSub: 'Ready for Supabase Multi-User Auth',
   },
   ar: {
     // Navigation Tabs
@@ -558,6 +578,26 @@ export const TRANSLATIONS = {
     biometricPromptMessage: 'إلغاء قفل بيانات حساب PSN',
     biometricFallbackLabel: 'استخدام رمز مرور الجهاز',
     biometricCancelLabel: 'إلغاء',
+
+    // Preferences & Menu Drawer
+    menuDrawerTitle: 'قائمة الخزينة',
+    menuDrawerSubtitle: 'الإعدادات والتفضيلات',
+    menuSectionAppearance: 'المظهر',
+    menuThemeDark: 'الوضع الداكن',
+    menuThemeDarkSub: 'محسّن لشاشات OLED',
+    menuThemeLight: 'الوضع الفاتح',
+    menuThemeLightSub: 'واضح وعالي التباين',
+    menuSectionLanguage: 'اللغة',
+    menuLangEnglish: 'English',
+    menuLangEnglishSub: 'من اليسار لليمين (LTR)',
+    menuLangArabic: 'العربية',
+    menuLangArabicSub: 'من اليمين لليسار (RTL)',
+    menuSectionSecurity: 'الأمان والنظام',
+    menuArchitectureBtn: 'البنية والبروتوكولات',
+    menuArchitectureSub: 'عرض مواصفات التشفير وقواعد القفل',
+    menuSectionAccount: 'الحساب والسحابة',
+    menuAccountGuest: 'الخزينة المحلية (وضع الزائر)',
+    menuAccountGuestSub: 'جاهز لمصادقة Supabase وتعدد المستخدمين',
   },
 } as const;
 

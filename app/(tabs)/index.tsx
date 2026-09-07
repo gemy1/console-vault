@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   Image,
@@ -9,7 +8,9 @@ import {
   Linking,
   StyleSheet,
   StatusBar,
+  Platform,
 } from "react-native";
+import { VaultText as Text } from "../../components/common/VaultText";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { OfflineVault } from "../../services/storage";
@@ -23,6 +24,7 @@ import {
   ShieldCheck,
   Lock,
   ChevronRight,
+  ChevronLeft,
   Clock,
 } from "lucide-react-native";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
@@ -33,6 +35,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [games, setGames] = useState<Game[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -158,25 +161,25 @@ export default function DashboardScreen() {
         </View>
 
         {/* METRICS ROW */}
-        <View style={styles.metricsRow}>
+        <View style={[styles.metricsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           {/* Total Games */}
           <View style={styles.metricCard}>
-            <View style={styles.metricCardHeader}>
-              <Text style={styles.metricLabel}>{t("metricVaultTotal")}</Text>
+            <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              <Text style={[styles.metricLabel, isRTL && styles.rtlText]}>{t("metricVaultTotal")}</Text>
               <Gamepad2
                 size={15}
                 color={styles.accentColor.color}
                 strokeWidth={2.2}
               />
             </View>
-            <Text style={styles.metricValue}>{totalGames}</Text>
-            <Text style={styles.metricSubtext}>{t("metricGamesStored")}</Text>
+            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{totalGames}</Text>
+            <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>{t("metricGamesStored")}</Text>
           </View>
 
           {/* Active Warranties */}
           <View style={styles.metricCard}>
-            <View style={styles.metricCardHeader}>
-              <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>
+            <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              <Text style={[styles.metricLabel, styles.metricLabelSuccess, isRTL && styles.rtlText]}>
                 {t("metricProtected")}
               </Text>
               <ShieldCheck
@@ -185,8 +188,8 @@ export default function DashboardScreen() {
                 strokeWidth={2.2}
               />
             </View>
-            <Text style={styles.metricValue}>{activeWarranties.length}</Text>
-            <Text style={styles.metricSubtext}>{t("metricUnderWarranty")}</Text>
+            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{activeWarranties.length}</Text>
+            <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>{t("metricUnderWarranty")}</Text>
           </View>
 
           {/* Locked / Issues */}
@@ -196,11 +199,12 @@ export default function DashboardScreen() {
               lockedGames.length > 0 && styles.metricCardDanger,
             ]}
           >
-            <View style={styles.metricCardHeader}>
+            <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Text
                 style={[
                   styles.metricLabel,
                   lockedGames.length > 0 && styles.metricLabelDanger,
+                  isRTL && styles.rtlText,
                 ]}
               >
                 {t("metricLocked")}
@@ -215,11 +219,12 @@ export default function DashboardScreen() {
                 strokeWidth={2.2}
               />
             </View>
-            <Text style={styles.metricValue}>{lockedGames.length}</Text>
+            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{lockedGames.length}</Text>
             <Text
               style={[
                 styles.metricSubtext,
                 lockedGames.length > 0 && styles.metricSubtextDanger,
+                isRTL && styles.rtlText,
               ]}
             >
               {lockedGames.length > 0 ? t("metricPadlockAlert") : t("metricAllClear")}
@@ -231,8 +236,8 @@ export default function DashboardScreen() {
         {lockedGames.length > 0 && (
           <View style={styles.padlockSection}>
             <View style={styles.padlockAlertBanner}>
-              <View style={styles.padlockHeaderRow}>
-                <View style={styles.padlockTitleGroup}>
+              <View style={[styles.padlockHeaderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <View style={[styles.padlockTitleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                   <PulsingPadlockBadge size="md" showLabel={false} />
                   <Text style={styles.padlockBannerTitle}>
                     {t("padlockProtocolActive")}
@@ -245,7 +250,7 @@ export default function DashboardScreen() {
                 </View>
               </View>
 
-              <Text style={styles.padlockInstruction}>
+              <Text style={[styles.padlockInstruction, isRTL && styles.rtlText]}>
                 {t("padlockInstruction")}
               </Text>
 
@@ -259,7 +264,7 @@ export default function DashboardScreen() {
                 );
 
                 return (
-                  <View key={game.id} style={styles.lockedGameItem}>
+                  <View key={game.id} style={[styles.lockedGameItem, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                     {game.cover_image_url ? (
                       <Image
                         source={{ uri: game.cover_image_url }}
@@ -275,30 +280,40 @@ export default function DashboardScreen() {
                       </View>
                     )}
 
-                    <View style={styles.lockedGameDetails}>
-                      <Text style={styles.lockedGameTitle} numberOfLines={1}>
+                    <View style={[styles.lockedGameDetails, isRTL ? { marginRight: 12, marginLeft: 0 } : { marginLeft: 12 }]}>
+                      <Text style={[styles.lockedGameTitle, isRTL && styles.rtlText]} numberOfLines={1}>
                         {game.title}
                       </Text>
 
                       {seller && (
                         <Pressable
                           onPress={() => router.push(`/seller/${seller.id}`)}
-                          style={styles.lockedSellerRow}
+                          style={[styles.lockedSellerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}
                         >
-                          <Text style={styles.lockedSellerText}>
-                            {t("padlockSeller")}: {seller.name}
+                          <Text style={[styles.lockedSellerText, isRTL && styles.rtlText]}>
+                            <Text>{t("padlockSeller")}: </Text>
+                            <Text>{seller.name}</Text>
                           </Text>
-                          <ChevronRight
-                            size={11}
-                            color={styles.accentColor.color}
-                            strokeWidth={2.4}
-                          />
+                          {isRTL ? (
+                            <ChevronLeft
+                              size={11}
+                              color={styles.accentColor.color}
+                              strokeWidth={2.4}
+                            />
+                          ) : (
+                            <ChevronRight
+                              size={11}
+                              color={styles.accentColor.color}
+                              strokeWidth={2.4}
+                            />
+                          )}
                         </Pressable>
                       )}
 
                       <Text
                         style={[
                           styles.lockedWarrantyText,
+                          isRTL && styles.rtlText,
                           warranty.isWarrantyActive
                             ? styles.warrantyActiveText
                             : styles.warrantyExpiredText,
@@ -340,9 +355,9 @@ export default function DashboardScreen() {
 
         {/* CATEGORY PILLS */}
         <View style={styles.categorySection}>
-          <Text style={styles.categoryHeading}>{t("categoryVaultCollection")}</Text>
+          <Text style={[styles.categoryHeading, isRTL && styles.rtlText]}>{t("categoryVaultCollection")}</Text>
 
-          <View style={styles.categoryPillsRow}>
+          <View style={[styles.categoryPillsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat.key;
               return (
@@ -658,5 +673,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     gamesListSection: {
       paddingHorizontal: 20,
+    },
+    rtlText: {
+      textAlign: 'right',
     },
   });

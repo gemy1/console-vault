@@ -1,20 +1,19 @@
 import React, { useRef, useEffect } from "react";
 import {
   View,
-  Text,
   Pressable,
   Platform,
   StatusBar as RNStatusBar,
   Animated,
   StyleSheet,
 } from "react-native";
+import { VaultText as Text } from "./VaultText";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react-native";
 import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
-import { ThemeToggleButton } from "./ThemeToggleButton";
-import { LanguageToggleButton } from "./LanguageToggleButton";
+import { MenuToggleButton } from "./MenuToggleButton";
 import { useLanguage } from "../../context/LanguageContext";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 
@@ -23,6 +22,7 @@ interface ModernHeaderProps {
   subtitle?: string;
   showBackButton?: boolean;
   rightAction?: React.ReactNode;
+  showMenuButton?: boolean;
   transparent?: boolean;
   /** Pass an Animated.Value driven by ScrollView onScroll to enable scroll-fade glass effect */
   scrollY?: Animated.Value;
@@ -33,6 +33,7 @@ export function ModernHeader({
   subtitle,
   showBackButton = false,
   rightAction,
+  showMenuButton = true,
   transparent = false,
   scrollY,
 }: ModernHeaderProps) {
@@ -103,7 +104,7 @@ export function ModernHeader({
       </View>
 
       {/* Navigation row */}
-      <View style={[styles.row, { paddingTop: headerPaddingTop }]}>
+      <View style={[styles.row, { paddingTop: headerPaddingTop, flexDirection: Platform.OS !== 'web' && isRTL ? 'row-reverse' : 'row' }]}>
         {/* LEFT: Back or Brand */}
         {showBackButton ? (
           <Pressable
@@ -148,9 +149,8 @@ export function ModernHeader({
 
         {/* RIGHT: Actions */}
         <View style={styles.actions}>
-          <LanguageToggleButton size={46} />
-          <ThemeToggleButton size={46} />
           {rightAction}
+          {showMenuButton && <MenuToggleButton size={46} />}
         </View>
       </View>
     </Animated.View>

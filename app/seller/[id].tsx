@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { VaultText as Text } from '../../components/common/VaultText';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -149,7 +150,7 @@ export default function SellerDetailsScreen() {
         {/* CONNECTION METHODS CARD */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionCardHeader}>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
               {t('connectWithSeller')} ({contacts.length})
             </Text>
             <Pressable onPress={() => setEditModalVisible(true)} style={styles.addMethodBtn}>
@@ -172,7 +173,7 @@ export default function SellerDetailsScreen() {
                       </View>
                       <View style={styles.contactDetailsCol}>
                         <View style={styles.platformNameRow}>
-                          <Text style={styles.platformName}>{contact.platform}</Text>
+                          <Text style={[styles.platformName, isRTL && styles.rtlText]}>{contact.platform}</Text>
                           {contact.label && (
                             <View style={[styles.contactLabelBadge, { backgroundColor: `${cfg.defaultColor}20` }]}>
                               <Text style={[styles.contactLabelText, { color: cfg.defaultColor }]}>
@@ -181,7 +182,7 @@ export default function SellerDetailsScreen() {
                             </View>
                           )}
                         </View>
-                        <Text style={styles.contactValue} numberOfLines={1}>
+                        <Text style={[styles.contactValue, isRTL && styles.rtlText]} numberOfLines={1}>
                           {contact.value}
                         </Text>
                       </View>
@@ -227,7 +228,7 @@ export default function SellerDetailsScreen() {
           <View style={styles.notesHeaderRow}>
             <View style={styles.notesTitleGroup}>
               <FileText size={15} color={styles.accentIcon.color} strokeWidth={2.2} />
-              <Text style={styles.sectionTitle}>
+              <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
                 {t('sellerGuaranteeNotes')}
               </Text>
             </View>
@@ -254,13 +255,13 @@ export default function SellerDetailsScreen() {
         {/* METRICS ROW */}
         <View style={styles.metricsRow}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>{t('metricVaultTotal')}</Text>
-            <Text style={styles.metricValue}>{games.length}</Text>
+            <Text style={[styles.metricLabel, isRTL && styles.rtlText]}>{t('metricVaultTotal')}</Text>
+            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{games.length}</Text>
           </View>
 
           <View style={styles.metricCard}>
-            <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>{t('activeWarranties')}</Text>
-            <Text style={styles.metricValue}>{activeWarrantiesCount}</Text>
+            <Text style={[styles.metricLabel, styles.metricLabelSuccess, isRTL && styles.rtlText]}>{t('activeWarranties')}</Text>
+            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{activeWarrantiesCount}</Text>
           </View>
 
           <View
@@ -273,11 +274,12 @@ export default function SellerDetailsScreen() {
               style={[
                 styles.metricLabel,
                 lockedGamesCount > 0 && styles.metricLabelDanger,
+                isRTL && styles.rtlText,
               ]}
             >
               {t('lockedClaims')}
             </Text>
-            <Text style={styles.metricValue}>{lockedGamesCount}</Text>
+            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{lockedGamesCount}</Text>
           </View>
         </View>
 

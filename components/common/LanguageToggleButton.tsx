@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
+import { VaultText as Text } from './VaultText';
 import { Globe } from 'lucide-react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import { useThemedStyles } from '../../hooks/useThemedStyles';

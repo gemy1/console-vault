@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   Image,
@@ -10,6 +9,7 @@ import {
   StatusBar as RNStatusBar,
   StyleSheet,
 } from "react-native";
+import { VaultText as Text } from "../../components/common/VaultText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -18,7 +18,7 @@ import { OfflineVault } from "../../services/storage";
 import { Game, Seller, GameStatus } from "../../types/vault";
 import { calculateWarranty } from "../../utils/padlock";
 import { useBiometricGuard } from "../../hooks/useBiometricGuard";
-import { ThemeToggleButton, LanguageToggleButton } from "../../components/common";
+import { MenuToggleButton } from "../../components/common";
 import {
   PulsingPadlockBadge,
   ReplaceCredentialsModal,
@@ -204,8 +204,7 @@ export default function GameDetailsScreen() {
               />
             </Pressable>
 
-            <LanguageToggleButton size={48} />
-            <ThemeToggleButton size={48} />
+            <MenuToggleButton size={48} />
           </View>
         </View>
       </View>
@@ -370,12 +369,13 @@ export default function GameDetailsScreen() {
 
           {/* WARRANTY COVERAGE */}
           <View style={styles.warrantyCard}>
-            <Text style={styles.sectionHeader}>{t('warrantyCoverageTitle')}</Text>
+            <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('warrantyCoverageTitle')}</Text>
 
             <View style={styles.warrantyRow}>
               <Text
                 style={[
                   styles.warrantyDaysText,
+                  isRTL && styles.rtlText,
                   warranty.isWarrantyActive
                     ? styles.statusTextSuccess
                     : styles.statusTextDanger,
@@ -385,12 +385,12 @@ export default function GameDetailsScreen() {
                   ? t('daysLeft', { days: warranty.daysRemaining })
                   : t('warrantyExpired')}
               </Text>
-              <Text style={styles.warrantyMonthsTotal}>
+              <Text style={[styles.warrantyMonthsTotal, isRTL && styles.rtlText]}>
                 {t('monthsTotal', { months: game.warranty_months })}
               </Text>
             </View>
 
-            <Text style={styles.warrantyExpiresText}>
+            <Text style={[styles.warrantyExpiresText, isRTL && styles.rtlText]}>
               {t('expiresOn', { date: warranty.expiryDate })}
             </Text>
           </View>
@@ -403,7 +403,7 @@ export default function GameDetailsScreen() {
             ]}
           >
             <View style={styles.credentialsHeader}>
-              <Text style={styles.credentialsTitle}>
+              <Text style={[styles.credentialsTitle, isRTL && styles.rtlText]}>
                 {t('credentialSectionTitle')}
               </Text>
               {isUnlocked && (
@@ -599,7 +599,7 @@ export default function GameDetailsScreen() {
 
           {/* STATUS ACTIONS */}
           <View style={styles.statusActionsSection}>
-            <Text style={styles.sectionHeader}>{t('changeStatusPrompt')}</Text>
+            <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('changeStatusPrompt')}</Text>
 
             {!isLocked ? (
               <Pressable

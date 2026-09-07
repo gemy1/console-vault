@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { VaultText as Text } from '../common/VaultText';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

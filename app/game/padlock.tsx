@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   Alert,
   StyleSheet,
 } from 'react-native';
+import { VaultText as Text } from '../../components/common/VaultText';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -101,7 +101,7 @@ export default function PadlockProtocolModal() {
         <View style={styles.card}>
           <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('warrantyVerificationTitle')}</Text>
           <View style={styles.warrantyRow}>
-            <Text style={styles.gameTitle}>{game.title}</Text>
+            <Text style={[styles.gameTitle, isRTL && styles.rtlText]}>{game.title}</Text>
             <Text
               style={[
                 styles.warrantyStatus,
@@ -134,7 +134,7 @@ export default function PadlockProtocolModal() {
           </View>
 
           <View style={styles.codeBox}>
-            <Text style={styles.codeText}>{claimMessage}</Text>
+            <Text style={[styles.codeText, isRTL && styles.rtlText]}>{claimMessage}</Text>
           </View>
         </View>
 

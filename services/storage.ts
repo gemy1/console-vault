@@ -1,17 +1,76 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Game, Seller } from '../types/vault';
 
-// In-memory / local fallback cache that provides instant offline availability
+// In-memory cache that provides instant, synchronous availability
 const memoryCache = new Map<string, string>();
+
+// Immediately hydrate memoryCache from window.localStorage on web
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key) {
+        const val = window.localStorage.getItem(key);
+        if (val !== null) {
+          memoryCache.set(key, val);
+        }
+      }
+    }
+  } catch {}
+} else {
+  // Asynchronous hydration fallback for React Native environments
+  try {
+    AsyncStorage.getAllKeys().then((keys) => {
+      return AsyncStorage.multiGet(keys).then((pairs) => {
+        pairs.forEach(([k, v]) => {
+          if (v !== null && !memoryCache.has(k)) {
+            memoryCache.set(k, v);
+          }
+        });
+      });
+    }).catch(() => {});
+  } catch {}
+}
 
 export const VaultStorage = {
   getItem: (key: string): string | null => {
-    return memoryCache.get(key) || null;
+    // 1. Check in-memory cache
+    if (memoryCache.has(key)) {
+      return memoryCache.get(key) || null;
+    }
+    // 2. Check window.localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const val = window.localStorage.getItem(key);
+        if (val !== null) {
+          memoryCache.set(key, val);
+          return val;
+        }
+      } catch {}
+    }
+    return null;
   },
   setItem: (key: string, value: string): void => {
     memoryCache.set(key, value);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {}
+    }
+    try {
+      AsyncStorage.setItem(key, value).catch(() => {});
+    } catch {}
   },
   removeItem: (key: string): void => {
     memoryCache.delete(key);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {}
+    }
+    try {
+      AsyncStorage.removeItem(key).catch(() => {});
+    } catch {}
   },
 };
 

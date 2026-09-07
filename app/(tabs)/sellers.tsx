@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,
@@ -9,6 +8,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
+import { VaultText as Text } from '../../components/common/VaultText';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ShieldCheck } from 'lucide-react-native';
