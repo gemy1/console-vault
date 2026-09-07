@@ -3,11 +3,17 @@ import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "react-native-reanimated";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { LanguageProvider } from "../context/LanguageContext";
 import { VaultThemeProvider, useVaultTheme } from "../context/ThemeContext";
+import { AuthProvider, useAuth } from "../context/AuthContext";
+import { SecurityProvider } from "../context/SecurityContext";
+import { VaultSyncProvider } from "../context/VaultSyncContext";
+import { BiometricLockScreen } from "../components/auth/BiometricLockScreen";
+import { BrandedSplashOverlay } from "../components/common/BrandedSplashOverlay";
+import { VaultStorage } from "../services/storage";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -88,6 +94,23 @@ function RootNavigator() {
   );
 }
 
+function VaultAppProviders({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+
+  return (
+    <SecurityProvider>
+      <VaultSyncProvider userId={user?.id}>
+        <LanguageProvider>
+          <VaultThemeProvider>
+            {children}
+            <BiometricLockScreen />
+          </VaultThemeProvider>
+        </LanguageProvider>
+      </VaultSyncProvider>
+    </SecurityProvider>
+  );
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -97,27 +120,37 @@ export default function RootLayout() {
     Cairo_800ExtraBold: require("@expo-google-fonts/cairo/800ExtraBold/Cairo_800ExtraBold.ttf"),
   });
 
+  const [storageReady, setStorageReady] = useState(() => VaultStorage.isHydrated());
+
+  useEffect(() => {
+    if (storageReady) return;
+    VaultStorage.waitForHydration().finally(() => {
+      setStorageReady(true);
+    });
+  }, [storageReady]);
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && storageReady) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, storageReady]);
 
-  if (!loaded) {
+  if (!loaded || !storageReady) {
     return null;
   }
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <LanguageProvider>
-        <VaultThemeProvider>
+      <AuthProvider>
+        <VaultAppProviders>
           <RootNavigator />
-        </VaultThemeProvider>
-      </LanguageProvider>
+          <BrandedSplashOverlay />
+        </VaultAppProviders>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,44 +1,147 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Game, Seller } from '../types/vault';
+import { getDatabase, wipeDatabase } from './database/db';
+import { GameRepository } from './database/gameRepository';
+import { SellerRepository } from './database/sellerRepository';
+
+export * from './database';
 
 // In-memory cache that provides instant, synchronous availability
 const memoryCache = new Map<string, string>();
+let isHydrated = false;
+const hydrationCallbacks = new Set<() => void>();
 
-// Immediately hydrate memoryCache from window.localStorage on web
-if (typeof window !== 'undefined' && window.localStorage) {
+// Keys
+const GAMES_STORAGE_KEY = 'vault_cached_games_v1';
+const SELLERS_STORAGE_KEY = 'vault_cached_sellers_v1';
+
+// In-memory indexing layer for high scale (10,000+ items with O(1) lookups)
+let memoryGames: Game[] | null = null;
+let memorySellers: Seller[] | null = null;
+const gamesMap = new Map<string, Game>();
+const sellersMap = new Map<string, Seller>();
+
+function rebuildGamesIndex(games: Game[]) {
+  memoryGames = games;
+  gamesMap.clear();
+  for (let i = 0; i < games.length; i++) {
+    gamesMap.set(games[i].id, games[i]);
+  }
+}
+
+function rebuildSellersIndex(sellers: Seller[]) {
+  memorySellers = sellers;
+  sellersMap.clear();
+  for (let i = 0; i < sellers.length; i++) {
+    sellersMap.set(sellers[i].id, sellers[i]);
+  }
+}
+
+// Immediately hydrate from SQLite database, with automatic migration from AsyncStorage
+const hydrationPromise = (async () => {
   try {
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const key = window.localStorage.key(i);
-      if (key) {
-        const val = window.localStorage.getItem(key);
-        if (val !== null) {
-          memoryCache.set(key, val);
+    // 1. Initialize SQLite Database & Tables
+    try {
+      await getDatabase();
+      const [sqliteGames, sqliteSellers] = await Promise.all([
+        GameRepository.getAll(),
+        SellerRepository.getAll(),
+      ]);
+
+      if (sqliteGames.length > 0) {
+        rebuildGamesIndex(sqliteGames);
+        memoryCache.set(GAMES_STORAGE_KEY, JSON.stringify(sqliteGames));
+      }
+      if (sqliteSellers.length > 0) {
+        rebuildSellersIndex(sqliteSellers);
+        memoryCache.set(SELLERS_STORAGE_KEY, JSON.stringify(sqliteSellers));
+      }
+    } catch (e) {
+      console.warn('[VaultStorage] SQLite init note:', e);
+    }
+
+    // 2. Hydrate from AsyncStorage / LocalStorage (for app settings like theme & language)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key) {
+          const val = window.localStorage.getItem(key);
+          if (val !== null && !memoryCache.has(key)) {
+            memoryCache.set(key, val);
+          }
         }
       }
-    }
-  } catch {}
-} else {
-  // Asynchronous hydration fallback for React Native environments
-  try {
-    AsyncStorage.getAllKeys().then((keys) => {
-      return AsyncStorage.multiGet(keys).then((pairs) => {
+    } else {
+      const keys = await AsyncStorage.getAllKeys();
+      if (keys && keys.length > 0) {
+        const pairs = await AsyncStorage.multiGet(keys);
         pairs.forEach(([k, v]) => {
           if (v !== null && !memoryCache.has(k)) {
             memoryCache.set(k, v);
           }
         });
-      });
-    }).catch(() => {});
-  } catch {}
-}
+      }
+    }
+
+    // 3. Data Migration: If SQLite was empty but AsyncStorage had existing items, migrate to SQLite!
+    const currentGames = memoryGames as Game[] | null;
+    if ((currentGames === null || currentGames.length === 0) && memoryCache.has(GAMES_STORAGE_KEY)) {
+      try {
+        const legacyGames: Game[] = JSON.parse(memoryCache.get(GAMES_STORAGE_KEY)!);
+        if (legacyGames && legacyGames.length > 0) {
+          rebuildGamesIndex(legacyGames);
+          GameRepository.bulkUpsert(legacyGames).catch(() => {});
+        }
+      } catch {}
+    }
+
+    const currentSellers = memorySellers as Seller[] | null;
+    if ((currentSellers === null || currentSellers.length === 0) && memoryCache.has(SELLERS_STORAGE_KEY)) {
+      try {
+        const legacySellers: Seller[] = JSON.parse(memoryCache.get(SELLERS_STORAGE_KEY)!);
+        if (legacySellers && legacySellers.length > 0) {
+          rebuildSellersIndex(legacySellers);
+          SellerRepository.bulkUpsert(legacySellers).catch(() => {});
+        }
+      } catch {}
+    }
+  } catch (err) {
+    console.warn('[VaultStorage] Hydration error:', err);
+  } finally {
+    isHydrated = true;
+    hydrationCallbacks.forEach((cb) => {
+      try { cb(); } catch {}
+    });
+    hydrationCallbacks.clear();
+  }
+})();
 
 export const VaultStorage = {
+  isHydrated: (): boolean => isHydrated,
+
+  waitForHydration: async (): Promise<void> => {
+    if (isHydrated) return;
+    await Promise.race([
+      hydrationPromise,
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
+  },
+
+  onHydrated: (callback: () => void): (() => void) => {
+    if (isHydrated) {
+      callback();
+      return () => {};
+    }
+    hydrationCallbacks.add(callback);
+    return () => {
+      hydrationCallbacks.delete(callback);
+    };
+  },
+
   getItem: (key: string): string | null => {
-    // 1. Check in-memory cache
     if (memoryCache.has(key)) {
       return memoryCache.get(key) || null;
     }
-    // 2. Check window.localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const val = window.localStorage.getItem(key);
@@ -50,6 +153,7 @@ export const VaultStorage = {
     }
     return null;
   },
+
   setItem: (key: string, value: string): void => {
     memoryCache.set(key, value);
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -57,10 +161,25 @@ export const VaultStorage = {
         window.localStorage.setItem(key, value);
       } catch {}
     }
-    try {
-      AsyncStorage.setItem(key, value).catch(() => {});
-    } catch {}
+    AsyncStorage.setItem(key, value).catch((err) => {
+      console.warn('[VaultStorage] AsyncStorage.setItem failed for ' + key, err);
+    });
   },
+
+  setItemAsync: async (key: string, value: string): Promise<void> => {
+    memoryCache.set(key, value);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {}
+    }
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (err) {
+      console.warn('[VaultStorage] AsyncStorage.setItemAsync failed for ' + key, err);
+    }
+  },
+
   removeItem: (key: string): void => {
     memoryCache.delete(key);
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -68,149 +187,79 @@ export const VaultStorage = {
         window.localStorage.removeItem(key);
       } catch {}
     }
+    AsyncStorage.removeItem(key).catch(() => {});
+  },
+
+  removeItemAsync: async (key: string): Promise<void> => {
+    memoryCache.delete(key);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {}
+    }
     try {
-      AsyncStorage.removeItem(key).catch(() => {});
+      await AsyncStorage.removeItem(key);
     } catch {}
   },
 };
 
-// Keys
-const GAMES_STORAGE_KEY = 'vault_cached_games_v1';
-const SELLERS_STORAGE_KEY = 'vault_cached_sellers_v1';
-
-// Initial Mock Data (Guarantees app looks premium and works immediately)
-const INITIAL_SELLERS: Seller[] = [
-  {
-    id: 's-1',
-    user_id: 'user-demo',
-    name: 'PlayStation Elite Deals',
-    contact_platform: 'WhatsApp',
-    contact_link: '+12025550192',
-    contact_methods: [
-      { id: 'cm-1-1', platform: 'WhatsApp', value: '+12025550192', label: 'VIP Hotline' },
-      { id: 'cm-1-2', platform: 'Facebook', value: 'm.me/ps5elitedeals', label: 'FB Messenger Page' },
-    ],
-    reputation_score: 4.9,
-    notes: 'Warranty response time < 15 mins. Accepts PayPal and Crypto. Replaces revoked accounts within 2 hours.',
-  },
-  {
-    id: 's-2',
-    user_id: 'user-demo',
-    name: 'DigitalVault PSN Keys',
-    contact_platform: 'Telegram',
-    contact_link: 'digitalvault_support',
-    contact_methods: [
-      { id: 'cm-2-1', platform: 'Telegram', value: 'digitalvault_support', label: 'Direct Telegram' },
-      { id: 'cm-2-2', platform: 'WhatsApp', value: '+14155552671', label: 'Support WhatsApp' },
-    ],
-    reputation_score: 4.3,
-    notes: 'Fast replacements, sends screenshot proof. Working hours: 10:00 AM - 11:00 PM UTC.',
-  },
-  {
-    id: 's-3',
-    user_id: 'user-demo',
-    name: 'GameKey Galaxy',
-    contact_platform: 'WhatsApp',
-    contact_link: '+447911123456',
-    contact_methods: [
-      { id: 'cm-3-1', platform: 'WhatsApp', value: '+447911123456', label: 'UK WhatsApp' },
-      { id: 'cm-3-2', platform: 'Facebook', value: 'facebook.com/gamekeygalaxy', label: 'Official Facebook' },
-      { id: 'cm-3-3', platform: 'Discord', value: 'GameKeyGalaxy#9901', label: 'Discord Server' },
-    ],
-    reputation_score: 4.7,
-    notes: '12-month full primary warranties. Offers discount codes on 3rd purchase.',
-  }
-];
-
-const INITIAL_GAMES: Game[] = [
-  {
-    id: 'g-1',
-    user_id: 'user-demo',
-    seller_id: 's-1',
-    title: "Marvel's Spider-Man 2",
-    cover_image_url: 'https://image.api.playstation.com/vulcan/ap/rnd/202306/1219/1c7b75d8ed9271516546560d219ad0b22ee0a263b4537bd8.png',
-    account_type: 'Primary',
-    status: 'Active',
-    purchase_date: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    warranty_months: 12,
-    psn_email: 'spidey.vault.buyer@gmail.com',
-    psn_password: 'WebSlinger#2024!',
-    backup_codes: ['12345678', '87654321', '11223344'],
-    notes: 'Activated as primary on PS5 console in living room.',
-  },
-  {
-    id: 'g-2',
-    user_id: 'user-demo',
-    seller_id: 's-1',
-    title: 'God of War Ragnarök',
-    cover_image_url: 'https://image.api.playstation.com/vulcan/ap/rnd/202207/1210/4xJ8XB3bi888QTLZYdl7Oi0s.png',
-    account_type: 'Secondary',
-    status: 'Locked', // LOCKED TRIGGER FOR PADLOCK PROTOCOL
-    purchase_date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    warranty_months: 6,
-    psn_email: 'kratos.norse.games@gmail.com',
-    psn_password: 'LeviathanAxe#99',
-    backup_codes: ['44556677'],
-    notes: 'License revoked yesterday. Padlock icon showing on dashboard.',
-  },
-  {
-    id: 'g-3',
-    user_id: 'user-demo',
-    seller_id: 's-2',
-    title: 'Elden Ring: Shadow of the Erdtree',
-    cover_image_url: 'https://image.api.playstation.com/vulcan/ap/rnd/202402/1911/c90e66bc28c9b357608ce0eaecadbeae9e29f8f41399ea5c.png',
-    account_type: 'Primary',
-    status: 'Active',
-    purchase_date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    warranty_months: 6,
-    psn_email: 'tarnished.erdtree@outlook.com',
-    psn_password: 'GraceFound#777',
-    backup_codes: ['99887766', '33221100'],
-    notes: 'DLC Edition included.',
-  },
-  {
-    id: 'g-4',
-    user_id: 'user-demo',
-    seller_id: 's-3',
-    title: 'Grand Theft Auto V: Enhanced',
-    cover_image_url: 'https://image.api.playstation.com/vulcan/ap/rnd/202202/2816/mYnWe5Fi1Y2Q65n9G2p1qf9n.png',
-    account_type: 'Secondary',
-    status: 'In Resolution',
-    purchase_date: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    warranty_months: 3,
-    psn_email: 'los.santos.heist@yahoo.com',
-    psn_password: 'TrevorPhilips#42',
-    backup_codes: ['66554433'],
-    notes: 'Seller provided ticket #9821.',
-  },
-];
-
-// Seed cache initially
-if (!VaultStorage.getItem(GAMES_STORAGE_KEY)) {
-  VaultStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(INITIAL_GAMES));
-}
-if (!VaultStorage.getItem(SELLERS_STORAGE_KEY)) {
-  VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(INITIAL_SELLERS));
-}
-
 export const OfflineVault = {
   getGames: (): Game[] => {
+    if (memoryGames !== null) return memoryGames;
     try {
       const raw = VaultStorage.getItem(GAMES_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : INITIAL_GAMES;
-    } catch {
-      return INITIAL_GAMES;
+      if (raw) {
+        const parsed: Game[] = JSON.parse(raw);
+        rebuildGamesIndex(parsed);
+        return parsed;
+      }
+    } catch {}
+    if (isHydrated) {
+      rebuildGamesIndex([]);
+      return [];
     }
+    return [];
   },
+
+  getGameById: (id: string): Game | undefined => {
+    if (memoryGames === null) OfflineVault.getGames();
+    return gamesMap.get(id);
+  },
+
   saveGames: (games: Game[]): void => {
+    rebuildGamesIndex(games);
     VaultStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify(games));
+    // Persist to SQLite
+    GameRepository.bulkUpsert(games).catch((err) => {
+      console.warn('[SQLite] bulkUpsert games failed:', err);
+    });
   },
+
+  saveGamesAsync: async (games: Game[]): Promise<void> => {
+    rebuildGamesIndex(games);
+    await VaultStorage.setItemAsync(GAMES_STORAGE_KEY, JSON.stringify(games));
+    await GameRepository.bulkUpsert(games);
+  },
+
   addGame: (game: Game): Game => {
     const games = OfflineVault.getGames();
-    const updated = [game, ...games];
+    const updated = [game, ...games.filter((g) => g.id !== game.id)];
     OfflineVault.saveGames(updated);
+    // Fast O(1) row insert in SQLite
+    GameRepository.upsert(game).catch((err) => {
+      console.warn('[SQLite] addGame error:', err);
+    });
     return game;
   },
+
+  addGameAsync: async (game: Game): Promise<Game> => {
+    const games = OfflineVault.getGames();
+    const updated = [game, ...games.filter((g) => g.id !== game.id)];
+    await OfflineVault.saveGamesAsync(updated);
+    await GameRepository.upsert(game);
+    return game;
+  },
+
   updateGame: (id: string, partial: Partial<Game>): Game | null => {
     const games = OfflineVault.getGames();
     const index = games.findIndex((g) => g.id === id);
@@ -218,35 +267,105 @@ export const OfflineVault = {
     const updatedGame = { ...games[index], ...partial, updated_at: new Date().toISOString() };
     games[index] = updatedGame;
     OfflineVault.saveGames(games);
+    // Surgical SQLite row update
+    GameRepository.update(id, partial).catch((err) => {
+      console.warn('[SQLite] updateGame error:', err);
+    });
     return updatedGame;
   },
+
+  deleteGame: (id: string): boolean => {
+    const games = OfflineVault.getGames();
+    const filtered = games.filter((g) => g.id !== id);
+    OfflineVault.saveGames(filtered);
+    // Native SQLite row delete
+    GameRepository.delete(id).catch((err) => {
+      console.warn('[SQLite] deleteGame error:', err);
+    });
+    return true;
+  },
+
   getSellers: (): Seller[] => {
+    if (memorySellers !== null) return memorySellers;
     try {
       const raw = VaultStorage.getItem(SELLERS_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : INITIAL_SELLERS;
-    } catch {
-      return INITIAL_SELLERS;
+      if (raw) {
+        const parsed: Seller[] = JSON.parse(raw);
+        rebuildSellersIndex(parsed);
+        return parsed;
+      }
+    } catch {}
+    if (isHydrated) {
+      rebuildSellersIndex([]);
+      return [];
     }
+    return [];
   },
+
+  getSellerById: (id: string): Seller | undefined => {
+    if (memorySellers === null) OfflineVault.getSellers();
+    return sellersMap.get(id);
+  },
+
+  saveSellers: (sellers: Seller[]): void => {
+    rebuildSellersIndex(sellers);
+    VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(sellers));
+    SellerRepository.bulkUpsert(sellers).catch((err) => {
+      console.warn('[SQLite] bulkUpsert sellers failed:', err);
+    });
+  },
+
   addSeller: (seller: Seller): Seller => {
     const sellers = OfflineVault.getSellers();
-    const updated = [seller, ...sellers];
-    VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(updated));
+    const updated = [seller, ...sellers.filter((s) => s.id !== seller.id)];
+    OfflineVault.saveSellers(updated);
+    SellerRepository.upsert(seller).catch((err) => {
+      console.warn('[SQLite] addSeller error:', err);
+    });
     return seller;
   },
+
   updateSeller: (id: string, partial: Partial<Seller>): Seller | null => {
     const sellers = OfflineVault.getSellers();
     const index = sellers.findIndex((s) => s.id === id);
     if (index === -1) return null;
     const updatedSeller = { ...sellers[index], ...partial, updated_at: new Date().toISOString() };
     sellers[index] = updatedSeller;
-    VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(sellers));
+    OfflineVault.saveSellers(sellers);
+    SellerRepository.update(id, partial).catch((err) => {
+      console.warn('[SQLite] updateSeller error:', err);
+    });
     return updatedSeller;
   },
+
   deleteSeller: (id: string): boolean => {
     const sellers = OfflineVault.getSellers();
     const filtered = sellers.filter((s) => s.id !== id);
-    VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(filtered));
+    OfflineVault.saveSellers(filtered);
+    SellerRepository.delete(id).catch((err) => {
+      console.warn('[SQLite] deleteSeller error:', err);
+    });
     return true;
+  },
+
+  hydrateVault: (games: Game[], sellers: Seller[]): void => {
+    OfflineVault.saveGames(games);
+    OfflineVault.saveSellers(sellers);
+    GameRepository.bulkUpsert(games).catch(() => {});
+    SellerRepository.bulkUpsert(sellers).catch(() => {});
+  },
+
+  clearVault: (): void => {
+    memoryGames = [];
+    memorySellers = [];
+    gamesMap.clear();
+    sellersMap.clear();
+    VaultStorage.removeItem(GAMES_STORAGE_KEY);
+    VaultStorage.removeItem(SELLERS_STORAGE_KEY);
+    wipeDatabase().catch(() => {});
+  },
+
+  resetToInitial: (): void => {
+    OfflineVault.clearVault();
   },
 };

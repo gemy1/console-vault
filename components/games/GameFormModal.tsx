@@ -66,6 +66,7 @@ export function GameFormModal({
 }: GameFormModalProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [title, setTitle] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
@@ -285,8 +286,8 @@ export function GameFormModal({
 
             {/* ACCOUNT ACTIVATION TYPE */}
             <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldAccountType')}</Text>
-            <View style={styles.accountTypeRow}>
-              {(['Primary', 'Secondary'] as AccountType[]).map((type) => {
+            <View style={[styles.accountTypeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              {(['Primary', 'Secondary', 'Full'] as AccountType[]).map((type) => {
                 const isSelected = accountType === type;
                 return (
                   <Pressable
@@ -307,8 +308,13 @@ export function GameFormModal({
                         styles.accountTypeText,
                         isSelected ? styles.accountTypeTextActive : styles.accountTypeTextInactive,
                       ]}
+                      numberOfLines={1}
                     >
-                      {type === 'Primary' ? t('accountTypePrimary') : t('accountTypeSecondary')}
+                      {type === 'Primary'
+                        ? t('accountTypePrimary')
+                        : type === 'Full'
+                        ? t('accountTypeFull')
+                        : t('accountTypeSecondary')}
                     </Text>
                   </Pressable>
                 );

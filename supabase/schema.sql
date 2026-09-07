@@ -14,10 +14,13 @@ exception
 end $$;
 
 do $$ begin
-    create type account_type as enum ('Primary', 'Secondary');
+    create type account_type as enum ('Primary', 'Secondary', 'Full');
 exception
     when duplicate_object then null;
 end $$;
+
+-- Ensure 'Full' value is present if enum was created in an earlier migration
+alter type account_type add value if not exists 'Full';
 
 do $$ begin
     create type contact_platform as enum ('WhatsApp', 'Telegram', 'Discord', 'Facebook', 'Other');
@@ -38,6 +41,9 @@ create table if not exists public.sellers (
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Ensure contact_methods column exists if table was created in an older migration
+alter table public.sellers add column if not exists contact_methods jsonb default '[]'::jsonb;
 
 -- 4. GAMES TABLE
 create table if not exists public.games (
@@ -194,3 +200,52 @@ select
     end as is_warranty_active
 from public.games g
 left join public.sellers s on g.seller_id = s.id;
+
+-- ==============================================================================
+-- 10. DUAL PERSONA: SELLER / DISTRIBUTOR HUB (Forward-Ready Tables)
+-- Tracks the user's clients and game slot sales (Primary, Secondary, or Full Account)
+-- ==============================================================================
+
+-- CLIENTS TABLE
+create table if not exists public.clients (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    name text not null,
+    contact_platform contact_platform not null default 'WhatsApp',
+    contact_link text not null,
+    notes text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- CLIENT ALLOCATIONS TABLE (Slot sales from master game accounts)
+create table if not exists public.client_allocations (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    game_id uuid not null references public.games(id) on delete cascade,
+    client_id uuid not null references public.clients(id) on delete cascade,
+    slot_type account_type not null default 'Primary',
+    sale_price numeric(10, 2) default 0.00,
+    sale_date date not null default current_date,
+    warranty_months integer not null default 6,
+    status text not null default 'Active' check (status in ('Active', 'Revoked', 'Replaced', 'Expired')),
+    notes text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- ROW LEVEL SECURITY FOR CLIENTS & ALLOCATIONS
+alter table public.clients enable row level security;
+alter table public.client_allocations enable row level security;
+
+create policy "Users can manage own clients" on public.clients
+    for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users can manage own allocations" on public.client_allocations
+    for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- HIGH PERFORMANCE INDEXES FOR SELLER HUB
+create index if not exists idx_clients_user on public.clients (user_id);
+create index if not exists idx_allocations_user_game on public.client_allocations (user_id, game_id);
+create index if not exists idx_allocations_client on public.client_allocations (client_id);
+

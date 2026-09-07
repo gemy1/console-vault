@@ -30,26 +30,21 @@ import {
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
+import { useVaultSync } from "../../context/VaultSyncContext";
 
 export default function DashboardScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const { games, sellers, addGame, addSeller, refreshData } = useVaultSync();
 
-  const [games, setGames] = useState<Game[]>([]);
-  const [sellers, setSellers] = useState<Seller[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<
     "All" | "Active" | "Locked"
   >("All");
   const [sellerModalVisible, setSellerModalVisible] = useState(false);
   const [gameModalVisible, setGameModalVisible] = useState(false);
-
-  const loadData = () => {
-    setGames(OfflineVault.getGames());
-    setSellers(OfflineVault.getSellers());
-  };
 
   const handleSaveGame = (gameData: any) => {
     const newGame: Game = {
@@ -59,9 +54,8 @@ export default function DashboardScreen() {
       purchase_date: new Date().toISOString().split('T')[0],
       ...gameData,
     };
-    OfflineVault.addGame(newGame);
+    addGame(newGame);
     setGameModalVisible(false);
-    loadData();
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
@@ -81,21 +75,20 @@ export default function DashboardScreen() {
       ...sellerData,
       created_at: new Date().toISOString(),
     };
-    OfflineVault.addSeller(newSeller);
+    addSeller(newSeller);
     setSellerModalVisible(false);
-    loadData();
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
   };
 
   useEffect(() => {
-    loadData();
+    refreshData();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    refreshData();
     setTimeout(() => setRefreshing(false), 300);
   };
 
@@ -139,6 +132,22 @@ export default function DashboardScreen() {
           />
         }
       >
+        {/* BRAND SLOGAN HERO BANNER */}
+        <View style={styles.sloganBanner}>
+          <View style={[styles.sloganTagRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={styles.sloganPulseDot} />
+            <Text style={styles.sloganTagText}>
+              {isRTL ? 'الحماية والضمان المتكامل' : 'SECURE VAULT ARCHITECTURE'}
+            </Text>
+          </View>
+          <Text style={[styles.sloganMainText, isRTL && styles.rtlText]}>
+            {t('appSlogan')}
+          </Text>
+          <Text style={[styles.sloganSubText, isRTL && styles.rtlText]}>
+            {t('appSloganSub')}
+          </Text>
+        </View>
+
         {/* QUICK SHORTCUTS TOP WIDGET */}
         <View style={styles.topWidgetWrapper}>
           <QuickAddWidget
@@ -394,27 +403,65 @@ export default function DashboardScreen() {
 
         {/* MODERN GAME CARDS LIST */}
         <View style={styles.gamesListSection}>
-          {displayedGames.map((game) => {
-            const seller = game.seller_id
-              ? sellerMap.get(game.seller_id)
-              : undefined;
-            return (
-              <GameCard
-                key={game.id}
-                game={game}
-                sellerName={seller?.name}
-                onPress={() => {
-                  try {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  } catch {}
-                  router.push(`/game/${game.id}`);
-                }}
-                onSellerPress={
-                  seller ? () => router.push(`/seller/${seller.id}`) : undefined
-                }
-              />
-            );
-          })}
+          {displayedGames.length === 0 ? (
+            <View style={styles.emptyVaultCard}>
+              <View style={styles.emptyIconCircle}>
+                <Gamepad2 size={36} color="#00D2FF" strokeWidth={2} />
+              </View>
+              <Text style={[styles.emptyVaultTitle, isRTL && styles.rtlText]}>
+                {games.length === 0
+                  ? t('emptyDashboardTitle')
+                  : t('noGamesFound')}
+              </Text>
+              <Text style={[styles.emptyVaultSubtitle, isRTL && styles.rtlText]}>
+                {games.length === 0
+                  ? t('emptyDashboardSubtitle')
+                  : t('noGamesFoundSub')}
+              </Text>
+              {games.length === 0 && (
+                <Pressable
+                  onPress={() => {
+                    try {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    } catch {}
+                    setGameModalVisible(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.emptyAddBtn,
+                    pressed && styles.emptyAddBtnPressed,
+                    isNativeRTL && { flexDirection: 'row-reverse' },
+                  ]}
+                >
+                  <Gamepad2 size={16} color="#FFFFFF" strokeWidth={2.2} />
+                  <Text style={styles.emptyAddBtnText}>
+                    {t('emptyDashboardActionBtn')}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            displayedGames.map((game) => {
+              const seller = game.seller_id
+                ? sellerMap.get(game.seller_id)
+                : undefined;
+              return (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  sellerName={seller?.name}
+                  onPress={() => {
+                    try {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    } catch {}
+                    router.push(`/game/${game.id}`);
+                  }}
+                  onSellerPress={
+                    seller ? () => router.push(`/seller/${seller.id}`) : undefined
+                  }
+                />
+              );
+            })
+          )}
         </View>
       </ScrollView>
 
@@ -445,8 +492,45 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       flex: 1,
     },
     scrollContent: {
-      paddingTop: 14,
+      paddingTop: 10,
       paddingBottom: 96,
+    },
+    sloganBanner: {
+      paddingHorizontal: 20,
+      paddingTop: 4,
+      paddingBottom: 16,
+    },
+    sloganTagRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 6,
+    },
+    sloganPulseDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#00D2FF',
+    },
+    sloganTagText: {
+      color: theme === 'dark' ? '#00D2FF' : '#0070D1',
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+    sloganMainText: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: '900',
+      letterSpacing: -0.4,
+      lineHeight: 28,
+    },
+    sloganSubText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '500',
+      marginTop: 4,
+      lineHeight: 18,
     },
     topWidgetWrapper: {
       paddingHorizontal: 20,
@@ -673,6 +757,65 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     gamesListSection: {
       paddingHorizontal: 20,
+    },
+    emptyVaultCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      paddingVertical: 36,
+      paddingHorizontal: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      boxShadow: theme === 'dark' ? '0px 8px 32px rgba(0, 0, 0, 0.4)' : '0px 8px 32px rgba(0, 0, 0, 0.05)',
+      marginTop: 4,
+      marginBottom: 20,
+    },
+    emptyIconCircle: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      backgroundColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.1)' : 'rgba(0, 112, 209, 0.08)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.25)' : 'rgba(0, 112, 209, 0.18)',
+    },
+    emptyVaultTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '800',
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    emptyVaultSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '500',
+      textAlign: 'center',
+      lineHeight: 20,
+      maxWidth: 290,
+      marginBottom: 20,
+    },
+    emptyAddBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#0070D1',
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 14,
+      boxShadow: '0px 4px 14px rgba(0, 112, 209, 0.35)',
+    },
+    emptyAddBtnPressed: {
+      opacity: 0.8,
+      transform: [{ scale: 0.98 }],
+    },
+    emptyAddBtnText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
     },
     rtlText: {
       textAlign: 'right',

@@ -1,5 +1,5 @@
 export type GameStatus = 'Active' | 'Locked' | 'In Resolution' | 'Archived' | 'Dead Loss';
-export type AccountType = 'Primary' | 'Secondary';
+export type AccountType = 'Primary' | 'Secondary' | 'Full';
 export type ContactPlatform = 'WhatsApp' | 'Telegram' | 'Discord' | 'Facebook' | 'Other';
 
 export interface SellerContactMethod {
@@ -59,4 +59,52 @@ export interface WarrantyCalculation {
   isExpiringSoon: boolean; // <= 14 days left
   daysRemaining: number;
   expiryDate: string;
+}
+
+// -----------------------------------------------------------------------------
+// DUAL PERSONA: SELLER / DISTRIBUTOR HUB TYPES (Forward-Ready)
+// -----------------------------------------------------------------------------
+export interface Client {
+  id: string;
+  user_id: string; // Seller ID who owns this client
+  name: string;
+  contact_platform: ContactPlatform;
+  contact_link: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type AllocationStatus = 'Active' | 'Revoked' | 'Replaced' | 'Expired';
+
+export interface ClientAllocation {
+  id: string;
+  user_id: string;
+  game_id: string;
+  client_id: string;
+  slot_type: AccountType; // 'Primary' | 'Secondary' | 'Full'
+  sale_price?: number;
+  sale_date: string;
+  warranty_months: number;
+  status: AllocationStatus;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+
+  // Joined relations (optional)
+  client?: Client;
+  game?: Game;
+}
+
+// -----------------------------------------------------------------------------
+// SYNC & BACKUP TYPES
+// -----------------------------------------------------------------------------
+export type SyncStatus = 'local_only' | 'synced' | 'syncing' | 'offline' | 'error';
+
+export interface PendingSyncItem {
+  id: string;
+  entity: 'game' | 'seller';
+  action: 'UPSERT' | 'DELETE';
+  payload: any;
+  timestamp: number;
 }

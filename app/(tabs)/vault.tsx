@@ -20,25 +20,21 @@ import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary';
+import { useVaultSync } from '../../context/VaultSyncContext';
+
+type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary' | 'Full';
 
 export default function VaultScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const { games, sellers, addGame, refreshData } = useVaultSync();
 
-  const [games, setGames] = useState<Game[]>([]);
-  const [sellers, setSellers] = useState<Seller[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterType>('All');
   const [refreshing, setRefreshing] = useState(false);
   const [gameModalVisible, setGameModalVisible] = useState(false);
-
-  const loadData = () => {
-    setGames(OfflineVault.getGames());
-    setSellers(OfflineVault.getSellers());
-  };
 
   const handleSaveGame = (gameData: any) => {
     const newGame: Game = {
@@ -48,21 +44,16 @@ export default function VaultScreen() {
       purchase_date: new Date().toISOString().split('T')[0],
       ...gameData,
     };
-    OfflineVault.addGame(newGame);
+    addGame(newGame);
     setGameModalVisible(false);
-    loadData();
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    refreshData();
     setTimeout(() => setRefreshing(false), 300);
   };
 
@@ -79,6 +70,7 @@ export default function VaultScreen() {
     if (filter === 'Locked') return g.status === 'Locked';
     if (filter === 'Primary') return g.account_type === 'Primary';
     if (filter === 'Secondary') return g.account_type === 'Secondary';
+    if (filter === 'Full') return g.account_type === 'Full';
     return true;
   });
 
@@ -88,6 +80,7 @@ export default function VaultScreen() {
     { key: 'Locked', label: t('filterLocked') },
     { key: 'Primary', label: t('filterPrimary') },
     { key: 'Secondary', label: t('filterSecondary') },
+    { key: 'Full', label: t('filterFull') },
   ];
 
   return (

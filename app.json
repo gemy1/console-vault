@@ -7,15 +7,30 @@
     "icon": "./assets/images/icon.png",
     "scheme": "consolevault",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#040914"
+    },
     "ios": {
       "supportsTablet": true,
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#040914"
+      },
       "infoPlist": {
         "NSFaceIDUsageDescription": "Console Vault uses Face ID to protect your sensitive PSN account credentials and backup codes."
       }
     },
     "android": {
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#040914"
+      },
       "adaptiveIcon": {
-        "backgroundColor": "#0A0E1A",
+        "backgroundColor": "#040914",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -38,7 +53,7 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0A0E1A"
+          "backgroundColor": "#040914"
         }
       ],
       [
@@ -46,7 +61,8 @@
         {
           "faceIDPermission": "Allow Console Vault to use Face ID to view sensitive PSN credentials."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true

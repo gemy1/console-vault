@@ -10,6 +10,8 @@ export const TRANSLATIONS = {
     // Headers & Subtitles
     headerDashboardTitle: 'Console Vault',
     headerDashboardSubtitle: 'PS5 Digital Library',
+    appSlogan: 'Your Digital PS5 Fortress & Warranty Hub',
+    appSloganSub: 'Track accounts, warranties & seller claims with zero data loss.',
     headerVaultTitle: 'Game Vault',
     headerVaultSubtitle: 'Inventory & Licenses',
     headerSellersTitle: 'Digital Sellers',
@@ -53,10 +55,14 @@ export const TRANSLATIONS = {
     filterLocked: 'Locked / Revoked',
     filterPrimary: 'Primary',
     filterSecondary: 'Secondary',
+    filterFull: 'Full Account',
     searchPlaceholder: 'Search by game title or PSN email...',
     noGamesFound: 'No Games Found',
     noGamesFoundSub: 'Try adjusting your search query or filter.',
     vaultEmptySub: 'Your vault is currently empty.',
+    emptyDashboardTitle: 'Your Vault is Ready',
+    emptyDashboardSubtitle: 'Add your first PS5 account or game purchase to start tracking credentials, warranties, and store claims.',
+    emptyDashboardActionBtn: 'Add First Game',
 
     // Sellers
     noSellersFound: 'No Digital Sellers Found',
@@ -77,6 +83,7 @@ export const TRANSLATIONS = {
     fieldAccountType: 'ACCOUNT ACTIVATION TYPE',
     accountTypePrimary: 'Primary Account',
     accountTypeSecondary: 'Secondary Account',
+    accountTypeFull: 'Full Account',
     fieldWarrantyDuration: 'WARRANTY DURATION (MONTHS)',
     warrantyCustomPlaceholder: 'Custom duration in months (e.g. 18)',
     warrantyMonthsUnit: 'Mos',
@@ -299,6 +306,11 @@ export const TRANSLATIONS = {
     menuSectionAccount: 'ACCOUNT & CLOUD',
     menuAccountGuest: 'Local Vault (Guest Mode)',
     menuAccountGuestSub: 'Ready for Supabase Multi-User Auth',
+    menuResetVault: 'Clear Cache / Start Fresh',
+    menuResetVaultSub: 'Reset local data to an empty clean vault',
+    alertResetTitle: 'Reset Vault Data',
+    alertResetMessage: 'Are you sure you want to clear all locally cached games and sellers? Cloud data will remain safe if synced.',
+    alertResetConfirm: 'Clear & Start Fresh',
   },
   ar: {
     // Navigation Tabs
@@ -309,6 +321,8 @@ export const TRANSLATIONS = {
     // Headers & Subtitles
     headerDashboardTitle: 'خزينة الكونسول',
     headerDashboardSubtitle: 'مكتبة ألعاب PS5 الرقمية',
+    appSlogan: 'حصنك الرقمي لحسابات وضمانات PS5',
+    appSloganSub: 'تتبع حساباتك، ضماناتك، ومطالبات المتاجر بأمان تام وبدون فقدان بيانات.',
     headerVaultTitle: 'خزينة الألعاب',
     headerVaultSubtitle: 'المخزون والتراخيص الرقمية',
     headerSellersTitle: 'المتاجر الرقمية',
@@ -352,10 +366,14 @@ export const TRANSLATIONS = {
     filterLocked: 'مقفل / ملغي',
     filterPrimary: 'رئيسي',
     filterSecondary: 'فرعي',
+    filterFull: 'حساب كامل',
     searchPlaceholder: 'ابحث باسم اللعبة أو بريد PSN...',
     noGamesFound: 'لم يتم العثور على ألعاب',
     noGamesFoundSub: 'حاول تعديل عبارة البحث أو الفلتر المحدد.',
     vaultEmptySub: 'خزينتك فارغة حالياً.',
+    emptyDashboardTitle: 'خزينتك جاهزة',
+    emptyDashboardSubtitle: 'أضف أول لعبة أو حساب PS5 للبدء في تتبع الضمانات، بيانات الدخول، والتواصل مع المتاجر بأمان.',
+    emptyDashboardActionBtn: 'إضافة أول لعبة',
 
     // Sellers
     noSellersFound: 'لا يوجد متاجر رقمية مسجلة',
@@ -376,6 +394,7 @@ export const TRANSLATIONS = {
     fieldAccountType: 'نوع تفعيل الحساب',
     accountTypePrimary: 'حساب رئيسي (Primary)',
     accountTypeSecondary: 'حساب فرعي (Secondary)',
+    accountTypeFull: 'حساب كامل (Full Account)',
     fieldWarrantyDuration: 'مدة الضمان (بالشهور)',
     warrantyCustomPlaceholder: 'مدة مخصصة بالشهور (مثال: 18)',
     warrantyMonthsUnit: 'شهر',
@@ -598,6 +617,11 @@ export const TRANSLATIONS = {
     menuSectionAccount: 'الحساب والسحابة',
     menuAccountGuest: 'الخزينة المحلية (وضع الزائر)',
     menuAccountGuestSub: 'جاهز لمصادقة Supabase وتعدد المستخدمين',
+    menuResetVault: 'تصفير الخزينة / البدء من جديد',
+    menuResetVaultSub: 'مسح البيانات التجريبية والبدء بخزينة نظيفة',
+    alertResetTitle: 'تصفير بيانات الخزينة',
+    alertResetMessage: 'هل أنت متأكد من مسح جميع الألعاب والمتاجر المخزنة محلياً على هذا الجهاز؟ بياناتك السحابية ستظل آمنة إذا كنت متزامناً.',
+    alertResetConfirm: 'مسح والبدء من جديد',
   },
 } as const;
 

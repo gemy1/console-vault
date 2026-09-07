@@ -20,13 +20,14 @@ import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 
+import { useVaultSync } from '../../context/VaultSyncContext';
+
 export default function SellersScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t } = useLanguage();
+  const { sellers, games, addSeller, updateSeller, refreshData } = useVaultSync();
 
-  const [sellers, setSellers] = useState<Seller[]>([]);
-  const [games, setGames] = useState<Game[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
 
@@ -34,18 +35,9 @@ export default function SellersScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
 
-  const loadData = () => {
-    setSellers(OfflineVault.getSellers());
-    setGames(OfflineVault.getGames());
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    refreshData();
     setTimeout(() => setRefreshing(false), 300);
   };
 
@@ -87,7 +79,7 @@ export default function SellersScreen() {
     notes?: string;
   }) => {
     if (editingSeller) {
-      OfflineVault.updateSeller(editingSeller.id, sellerData);
+      updateSeller(editingSeller.id, sellerData);
     } else {
       const newSeller: Seller = {
         id: `seller-${Date.now()}`,
@@ -95,14 +87,13 @@ export default function SellersScreen() {
         ...sellerData,
         created_at: new Date().toISOString(),
       };
-      OfflineVault.addSeller(newSeller);
+      addSeller(newSeller);
     }
 
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
 
-    loadData();
     setModalVisible(false);
   };
 

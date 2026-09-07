@@ -22,9 +22,11 @@ import { MenuToggleButton } from "../../components/common";
 import {
   PulsingPadlockBadge,
   ReplaceCredentialsModal,
+  GameFormModal,
 } from "../../components/games";
+import { useVaultSync } from "../../context/VaultSyncContext";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
-import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
+import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
 import {
   ChevronLeft,
@@ -38,20 +40,30 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Pencil,
 } from "lucide-react-native";
 
 export default function GameDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useVaultTheme();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [game, setGame] = useState<Game | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
   const [replaceModalVisible, setReplaceModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+
+  let vaultSync: ReturnType<typeof useVaultSync> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    vaultSync = useVaultSync();
+  } catch {}
 
   const { isUnlocked, requestUnlock, lock } = useBiometricGuard(60);
 
@@ -103,6 +115,32 @@ export default function GameDetailsScreen() {
             : Haptics.NotificationFeedbackType.Success,
         );
       } catch {}
+    }
+  };
+
+  const handleSaveEditedGame = (gameData: any) => {
+    if (!game) return;
+    const updated = vaultSync
+      ? vaultSync.updateGame(game.id, gameData)
+      : OfflineVault.updateGame(game.id, gameData);
+
+    if (updated) {
+      setGame(updated);
+      if (updated.seller_id) {
+        const sellers = OfflineVault.getSellers();
+        const foundSeller = sellers.find((s) => s.id === updated.seller_id);
+        setSeller(foundSeller || null);
+      } else {
+        setSeller(null);
+      }
+      setEditModalVisible(false);
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+      Alert.alert(
+        isRTL ? 'تم التعديل بنجاح' : 'Game Updated',
+        isRTL ? 'تم حفظ تعديلات اللعبة بنجاح في خزينتك.' : 'Game details have been saved successfully to your vault.'
+      );
     }
   };
 
@@ -204,6 +242,26 @@ export default function GameDetailsScreen() {
               />
             </Pressable>
 
+            <Pressable
+              onPress={() => {
+                try {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                } catch {}
+                setEditModalVisible(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [
+                styles.headerCircleBtn,
+                pressed && styles.headerCircleBtnPressed,
+              ]}
+            >
+              <Pencil
+                size={18}
+                color={styles.headerIconColor.color}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+
             <MenuToggleButton size={48} />
           </View>
         </View>
@@ -243,7 +301,11 @@ export default function GameDetailsScreen() {
                 ]}
               />
               <Text style={styles.accountTypeText}>
-                PS5 {game.account_type}
+                PS5 {game.account_type === 'Primary'
+                  ? t('accountTypePrimary')
+                  : game.account_type === 'Full'
+                  ? t('accountTypeFull')
+                  : t('accountTypeSecondary')}
               </Text>
             </View>
 
@@ -597,6 +659,28 @@ export default function GameDetailsScreen() {
             )}
           </View>
 
+          {/* EDIT GAME DETAILS BUTTON */}
+          <View style={styles.editSection}>
+            <Pressable
+              onPress={() => {
+                try {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                } catch {}
+                setEditModalVisible(true);
+              }}
+              style={({ pressed }) => [
+                styles.editGameBtn,
+                pressed && styles.editGameBtnPressed,
+                isNativeRTL && { flexDirection: 'row-reverse' },
+              ]}
+            >
+              <Pencil size={15} color={colors.accent} strokeWidth={2.2} />
+              <Text style={styles.editGameBtnText}>
+                {isRTL ? 'تعديل بيانات اللعبة' : 'Edit Game Details'}
+              </Text>
+            </Pressable>
+          </View>
+
           {/* STATUS ACTIONS */}
           <View style={styles.statusActionsSection}>
             <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('changeStatusPrompt')}</Text>
@@ -637,6 +721,14 @@ export default function GameDetailsScreen() {
         visible={replaceModalVisible}
         onClose={() => setReplaceModalVisible(false)}
         onSave={handleCredentialReplacement}
+      />
+
+      {/* EDIT GAME DETAILS MODAL */}
+      <GameFormModal
+        visible={editModalVisible}
+        initialGame={game}
+        onClose={() => setEditModalVisible(false)}
+        onSave={handleSaveEditedGame}
       />
     </View>
   );
@@ -1134,8 +1226,31 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       fontWeight: "800",
       fontSize: 13,
     },
+    editSection: {
+      marginTop: 18,
+    },
+    editGameBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 13,
+      borderRadius: 14,
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.08)" : "#E8F3FC",
+      borderWidth: 1,
+      borderColor: theme === "dark" ? "rgba(0, 210, 255, 0.25)" : "rgba(0, 112, 209, 0.2)",
+    },
+    editGameBtnPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.98 }],
+    },
+    editGameBtnText: {
+      color: theme === "dark" ? "#00D2FF" : "#0070D1",
+      fontSize: 13,
+      fontWeight: "800",
+    },
     statusActionsSection: {
-      marginTop: 20,
+      marginTop: 14,
     },
     markLockedBtn: {
       backgroundColor: colors.danger,

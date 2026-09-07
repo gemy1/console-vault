@@ -10,6 +10,7 @@ import {
   Animated,
   Easing,
   Linking,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { VaultText as Text } from './VaultText';
@@ -25,10 +26,21 @@ import {
   ChevronRight,
   ChevronLeft,
   Cloud,
+  Fingerprint,
+  RefreshCw,
+  LogOut,
+  LogIn,
+  Lock,
+  RotateCcw,
 } from 'lucide-react-native';
 import { useVaultTheme, ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { useAuth } from '../../context/AuthContext';
+import { useSecurity } from '../../context/SecurityContext';
+import { useVaultSync } from '../../context/VaultSyncContext';
+import { AuthModal } from '../auth/AuthModal';
+import { isSupabaseConfigured } from '../../services/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(320, Math.round(SCREEN_WIDTH * 0.8));
@@ -41,13 +53,52 @@ interface AppMenuModalProps {
 export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme, setTheme } = useVaultTheme();
+  const { theme, setTheme, colors } = useVaultTheme();
   const { language, setLanguage, t, isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
   const styles = useThemedStyles(createStyles);
 
   const animValue = useRef(new Animated.Value(0)).current;
   const [modalRendered, setModalRendered] = useState(visible);
+  const [authModalVisible, setAuthModalVisible] = useState(false);
+
+  let authState = { user: null as any, signOut: async () => {} };
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const auth = useAuth();
+    if (auth) authState = auth;
+  } catch {}
+
+  let securityState = {
+    isBiometricsAvailable: false,
+    isBiometricsEnabled: false,
+    toggleBiometrics: async (_val: boolean) => true,
+    lockVault: () => {},
+  };
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const sec = useSecurity();
+    if (sec) securityState = sec;
+  } catch {}
+
+  let syncState: {
+    syncStatus: import('../../types/vault').SyncStatus;
+    pendingCount: number;
+    lastSyncedAt: string | null;
+    syncNow: () => Promise<boolean>;
+    clearLocalVault: () => void;
+  } = {
+    syncStatus: isSupabaseConfigured ? 'synced' : 'local_only',
+    pendingCount: 0,
+    lastSyncedAt: null,
+    syncNow: async () => true,
+    clearLocalVault: () => {},
+  };
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const sync = useVaultSync();
+    if (sync) syncState = sync;
+  } catch {}
 
   useEffect(() => {
     if (visible) {
@@ -108,6 +159,84 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     setTimeout(() => {
       router.push('/modal');
     }, 120);
+  };
+
+  const handleSyncPress = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
+
+    if (!isSupabaseConfigured) {
+      Alert.alert(
+        isRTL ? 'الخزينة المحلية (سوبابيز غير متصل)' : 'Local Vault (Offline Mode)',
+        isRTL
+          ? 'تطبيقك يعمل حالياً كخزينة محلية ذاتية تماماً. لم يتم إعداد مفاتيح Supabase في ملف .env بعد، لذا يتم حفظ وتشفير كافة ألعابك ومبيعاتك بأمان على هذا الجهاز.'
+          : 'Your vault is operating in 100% offline local storage mode. Supabase credentials have not been connected in .env, so all your games and data are safely saved on this device.',
+        [{ text: isRTL ? 'حسناً' : 'Understood' }]
+      );
+      return;
+    }
+
+    if (!authState.user) {
+      Alert.alert(
+        isRTL ? 'تسجيل الدخول للمزامنة السحابية' : 'Sign In Required for Cloud Sync',
+        isRTL
+          ? 'سحابة Supabase متوفرة ولكنك في وضع الضيف. سجّل الدخول الآن لتفعيل المزامنة الفورية عبر الأجهزة.'
+          : 'Supabase is configured, but you are currently in Guest mode. Sign in to sync your vault across devices.',
+        [
+          { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
+          {
+            text: isRTL ? 'تسجيل الدخول' : 'Sign In',
+            onPress: () => setAuthModalVisible(true),
+          },
+        ]
+      );
+      return;
+    }
+
+    await syncState.syncNow();
+  };
+
+  const handleToggleBio = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    await securityState.toggleBiometrics(!securityState.isBiometricsEnabled);
+  };
+
+  const handleLockPress = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
+    handleDismiss();
+    setTimeout(() => {
+      securityState.lockVault();
+    }, 220);
+  };
+
+  const handleResetVault = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
+
+    Alert.alert(
+      t('alertResetTitle'),
+      t('alertResetMessage'),
+      [
+        { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
+        {
+          text: t('alertResetConfirm'),
+          style: 'destructive',
+          onPress: () => {
+            try {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {}
+            syncState.clearLocalVault();
+            handleDismiss();
+          },
+        },
+      ]
+    );
   };
 
   const handleOpenLinkedIn = () => {
@@ -176,13 +305,57 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
               </View>
             </View>
 
-            <Pressable
-              onPress={handleDismiss}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
-            >
-              <X size={17} color={styles.closeIcon.color} strokeWidth={2.4} />
-            </Pressable>
+            <View style={[styles.headerRightGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              {/* CLOUD SYNC LIVE BADGE */}
+              <Pressable
+                onPress={handleSyncPress}
+                style={({ pressed }) => [
+                  styles.headerSyncBadge,
+                  pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
+                  isNativeRTL && { flexDirection: 'row-reverse' },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.syncLiveDot,
+                    syncState.syncStatus === 'synced'
+                      ? styles.syncDotSuccess
+                      : syncState.syncStatus === 'syncing'
+                      ? styles.syncDotSyncing
+                      : syncState.syncStatus === 'offline'
+                      ? styles.syncDotOffline
+                      : syncState.syncStatus === 'local_only'
+                      ? styles.syncDotLocal
+                      : styles.syncDotOffline,
+                  ]}
+                />
+                <Text style={styles.headerSyncBadgeText}>
+                  {syncState.syncStatus === 'synced'
+                    ? isRTL
+                      ? 'متزامن'
+                      : 'Synced'
+                    : syncState.syncStatus === 'syncing'
+                    ? isRTL
+                      ? 'مزامنة...'
+                      : 'Syncing...'
+                    : syncState.syncStatus === 'local_only'
+                    ? isRTL
+                      ? 'خزينة محلية'
+                      : 'Local Vault'
+                    : isRTL
+                    ? `معلق (${syncState.pendingCount})`
+                    : `Offline (${syncState.pendingCount})`}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleDismiss}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
+              >
+                <X size={17} color={styles.closeIcon.color} strokeWidth={2.4} />
+              </Pressable>
+            </View>
           </View>
 
           <ScrollView
@@ -325,26 +498,233 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                 </Pressable>
 
                 {/* CLOUD SYNC & AUTH ROW */}
-                <View style={[styles.groupItem, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <View style={[styles.groupItem, styles.groupItemBorder, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                   <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                     <View style={styles.itemIconCircle}>
                       <Cloud size={16} color="#00D2FF" strokeWidth={2.2} />
                     </View>
-                    <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
-                      {isRTL ? 'الخزينة المحلية' : 'Local Vault'}
+                    <View>
+                      <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
+                        {authState.user
+                          ? authState.user.email?.split('@')[0] || (isRTL ? 'المستخدم' : 'Account')
+                          : isRTL
+                          ? 'الخزينة المحلية'
+                          : 'Local Vault'}
+                      </Text>
+                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
+                        {authState.user
+                          ? authState.user.email
+                          : isRTL
+                          ? 'مزامنة السحابة غير مفعلة'
+                          : 'Guest Mode (No Cloud)'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {authState.user ? (
+                    <Pressable
+                      onPress={async () => {
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        } catch {}
+                        await authState.signOut();
+                      }}
+                      style={styles.actionPillDanger}
+                    >
+                      <LogOut size={12} color={colors.danger} strokeWidth={2.2} />
+                      <Text style={styles.actionPillDangerText}>
+                        {isRTL ? 'خروج' : 'Sign Out'}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => {
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        } catch {}
+                        setAuthModalVisible(true);
+                      }}
+                      style={styles.actionPillPrimary}
+                    >
+                      <LogIn size={12} color="#00D2FF" strokeWidth={2.2} />
+                      <Text style={styles.actionPillPrimaryText}>
+                        {isRTL ? 'دخول' : 'Sign In'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* CLOUD SYNC NOW ROW */}
+                <View style={[styles.groupItem, styles.groupItemBorder, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <View style={styles.itemIconCircle}>
+                      <RefreshCw size={15} color={colors.accent} strokeWidth={2.2} />
+                    </View>
+                    <View>
+                      <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                        <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
+                          {syncState.syncStatus === 'local_only'
+                            ? isRTL
+                              ? 'وضع الخزينة'
+                              : 'Vault Storage'
+                            : isRTL
+                            ? 'حالة المزامنة'
+                            : 'Cloud Sync'}
+                        </Text>
+                        <View
+                          style={[
+                            styles.syncLiveDot,
+                            syncState.syncStatus === 'synced'
+                              ? styles.syncDotSuccess
+                              : syncState.syncStatus === 'syncing'
+                              ? styles.syncDotSyncing
+                              : syncState.syncStatus === 'offline'
+                              ? styles.syncDotOffline
+                              : syncState.syncStatus === 'local_only'
+                              ? styles.syncDotLocal
+                              : styles.syncDotOffline,
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
+                        {syncState.syncStatus === 'synced'
+                          ? isRTL
+                            ? 'متزامن بالكامل مع سحابة Supabase'
+                            : 'All changes synced with cloud'
+                          : syncState.syncStatus === 'syncing'
+                          ? isRTL
+                            ? 'جاري رفع التغييرات للسحابة...'
+                            : 'Syncing changes to cloud...'
+                          : syncState.syncStatus === 'local_only'
+                          ? !isSupabaseConfigured
+                            ? isRTL
+                              ? 'Supabase غير متصل • الحفظ محلي بالجهاز'
+                              : 'Supabase not connected • Saved locally'
+                            : isRTL
+                            ? 'وضع الضيف • سجّل الدخول لتفعيل المزامنة'
+                            : 'Guest mode • Sign in to sync across devices'
+                          : isRTL
+                          ? `وضع غير متصل (${syncState.pendingCount} معلق)`
+                          : `Offline (${syncState.pendingCount} pending)`}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    onPress={handleSyncPress}
+                    style={({ pressed }) => [
+                      styles.actionPillPrimary,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <RefreshCw size={11} color="#00D2FF" strokeWidth={2.2} />
+                    <Text style={styles.actionPillPrimaryText}>
+                      {syncState.syncStatus === 'local_only'
+                        ? !isSupabaseConfigured
+                          ? isRTL
+                            ? 'معلومات'
+                            : 'Info'
+                          : isRTL
+                          ? 'تفعيل'
+                          : 'Connect'
+                        : isRTL
+                        ? 'مزامنة الآن'
+                        : 'Sync Now'}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* BIOMETRIC FACE ID / TOUCH ID TOGGLE */}
+                <Pressable
+                  onPress={handleToggleBio}
+                  style={[styles.groupItem, styles.groupItemBorder, isNativeRTL && { flexDirection: 'row-reverse' }]}
+                >
+                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <View style={styles.itemIconCircle}>
+                      <Fingerprint size={16} color={colors.accent} strokeWidth={2.2} />
+                    </View>
+                    <View>
+                      <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
+                        {isRTL ? 'قفل الخزينة بالبصمة' : 'Biometric Lock'}
+                      </Text>
+                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
+                        {isRTL ? 'Face ID / بصمة الإصبع' : 'Require Face ID / Touch ID'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.toggleTrack,
+                      securityState.isBiometricsEnabled && styles.toggleTrackActive,
+                      isNativeRTL && { flexDirection: 'row-reverse' },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.toggleThumb,
+                        securityState.isBiometricsEnabled && styles.toggleThumbActive,
+                      ]}
+                    />
+                  </View>
+                </Pressable>
+
+                {/* LOCK VAULT NOW */}
+                <Pressable
+                  onPress={handleLockPress}
+                  style={({ pressed }) => [
+                    styles.groupItem,
+                    styles.groupItemBorder,
+                    isNativeRTL && { flexDirection: 'row-reverse' },
+                    pressed && styles.itemPressed,
+                  ]}
+                >
+                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <View style={styles.itemIconCircle}>
+                      <Lock size={15} color={colors.danger} strokeWidth={2.2} />
+                    </View>
+                    <Text style={[styles.groupItemText, { color: colors.danger }, isRTL && styles.rtlText]}>
+                      {isRTL ? 'قفل الخزينة الآن' : 'Lock Vault Now'}
                     </Text>
                   </View>
 
-                  <View style={[styles.statusPill, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                    <View style={styles.statusDot} />
-                    <Text style={styles.statusPillText}>
-                      {isRTL ? 'زائر' : 'Guest'}
-                    </Text>
+                  <Lock size={14} color={colors.danger} strokeWidth={2} />
+                </Pressable>
+
+                {/* RESET VAULT / START FRESH */}
+                <Pressable
+                  onPress={handleResetVault}
+                  style={({ pressed }) => [
+                    styles.groupItem,
+                    isNativeRTL && { flexDirection: 'row-reverse' },
+                    pressed && styles.itemPressed,
+                  ]}
+                >
+                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <View style={styles.itemIconCircle}>
+                      <RotateCcw size={15} color={colors.textMuted} strokeWidth={2.2} />
+                    </View>
+                    <View>
+                      <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
+                        {t('menuResetVault')}
+                      </Text>
+                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
+                        {t('menuResetVaultSub')}
+                      </Text>
+                    </View>
                   </View>
-                </View>
+
+                  <RotateCcw size={14} color={colors.textMuted} strokeWidth={2} />
+                </Pressable>
               </View>
             </View>
           </ScrollView>
+
+          {/* AUTH MODAL DIALOG */}
+          <AuthModal
+            visible={authModalVisible}
+            onClose={() => setAuthModalVisible(false)}
+          />
 
           {/* FOOTER: APP NAME, VERSION & GAMAL HAROUN ATTRIBUTION */}
           <View style={styles.footer}>
@@ -455,18 +835,53 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       marginTop: 1,
     },
     closeBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       backgroundColor: colors.surfaceSubtle,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
     },
     closeBtnPressed: {
-      opacity: 0.65,
-      transform: [{ scale: 0.93 }],
+      opacity: 0.6,
+    },
+    headerRightGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    headerSyncBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 12,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    },
+    headerSyncBadgeText: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    syncLiveDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+    },
+    syncDotSuccess: {
+      backgroundColor: '#30D158',
+    },
+    syncDotSyncing: {
+      backgroundColor: '#00D2FF',
+    },
+    syncDotOffline: {
+      backgroundColor: '#FF9F0A',
+    },
+    syncDotLocal: {
+      backgroundColor: '#64748B',
     },
     scrollContent: {
       gap: 20,
@@ -562,6 +977,64 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: colors.text,
       fontSize: 13,
       fontWeight: '700',
+    },
+    groupSubText: {
+      color: colors.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+    },
+    actionPillPrimary: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 9,
+      backgroundColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.12)' : '#E8F3FC',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.3)' : 'rgba(0, 112, 209, 0.25)',
+    },
+    actionPillPrimaryText: {
+      color: theme === 'dark' ? '#00D2FF' : '#0070D1',
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    actionPillDanger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 9,
+      backgroundColor: 'rgba(255, 59, 48, 0.12)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 59, 48, 0.25)',
+    },
+    actionPillDangerText: {
+      color: colors.danger,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    toggleTrack: {
+      width: 40,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
+      padding: 2,
+      justifyContent: 'center',
+    },
+    toggleTrackActive: {
+      backgroundColor: colors.accent,
+    },
+    toggleThumb: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: '#FFFFFF',
+    },
+    toggleThumbActive: {
+      alignSelf: 'flex-end',
+      backgroundColor: '#000000',
     },
     statusPill: {
       flexDirection: 'row',

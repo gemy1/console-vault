@@ -52,16 +52,28 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
           <View
             style={[
               styles.typeBadge,
-              game.account_type === 'Primary' ? styles.primaryBadge : styles.secondaryBadge,
+              game.account_type === 'Primary'
+                ? styles.primaryBadge
+                : game.account_type === 'Full'
+                ? styles.fullBadge
+                : styles.secondaryBadge,
             ]}
           >
             <Text
               style={[
                 styles.badgeText,
-                game.account_type === 'Primary' ? styles.primaryText : styles.secondaryText,
+                game.account_type === 'Primary'
+                  ? styles.primaryText
+                  : game.account_type === 'Full'
+                  ? styles.fullText
+                  : styles.secondaryText,
               ]}
             >
-              {game.account_type === 'Primary' ? t('accountTypePrimary') : t('accountTypeSecondary')}
+              {game.account_type === 'Primary'
+                ? t('accountTypePrimary')
+                : game.account_type === 'Full'
+                ? t('accountTypeFull')
+                : t('accountTypeSecondary')}
             </Text>
           </View>
 
@@ -212,11 +224,17 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     secondaryBadge: {
       backgroundColor: 'rgba(147, 51, 234, 0.15)',
     },
+    fullBadge: {
+      backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    },
     primaryText: {
       color: '#0070D1',
     },
     secondaryText: {
       color: '#9333EA',
+    },
+    fullText: {
+      color: '#F59E0B',
     },
     badgeText: {
       fontSize: 10,
