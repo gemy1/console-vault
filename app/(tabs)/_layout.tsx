@@ -128,10 +128,7 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
       borderRadius: 0,
       paddingTop: 6,
       elevation: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 4,
+      boxShadow: '0px -2px 4px rgba(0, 0, 0, 0.06)',
     },
     tabIconContainer: {
       alignItems: 'center',

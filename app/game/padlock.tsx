@@ -246,10 +246,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       marginTop: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
-      shadowRadius: 4,
+      boxShadow: theme === 'dark' ? '0px 1px 4px rgba(0, 0, 0, 0.2)' : '0px 1px 4px rgba(0, 0, 0, 0.04)',
+      elevation: 2,
     },
     sectionHeader: {
       color: colors.textMuted,

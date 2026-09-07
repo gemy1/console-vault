@@ -741,10 +741,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderRadius: 14,
       alignItems: 'center',
       backgroundColor: colors.accent,
-      shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
+      boxShadow: '0px 4px 8px rgba(0, 112, 209, 0.3)',
       elevation: 4,
     },
     submitBtnPressed: {

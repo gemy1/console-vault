@@ -150,10 +150,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       marginBottom: 14,
       borderWidth: 1,
       borderColor: colors.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: theme === 'dark' ? 0.25 : 0.05,
-      shadowRadius: 6,
+      boxShadow: theme === 'dark' ? '0px 2px 6px rgba(0, 0, 0, 0.25)' : '0px 2px 6px rgba(0, 0, 0, 0.05)',
+      elevation: 2,
     },
     cardPressed: {
       backgroundColor: colors.surfaceElevated,

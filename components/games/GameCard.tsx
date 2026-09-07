@@ -141,10 +141,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderColor: colors.border,
       flexDirection: 'row',
       alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: theme === 'dark' ? 0.25 : 0.05,
-      shadowRadius: 6,
+      boxShadow: theme === 'dark' ? '0px 2px 6px rgba(0, 0, 0, 0.25)' : '0px 2px 6px rgba(0, 0, 0, 0.05)',
+      elevation: 2,
     },
     cardLocked: {
       borderColor: colors.danger,

@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { OfflineVault } from '../../services/storage';
-import { ModernHeader } from '../../components/common';
+import { ModernHeader, QuickAddWidget } from '../../components/common';
 import { GameCard } from '../../components/games';
 import { Game, Seller } from '../../types/vault';
 import { Search, X, Gamepad2 } from 'lucide-react-native';
@@ -69,11 +69,21 @@ export default function VaultScreen() {
       <ModernHeader
         title="Game Vault"
         subtitle="Inventory & Licenses"
-        showAddButton={true}
-        onAddPress={() => router.push('/game/add')}
       />
 
       <View style={styles.controlsHeader}>
+        {/* QUICK ADD GAME TOP WIDGET */}
+        <QuickAddWidget
+          actions={[
+            {
+              label: 'Add New Game',
+              sublabel: 'Store credentials & set warranty',
+              icon: 'game',
+              onPress: () => router.push('/game/add'),
+            },
+          ]}
+        />
+
         {/* SEARCH BAR */}
         <View style={styles.searchBar}>
           <Search size={16} color={styles.searchIcon.color} strokeWidth={2.2} style={styles.searchIconMargin} />
@@ -188,10 +198,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderColor: colors.border,
       flexDirection: 'row',
       alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
-      shadowRadius: 4,
+      boxShadow: theme === 'dark' ? '0px 1px 4px rgba(0, 0, 0, 0.2)' : '0px 1px 4px rgba(0, 0, 0, 0.04)',
+      elevation: 2,
     },
     searchIcon: {
       color: colors.textMuted,
@@ -221,19 +229,16 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       paddingVertical: 8,
       borderRadius: 20,
       borderWidth: 1,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowRadius: 3,
     },
     filterChipActive: {
       backgroundColor: colors.pillActiveBg,
       borderColor: colors.pillActiveBg,
-      shadowOpacity: 0.12,
+      boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.12)',
     },
     filterChipInactive: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
-      shadowOpacity: 0.02,
+      boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.02)',
     },
     filterChipText: {
       fontSize: 12,

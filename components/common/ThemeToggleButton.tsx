@@ -36,10 +36,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       justifyContent: 'center',
       borderWidth: 1,
       borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: theme === 'dark' ? 0.35 : 0.1,
-      shadowRadius: 8,
+      boxShadow: theme === 'dark' ? '0px 4px 8px rgba(0, 0, 0, 0.35)' : '0px 4px 8px rgba(0, 0, 0, 0.1)',
       elevation: 4,
     },
     buttonPressed: {

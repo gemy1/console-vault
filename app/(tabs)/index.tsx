@@ -13,10 +13,11 @@ import {
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { OfflineVault } from "../../services/storage";
-import { Game, Seller } from "../../types/vault";
+import { Game, Seller, ContactPlatform, SellerContactMethod } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
-import { ModernHeader } from "../../components/common";
+import { ModernHeader, QuickAddWidget } from "../../components/common";
 import { GameCard, PulsingPadlockBadge } from "../../components/games";
+import { SellerFormModal } from "../../components/sellers";
 import {
   Gamepad2,
   ShieldCheck,
@@ -37,10 +38,33 @@ export default function DashboardScreen() {
   const [selectedCategory, setSelectedCategory] = useState<
     "All" | "Active" | "Locked"
   >("All");
+  const [sellerModalVisible, setSellerModalVisible] = useState(false);
 
   const loadData = () => {
     setGames(OfflineVault.getGames());
     setSellers(OfflineVault.getSellers());
+  };
+
+  const handleSaveSeller = (sellerData: {
+    name: string;
+    contact_platform: ContactPlatform;
+    contact_link: string;
+    contact_methods: SellerContactMethod[];
+    reputation_score: number;
+    notes?: string;
+  }) => {
+    const newSeller: Seller = {
+      id: `seller-${Date.now()}`,
+      user_id: 'user-demo',
+      ...sellerData,
+      created_at: new Date().toISOString(),
+    };
+    OfflineVault.addSeller(newSeller);
+    setSellerModalVisible(false);
+    loadData();
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
   };
 
   useEffect(() => {
@@ -80,8 +104,6 @@ export default function DashboardScreen() {
       <ModernHeader
         title="Console Vault"
         subtitle="PS5 Digital Library"
-        showAddButton={true}
-        onAddPress={() => router.push("/game/add")}
       />
 
       <ScrollView
@@ -95,6 +117,27 @@ export default function DashboardScreen() {
           />
         }
       >
+        {/* QUICK SHORTCUTS TOP WIDGET */}
+        <View style={styles.topWidgetWrapper}>
+          <QuickAddWidget
+            tag="Quick Shortcuts"
+            actions={[
+              {
+                label: "Add Game",
+                sublabel: "Store account",
+                icon: "game",
+                onPress: () => router.push("/game/add"),
+              },
+              {
+                label: "Add Seller",
+                sublabel: "Register contact",
+                icon: "seller",
+                onPress: () => setSellerModalVisible(true),
+              },
+            ]}
+          />
+        </View>
+
         {/* METRICS ROW */}
         <View style={styles.metricsRow}>
           {/* Total Games */}
@@ -341,6 +384,13 @@ export default function DashboardScreen() {
           })}
         </View>
       </ScrollView>
+
+      {/* QUICK SELLER REGISTRATION MODAL */}
+      <SellerFormModal
+        visible={sellerModalVisible}
+        onClose={() => setSellerModalVisible(false)}
+        onSave={handleSaveSeller}
+      />
     </View>
   );
 }
@@ -355,8 +405,11 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       flex: 1,
     },
     scrollContent: {
-      paddingTop: 16,
+      paddingTop: 14,
       paddingBottom: 40,
+    },
+    topWidgetWrapper: {
+      paddingHorizontal: 20,
     },
     accentColor: {
       color: colors.accent,
@@ -383,10 +436,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       padding: 14,
       borderWidth: 1,
       borderColor: colors.border,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: theme === "dark" ? 0.2 : 0.04,
-      shadowRadius: 6,
+      boxShadow: theme === "dark" ? "0px 2px 6px rgba(0, 0, 0, 0.2)" : "0px 2px 6px rgba(0, 0, 0, 0.04)",
+      elevation: 2,
     },
     metricCardDanger: {
       backgroundColor: theme === "dark" ? "#261014" : "#FEF2F2",
@@ -433,10 +484,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       padding: 16,
       borderWidth: 1.5,
       borderColor: colors.danger,
-      shadowColor: colors.danger,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: theme === "dark" ? 0.3 : 0.08,
-      shadowRadius: 10,
+      boxShadow: theme === "dark" ? "0px 4px 10px rgba(255, 59, 48, 0.3)" : "0px 4px 10px rgba(239, 68, 68, 0.08)",
+      elevation: 3,
     },
     padlockHeaderRow: {
       flexDirection: "row",
@@ -560,19 +609,16 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       paddingVertical: 8,
       borderRadius: 20,
       borderWidth: 1,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 1 },
-      shadowRadius: 3,
     },
     categoryPillActive: {
       backgroundColor: colors.pillActiveBg,
       borderColor: colors.pillActiveBg,
-      shadowOpacity: 0.12,
+      boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.12)",
     },
     categoryPillInactive: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
-      shadowOpacity: 0.02,
+      boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.02)",
     },
     categoryPillText: {
       fontSize: 12,

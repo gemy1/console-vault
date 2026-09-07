@@ -11,7 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { ChevronLeft, Gamepad2, Plus } from "lucide-react-native";
+import { ChevronLeft, Gamepad2 } from "lucide-react-native";
 import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
@@ -20,8 +20,6 @@ interface ModernHeaderProps {
   title?: string;
   subtitle?: string;
   showBackButton?: boolean;
-  showAddButton?: boolean;
-  onAddPress?: () => void;
   rightAction?: React.ReactNode;
   transparent?: boolean;
   /** Pass an Animated.Value driven by ScrollView onScroll to enable scroll-fade glass effect */
@@ -32,8 +30,6 @@ export function ModernHeader({
   title,
   subtitle,
   showBackButton = false,
-  showAddButton = false,
-  onAddPress,
   rightAction,
   transparent = false,
   scrollY,
@@ -81,16 +77,6 @@ export function ModernHeader({
       })
     : new Animated.Value(transparent ? 0 : 1);
 
-  const handleAdd = () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-    if (onAddPress) {
-      onAddPress();
-    } else {
-      router.push("/game/add");
-    }
-  };
 
   const handleBack = () => {
     try {
@@ -103,12 +89,11 @@ export function ModernHeader({
     <Animated.View style={[styles.wrapper, animatedStyle]}>
       {/* Frosted glass overlay */}
       <Animated.View
-        pointerEvents="none"
         style={[styles.glassOverlay, { opacity: bgOpacity }]}
       />
 
       {/* Thin gradient accent bar just below the notch */}
-      <View pointerEvents="none" style={[styles.accentBar, { top: safeTop }]}>
+      <View style={[styles.accentBar, { top: safeTop }]}>
         <View style={styles.accentSegPrimary} />
         <View style={styles.accentSegSecondary} />
         <View style={styles.accentSegTertiary} />
@@ -157,21 +142,6 @@ export function ModernHeader({
         {/* RIGHT: Actions */}
         <View style={styles.actions}>
           <ThemeToggleButton size={46} />
-
-          {showAddButton && (
-            <Pressable
-              onPress={handleAdd}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({ pressed }) => [
-                styles.pill,
-                styles.accentPill,
-                pressed && styles.accentPillPressed,
-              ]}
-            >
-              <Plus size={22} color="#FFFFFF" strokeWidth={2.5} />
-            </Pressable>
-          )}
-
           {rightAction}
         </View>
       </View>
@@ -194,6 +164,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       backgroundColor: theme === "dark" ? "rgba(8, 12, 22, 0.9)" : "rgba(245, 247, 251, 0.9)",
       borderBottomWidth: 1,
       borderBottomColor: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+      pointerEvents: "none",
     },
     accentBar: {
       position: "absolute",
@@ -201,6 +172,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       right: 0,
       height: 2,
       flexDirection: "row",
+      pointerEvents: "none",
     },
     accentSegPrimary: {
       flex: 1,
@@ -236,10 +208,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderWidth: 1,
       backgroundColor: theme === "dark" ? "rgba(255, 255, 255, 0.07)" : "rgba(255, 255, 255, 0.9)",
       borderColor: theme === "dark" ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.07)",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: theme === "dark" ? 0.45 : 0.12,
-      shadowRadius: 12,
+      boxShadow: theme === "dark" ? "0px 4px 12px rgba(0, 0, 0, 0.45)" : "0px 4px 12px rgba(0, 0, 0, 0.12)",
       elevation: 5,
     },
     pillPressed: {
@@ -297,15 +266,5 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-    },
-    accentPill: {
-      backgroundColor: "#0070D1",
-      borderColor: "rgba(0, 112, 209, 0.35)",
-      shadowColor: "#0070D1",
-      shadowOpacity: 0.6,
-    },
-    accentPillPressed: {
-      opacity: 0.7,
-      transform: [{ scale: 0.88 }],
     },
   });

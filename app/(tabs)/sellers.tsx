@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ShieldCheck, Plus, ChevronRight } from 'lucide-react-native';
+import { ShieldCheck } from 'lucide-react-native';
 import { OfflineVault } from '../../services/storage';
 import { Seller, Game } from '../../types/vault';
-import { ModernHeader } from '../../components/common';
+import { ModernHeader, QuickAddWidget } from '../../components/common';
 import { SellerCard, SellerFormModal } from '../../components/sellers';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
@@ -90,8 +90,6 @@ export default function SellersScreen() {
       <ModernHeader
         title="Digital Sellers"
         subtitle="Reputation & Multi-Contacts"
-        showAddButton={true}
-        onAddPress={handleOpenAdd}
       />
 
       <ScrollView
@@ -105,24 +103,17 @@ export default function SellersScreen() {
           />
         }
       >
-        {/* ADD SELLER QUICK BANNER */}
-        <Pressable
-          onPress={handleOpenAdd}
-          style={({ pressed }) => [styles.addBanner, pressed && styles.addBannerPressed]}
-        >
-          <View style={styles.bannerLeftRow}>
-            <View style={styles.bannerIconCircle}>
-              <Plus size={20} color={styles.accentIcon.color} strokeWidth={2.4} />
-            </View>
-            <View>
-              <Text style={styles.bannerTitle}>Register New Digital Seller</Text>
-              <Text style={styles.bannerSubtitle}>
-                Add WhatsApp, Facebook, Telegram & custom notes
-              </Text>
-            </View>
-          </View>
-          <ChevronRight size={18} color={styles.accentIcon.color} strokeWidth={2.2} />
-        </Pressable>
+        {/* QUICK REGISTER SELLER TOP WIDGET */}
+        <QuickAddWidget
+          actions={[
+            {
+              label: 'Register New Seller',
+              sublabel: 'Add WhatsApp, Telegram & custom notes',
+              icon: 'seller',
+              onPress: handleOpenAdd,
+            },
+          ]}
+        />
 
         {/* SELLERS LIST */}
         {sellers.length === 0 ? (
@@ -173,44 +164,6 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
     },
     accentIcon: {
       color: colors.accent,
-    },
-    addBanner: {
-      backgroundColor: colors.surface,
-      borderRadius: 18,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1.5,
-      borderColor: colors.accent,
-      borderStyle: 'dashed',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    addBannerPressed: {
-      backgroundColor: colors.surfaceElevated,
-    },
-    bannerLeftRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    bannerIconCircle: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(0, 112, 209, 0.15)',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    bannerTitle: {
-      color: colors.text,
-      fontSize: 15,
-      fontWeight: '800',
-    },
-    bannerSubtitle: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      marginTop: 2,
     },
     emptyContainer: {
       alignItems: 'center',
