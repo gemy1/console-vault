@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,6 +7,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { useThemedStyles } from '../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../context/ThemeContext';
 
 interface PulsingPadlockBadgeProps {
   size?: 'sm' | 'md' | 'lg';
@@ -14,6 +16,7 @@ interface PulsingPadlockBadgeProps {
 }
 
 export function PulsingPadlockBadge({ size = 'md', showLabel = true }: PulsingPadlockBadgeProps) {
+  const styles = useThemedStyles(createStyles);
   const pulseAnim = useSharedValue(1);
   const opacityAnim = useSharedValue(0.7);
 
@@ -35,46 +38,46 @@ export function PulsingPadlockBadge({ size = 'md', showLabel = true }: PulsingPa
     opacity: opacityAnim.value,
   }));
 
-  const coreSize = size === 'sm' ? 8 : size === 'lg' ? 14 : 10;
-  const ringSize = size === 'sm' ? 18 : size === 'lg' ? 28 : 22;
+  const coreDimension = size === 'sm' ? 8 : size === 'lg' ? 14 : 10;
+  const ringDimension = size === 'sm' ? 18 : size === 'lg' ? 28 : 22;
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={styles.container}>
+      <View
+        style={[
+          styles.ringContainer,
+          { width: ringDimension, height: ringDimension },
+        ]}
+      >
         <Animated.View
           style={[
             animatedRingStyle,
+            styles.animatedRing,
             {
-              position: 'absolute',
-              width: ringSize,
-              height: ringSize,
-              borderRadius: ringSize / 2,
-              backgroundColor: '#FF3B30',
+              width: ringDimension,
+              height: ringDimension,
+              borderRadius: ringDimension / 2,
             },
           ]}
         />
         <View
-          style={{
-            width: coreSize,
-            height: coreSize,
-            borderRadius: coreSize / 2,
-            backgroundColor: '#FF3B30',
-            borderWidth: 1.5,
-            borderColor: '#080B14',
-          }}
+          style={[
+            styles.coreDot,
+            {
+              width: coreDimension,
+              height: coreDimension,
+              borderRadius: coreDimension / 2,
+            },
+          ]}
         />
       </View>
 
       {showLabel && (
         <Text
-          style={{
-            color: '#FF453A',
-            fontSize: size === 'sm' ? 11 : 13,
-            fontWeight: '700',
-            marginLeft: 6,
-            letterSpacing: 0.5,
-            textTransform: 'uppercase',
-          }}
+          style={[
+            styles.label,
+            size === 'sm' ? styles.labelSmall : styles.labelRegular,
+          ]}
         >
           LOCKED / REVOKED
         </Text>
@@ -82,3 +85,37 @@ export function PulsingPadlockBadge({ size = 'md', showLabel = true }: PulsingPa
     </View>
   );
 }
+
+const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    ringContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    animatedRing: {
+      position: 'absolute',
+      backgroundColor: colors.danger,
+    },
+    coreDot: {
+      backgroundColor: colors.danger,
+      borderWidth: 1.5,
+      borderColor: colors.bg,
+    },
+    label: {
+      color: colors.danger,
+      fontWeight: '700',
+      marginLeft: 6,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+    },
+    labelSmall: {
+      fontSize: 11,
+    },
+    labelRegular: {
+      fontSize: 13,
+    },
+  });

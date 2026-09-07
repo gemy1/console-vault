@@ -5,31 +5,30 @@ import {
   ScrollView,
   Pressable,
   Image,
-  TextInput,
-  Modal,
   Alert,
-  Linking,
   Platform,
   StatusBar as RNStatusBar,
+  StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Game, Seller, GameStatus } from '../../types/vault';
-import { calculateWarranty, generateSellerDeepLink } from '../../utils/padlock';
+import { calculateWarranty } from '../../utils/padlock';
 import { useBiometricGuard } from '../../hooks/useBiometricGuard';
 import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
-import { ModernHeader } from '../../components/ModernHeader';
 import { ThemeToggleButton } from '../../components/ThemeToggleButton';
+import { ReplaceCredentialsModal } from '../../components/ReplaceCredentialsModal';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import {
   ChevronLeft,
   Heart,
   Gamepad2,
-  Star,
   ShieldCheck,
+  Star,
   ChevronRight,
   Lock,
   KeyRound,
@@ -42,13 +41,11 @@ export default function GameDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, theme } = useVaultTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [game, setGame] = useState<Game | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
   const [replaceModalVisible, setReplaceModalVisible] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -70,10 +67,10 @@ export default function GameDetailsScreen() {
 
   if (!game) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.text, fontSize: 16 }}>Game not found.</Text>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 12 }}>
-          <Text style={{ color: colors.accent, fontWeight: '700' }}>← Go Back</Text>
+      <View style={styles.notFoundContainer}>
+        <Text style={styles.notFoundText}>Game not found.</Text>
+        <Pressable onPress={() => router.back()} style={styles.goBackBtn}>
+          <Text style={styles.goBackText}>← Go Back</Text>
         </Pressable>
       </View>
     );
@@ -82,12 +79,12 @@ export default function GameDetailsScreen() {
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
   const isLocked = game.status === 'Locked';
 
-  const copyToClipboard = async (text: string, fieldName: string) => {
+  const copyToClipboard = async (text: string, fieldKey: string) => {
     await Clipboard.setStringAsync(text);
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
-    setCopiedField(fieldName);
+    setCopiedField(fieldKey);
     setTimeout(() => setCopiedField(null), 2000);
   };
 
@@ -96,28 +93,25 @@ export default function GameDetailsScreen() {
     if (updated) {
       setGame(updated);
       try {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        Haptics.notificationAsync(
+          newStatus === 'Locked'
+            ? Haptics.NotificationFeedbackType.Warning
+            : Haptics.NotificationFeedbackType.Success
+        );
       } catch {}
     }
   };
 
-  const handleCredentialReplacement = () => {
-    if (!newEmail.trim() || !newPassword.trim()) {
-      Alert.alert('Missing Fields', 'Please provide both new PSN email and password.');
-      return;
-    }
-
+  const handleCredentialReplacement = (newEmailVal: string, newPasswordVal: string) => {
+    if (!game) return;
     const updated = OfflineVault.updateGame(game.id, {
-      psn_email: newEmail.trim(),
-      psn_password: newPassword.trim(),
+      psn_email: newEmailVal,
+      psn_password: newPasswordVal,
       status: 'Active',
     });
 
     if (updated) {
       setGame(updated);
-      setReplaceModalVisible(false);
-      setNewEmail('');
-      setNewPassword('');
       Alert.alert('Credentials Updated', 'Old credentials archived to history. Game restored to Active.');
     }
   };
@@ -125,83 +119,37 @@ export default function GameDetailsScreen() {
   const androidStatusBar = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 36) : 0;
   const safeTop = Math.max(insets.top, Platform.OS === 'android' ? androidStatusBar : 48);
   const headerPaddingTop = safeTop + 12;
-  const buttonBg = theme === 'dark' ? colors.surfaceElevated : '#FFFFFF';
-  const buttonBorder = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* HERO COVER WITH FLOATING CIRCULAR HEADER BUTTONS (MATCHING USER ATTACHED IMAGE) */}
-      <View style={{ width: '100%', height: 280, position: 'relative' }}>
+    <View style={styles.container}>
+      {/* HERO COVER WITH FLOATING CIRCULAR HEADER BUTTONS */}
+      <View style={styles.heroWrapper}>
         {game.cover_image_url ? (
           <Image
             source={{ uri: game.cover_image_url }}
-            style={{ width: '100%', height: '100%' }}
+            style={styles.heroCoverImage}
             resizeMode="cover"
           />
         ) : (
-          <View
-            style={{
-              width: '100%',
-              height: '100%',
-              backgroundColor: theme === 'dark' ? '#0B1120' : '#E2E8F0',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Gamepad2 size={64} color={colors.textMuted} strokeWidth={1.5} />
+          <View style={styles.heroCoverPlaceholder}>
+            <Gamepad2 size={64} color={styles.placeholderIcon.color} strokeWidth={1.5} />
           </View>
         )}
 
         {/* CONTRAST VIGNETTE */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.25)',
-          }}
-        />
+        <View style={styles.vignette} />
 
         {/* FLOATING HEADER DIRECTLY BELOW NOTIFICATION BAR */}
-        <View
-          style={{
-            position: 'absolute',
-            top: headerPaddingTop,
-            left: 20,
-            right: 20,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* CIRCULAR BACK BUTTON (MATCHING REFERENCE IMAGE) */}
+        <View style={[styles.floatingHeader, { top: headerPaddingTop }]}>
           <Pressable
             onPress={() => router.back()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => ({
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: buttonBg,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: buttonBorder,
-              opacity: pressed ? 0.8 : 1,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.18,
-              shadowRadius: 10,
-              elevation: 5,
-            })}
+            style={({ pressed }) => [styles.headerCircleBtn, pressed && styles.headerCircleBtnPressed]}
           >
-            <ChevronLeft size={24} color={colors.text} strokeWidth={2.4} />
+            <ChevronLeft size={24} color={styles.headerIconColor.color} strokeWidth={2.4} />
           </Pressable>
 
-          {/* RIGHT CIRCULAR ACTIONS: FAVORITE BUTTON + THEME TOGGLE */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={styles.headerRightActions}>
             <Pressable
               onPress={() => {
                 try {
@@ -210,26 +158,11 @@ export default function GameDetailsScreen() {
                 setIsFavorite(!isFavorite);
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={({ pressed }) => ({
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: buttonBg,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: buttonBorder,
-                opacity: pressed ? 0.8 : 1,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.18,
-                shadowRadius: 10,
-                elevation: 5,
-              })}
+              style={({ pressed }) => [styles.headerCircleBtn, pressed && styles.headerCircleBtnPressed]}
             >
               <Heart
                 size={20}
-                color={isFavorite ? '#EF4444' : colors.text}
+                color={isFavorite ? '#EF4444' : styles.headerIconColor.color}
                 fill={isFavorite ? '#EF4444' : 'transparent'}
                 strokeWidth={2.2}
               />
@@ -240,627 +173,854 @@ export default function GameDetailsScreen() {
         </View>
       </View>
 
-      {/* OVERLAY SHEET (MATCHING "Rio de Janeiro" SHEET IN ATTACHED IMAGE) */}
+      {/* OVERLAY SHEET */}
       <ScrollView
-        style={{ flex: 1, marginTop: -32 }}
-        contentContainerStyle={{ paddingBottom: 60 }}
+        style={styles.sheetScroll}
+        contentContainerStyle={styles.sheetScrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={{
-            backgroundColor: colors.bg,
-            borderTopLeftRadius: 32,
-            borderTopRightRadius: 32,
-            paddingHorizontal: 20,
-            paddingTop: 14,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.12,
-            shadowRadius: 10,
-            elevation: 6,
-          }}
-        >
+        <View style={styles.sheetContent}>
           {/* SHEET HANDLE BAR */}
-          <View
-            style={{
-              width: 38,
-              height: 5,
-              borderRadius: 3,
-              backgroundColor: colors.border,
-              alignSelf: 'center',
-              marginBottom: 16,
-            }}
-          />
+          <View style={styles.sheetHandle} />
 
           {/* TITLE & REPUTATION / RATING ROW */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: 12,
-              marginBottom: 8,
-            }}
-          >
-            <Text
-              style={{
-                flex: 1,
-                color: colors.text,
-                fontSize: 24,
-                fontWeight: '800',
-                letterSpacing: -0.4,
-              }}
-            >
+          <View style={styles.titleRow}>
+            <Text style={styles.gameTitle}>
               {game.title}
             </Text>
 
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: theme === 'dark' ? 'rgba(255, 215, 0, 0.12)' : '#FEF3C7',
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: '#F59E0B',
-              }}
-            >
+            <View style={styles.ratingBadge}>
               <Star size={12} color="#F59E0B" fill="#F59E0B" />
-              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>
+              <Text style={styles.ratingText}>
                 {seller?.reputation_score ? seller.reputation_score.toFixed(1) : '5.0'}
               </Text>
             </View>
           </View>
 
           {/* BADGES & METADATA ROW */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={styles.badgesRow}>
+            <View style={styles.accountTypeRow}>
               <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: isLocked ? colors.danger : colors.success,
-                }}
+                style={[
+                  styles.statusIndicatorDot,
+                  isLocked ? styles.dotDanger : styles.dotSuccess,
+                ]}
               />
-              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '700' }}>
+              <Text style={styles.accountTypeText}>
                 PS5 {game.account_type}
               </Text>
             </View>
 
             <View
-              style={{
-                backgroundColor: isLocked
-                  ? (theme === 'dark' ? 'rgba(255, 59, 48, 0.2)' : '#FEE2E2')
+              style={[
+                styles.statusBadge,
+                isLocked
+                  ? styles.statusBadgeLocked
                   : game.status === 'Active'
-                  ? (theme === 'dark' ? 'rgba(48, 209, 88, 0.2)' : '#ECFDF5')
-                  : 'rgba(255, 159, 10, 0.2)',
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: 6,
-                borderWidth: 0.5,
-                borderColor: isLocked ? colors.danger : game.status === 'Active' ? colors.success : colors.warning,
-              }}
+                  ? styles.statusBadgeActive
+                  : styles.statusBadgeWarning,
+              ]}
             >
               <Text
-                style={{
-                  color: isLocked ? colors.danger : game.status === 'Active' ? colors.success : colors.warning,
-                  fontSize: 11,
-                  fontWeight: '800',
-                }}
+                style={[
+                  styles.statusBadgeText,
+                  isLocked
+                    ? styles.statusTextDanger
+                    : game.status === 'Active'
+                    ? styles.statusTextSuccess
+                    : styles.statusTextWarning,
+                ]}
               >
                 {game.status}
               </Text>
             </View>
 
-            <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+            <Text style={styles.purchaseDateText}>
               Purchased {game.purchase_date}
             </Text>
           </View>
 
-        {/* CLICKABLE SELLER CARD */}
-        {seller && (
-          <Pressable
-            onPress={() => router.push(`/seller/${seller.id}`)}
-            style={({ pressed }) => ({
-              backgroundColor: pressed ? colors.surfaceElevated : colors.surface,
-              borderRadius: 18,
-              padding: 14,
-              marginTop: 14,
-              borderWidth: 1,
-              borderColor: colors.border,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
-              shadowRadius: 4,
-            })}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: colors.surfaceSubtle,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <ShieldCheck size={20} color={colors.accent} strokeWidth={2} />
-              </View>
-              <View>
-                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 14 }}>
-                  Seller: {seller.name}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
-                  <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700' }}>
-                    Tap to view vendor profile & all games
-                  </Text>
-                  <ChevronRight size={12} color={colors.accent} strokeWidth={2.4} />
-                </View>
-              </View>
-            </View>
-
-            <View
-              style={{
-                backgroundColor: 'rgba(255, 215, 0, 0.12)',
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 10,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-              }}
+          {/* CLICKABLE SELLER CARD */}
+          {seller && (
+            <Pressable
+              onPress={() => router.push(`/seller/${seller.id}`)}
+              style={({ pressed }) => [styles.sellerCard, pressed && styles.sellerCardPressed]}
             >
-              <Star size={11} color="#FFD700" fill="#FFD700" />
-              <Text style={{ color: '#FFD700', fontWeight: '800', fontSize: 12 }}>
-                {seller.reputation_score.toFixed(1)}
-              </Text>
-            </View>
-          </Pressable>
-        )}
-
-        {/* PADLOCK BANNER */}
-        {isLocked && (
-          <View
-            style={{
-              backgroundColor: theme === 'dark' ? '#1E0E12' : '#FEF2F2',
-              borderRadius: 20,
-              padding: 16,
-              marginTop: 14,
-              borderWidth: 1.5,
-              borderColor: colors.danger,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <PulsingPadlockBadge size="sm" showLabel={false} />
-              <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 14 }}>
-                LICENSE REVOKED BY SONY
-              </Text>
-            </View>
-
-            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 6, lineHeight: 18 }}>
-              {warranty.isWarrantyActive
-                ? `Warranty is active (${warranty.daysRemaining} days remaining). Contact ${seller?.name || 'seller'} to request replacement credentials.`
-                : `Warranty expired on ${warranty.expiryDate}.`}
-            </Text>
-
-            {seller && (
-              <Pressable
-                onPress={() => {
-                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-                  router.push(`/game/padlock?id=${game.id}`);
-                }}
-                style={({ pressed }) => ({
-                  backgroundColor: pressed ? '#DC2626' : colors.danger,
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  marginTop: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                })}
-              >
-                <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
-                  Dispatch Warranty Claim via Padlock Protocol
-                </Text>
-                <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
-              </Pressable>
-            )}
-          </View>
-        )}
-
-        {/* WARRANTY COVERAGE */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 18,
-            padding: 16,
-            marginTop: 14,
-            borderWidth: 1,
-            borderColor: colors.border,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
-            shadowRadius: 4,
-          }}
-        >
-          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-            Warranty Coverage
-          </Text>
-
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 }}>
-            <Text
-              style={{
-                color: warranty.isWarrantyActive ? colors.success : colors.danger,
-                fontSize: 20,
-                fontWeight: '800',
-              }}
-            >
-              {warranty.isWarrantyActive ? `${warranty.daysRemaining} Days Left` : 'Expired'}
-            </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-              {game.warranty_months} Months Total
-            </Text>
-          </View>
-
-          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-            Expires: {warranty.expiryDate}
-          </Text>
-        </View>
-
-        {/* SENSITIVE CREDENTIALS (BIOMETRIC SHIELD) */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 20,
-            padding: 18,
-            marginTop: 14,
-            borderWidth: 1,
-            borderColor: isUnlocked ? colors.accent : colors.border,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: theme === 'dark' ? 0.25 : 0.05,
-            shadowRadius: 6,
-          }}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>
-              PSN Account Credentials
-            </Text>
-            {isUnlocked && (
-              <Pressable onPress={lock}>
-                <Text style={{ color: colors.danger, fontSize: 12, fontWeight: '700' }}>Hide & Lock</Text>
-              </Pressable>
-            )}
-          </View>
-
-          {!isUnlocked ? (
-            /* LOCKED VIEW */
-            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-              <Lock size={36} color={colors.accent} strokeWidth={2} style={{ marginBottom: 10 }} />
-              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
-                Credentials Protected
-              </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 4, marginBottom: 16 }}>
-                Biometric authentication required to view PSN email, password, and 2FA codes.
-              </Text>
-
-              <Pressable
-                onPress={requestUnlock}
-                style={({ pressed }) => ({
-                  backgroundColor: colors.text,
-                  paddingHorizontal: 22,
-                  paddingVertical: 12,
-                  borderRadius: 14,
-                  opacity: pressed ? 0.8 : 1,
-                })}
-              >
-                <Text style={{ color: colors.bg, fontWeight: '800', fontSize: 13 }}>
-                  Unlock with Face ID / Passcode
-                </Text>
-              </Pressable>
-            </View>
-          ) : (
-            /* UNLOCKED VIEW */
-            <View style={{ marginTop: 14 }}>
-              {/* PSN Email */}
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
-                  PSN EMAIL
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: colors.surfaceSubtle,
-                    borderRadius: 12,
-                    padding: 12,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                    {game.psn_email}
-                  </Text>
-                  <Pressable
-                    onPress={() => copyToClipboard(game.psn_email, 'email')}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                  >
-                    {copiedField === 'email' ? (
-                      <Check size={12} color={colors.success} strokeWidth={2.4} />
-                    ) : (
-                      <Copy size={12} color={colors.accent} strokeWidth={2.2} />
-                    )}
-                    <Text style={{ color: copiedField === 'email' ? colors.success : colors.accent, fontSize: 12, fontWeight: '800' }}>
-                      {copiedField === 'email' ? 'Copied' : 'Copy'}
-                    </Text>
-                  </Pressable>
+              <View style={styles.sellerCardLeft}>
+                <View style={styles.sellerAvatar}>
+                  <ShieldCheck size={20} color={styles.accentIcon.color} strokeWidth={2} />
                 </View>
-              </View>
-
-              {/* PSN Password */}
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
-                  PSN PASSWORD
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: colors.surfaceSubtle,
-                    borderRadius: 12,
-                    padding: 12,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                    {game.psn_password}
+                <View>
+                  <Text style={styles.sellerCardName}>
+                    Seller: {seller.name}
                   </Text>
-                  <Pressable
-                    onPress={() => copyToClipboard(game.psn_password, 'password')}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                  >
-                    {copiedField === 'password' ? (
-                      <Check size={12} color={colors.success} strokeWidth={2.4} />
-                    ) : (
-                      <Copy size={12} color={colors.accent} strokeWidth={2.2} />
-                    )}
-                    <Text style={{ color: copiedField === 'password' ? colors.success : colors.accent, fontSize: 12, fontWeight: '800' }}>
-                      {copiedField === 'password' ? 'Copied' : 'Copy'}
+                  <View style={styles.sellerSubtextRow}>
+                    <Text style={styles.sellerSubtext}>
+                      Tap to view vendor profile & all games
                     </Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* 2FA Backup Codes */}
-              {game.backup_codes && game.backup_codes.length > 0 && (
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
-                    2FA BACKUP CODES
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: colors.surfaceSubtle,
-                      borderRadius: 12,
-                      padding: 12,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    {game.backup_codes.map((code, index) => (
-                      <View
-                        key={index}
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          paddingVertical: 6,
-                          borderBottomWidth: index < game.backup_codes!.length - 1 ? 1 : 0,
-                          borderBottomColor: colors.border,
-                        }}
-                      >
-                        <Text style={{ color: colors.text, fontFamily: 'monospace', fontSize: 13 }}>
-                          {code}
-                        </Text>
-                        <Pressable
-                          onPress={() => copyToClipboard(code, `code-${index}`)}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                        >
-                          {copiedField === `code-${index}` ? (
-                            <Check size={12} color={colors.success} strokeWidth={2.4} />
-                          ) : (
-                            <Copy size={12} color={colors.accent} strokeWidth={2.2} />
-                          )}
-                          <Text style={{ color: copiedField === `code-${index}` ? colors.success : colors.accent, fontSize: 12, fontWeight: '700' }}>
-                            {copiedField === `code-${index}` ? 'Copied' : 'Copy'}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    ))}
+                    <ChevronRight size={12} color={styles.accentIcon.color} strokeWidth={2.4} />
                   </View>
                 </View>
-              )}
+              </View>
 
-              {/* Replace Credentials Action */}
-              <Pressable
-                onPress={() => setReplaceModalVisible(true)}
-                style={({ pressed }) => ({
-                  backgroundColor: colors.surfaceSubtle,
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'row',
-                  gap: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  marginTop: 6,
-                  opacity: pressed ? 0.8 : 1,
-                })}
+              <View style={styles.sellerRatingPill}>
+                <Star size={11} color="#FFD700" fill="#FFD700" />
+                <Text style={styles.sellerRatingText}>
+                  {seller.reputation_score.toFixed(1)}
+                </Text>
+              </View>
+            </Pressable>
+          )}
+
+          {/* PADLOCK BANNER */}
+          {isLocked && (
+            <View style={styles.padlockBanner}>
+              <View style={styles.padlockHeaderRow}>
+                <PulsingPadlockBadge size="sm" showLabel={false} />
+                <Text style={styles.padlockTitle}>
+                  LICENSE REVOKED BY SONY
+                </Text>
+              </View>
+
+              <Text style={styles.padlockDescription}>
+                {warranty.isWarrantyActive
+                  ? `Warranty is active (${warranty.daysRemaining} days remaining). Contact ${seller?.name || 'seller'} to request replacement credentials.`
+                  : `Warranty expired on ${warranty.expiryDate}.`}
+              </Text>
+
+              {seller && (
+                <Pressable
+                  onPress={() => {
+                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+                    router.push(`/game/padlock?id=${game.id}`);
+                  }}
+                  style={({ pressed }) => [styles.padlockDispatchBtn, pressed && styles.padlockDispatchBtnPressed]}
+                >
+                  <Text style={styles.padlockDispatchText}>
+                    Dispatch Warranty Claim via Padlock Protocol
+                  </Text>
+                  <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {/* WARRANTY COVERAGE */}
+          <View style={styles.warrantyCard}>
+            <Text style={styles.sectionHeader}>Warranty Coverage</Text>
+
+            <View style={styles.warrantyRow}>
+              <Text
+                style={[
+                  styles.warrantyDaysText,
+                  warranty.isWarrantyActive ? styles.statusTextSuccess : styles.statusTextDanger,
+                ]}
               >
-                <RefreshCw size={14} color={colors.accent} strokeWidth={2.2} />
-                <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 13 }}>
-                  Replace Credentials (Archive Old to History)
+                {warranty.isWarrantyActive ? `${warranty.daysRemaining} Days Left` : 'Expired'}
+              </Text>
+              <Text style={styles.warrantyMonthsTotal}>
+                {game.warranty_months} Months Total
+              </Text>
+            </View>
+
+            <Text style={styles.warrantyExpiresText}>
+              Expires: {warranty.expiryDate}
+            </Text>
+          </View>
+
+          {/* SENSITIVE CREDENTIALS (BIOMETRIC SHIELD) */}
+          <View style={[styles.credentialsCard, isUnlocked && styles.credentialsCardUnlocked]}>
+            <View style={styles.credentialsHeader}>
+              <Text style={styles.credentialsTitle}>
+                PSN Account Credentials
+              </Text>
+              {isUnlocked && (
+                <Pressable onPress={lock}>
+                  <Text style={styles.lockText}>Hide & Lock</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {!isUnlocked ? (
+              /* LOCKED VIEW */
+              <View style={styles.biometricPromptBox}>
+                <Lock size={36} color={styles.accentIcon.color} strokeWidth={2} style={styles.lockIconMargin} />
+                <Text style={styles.credentialsProtectedTitle}>
+                  Credentials Protected
+                </Text>
+                <Text style={styles.credentialsProtectedSubtitle}>
+                  Biometric authentication required to view PSN email, password, and 2FA codes.
+                </Text>
+
+                <Pressable
+                  onPress={requestUnlock}
+                  style={({ pressed }) => [styles.unlockBtn, pressed && styles.unlockBtnPressed]}
+                >
+                  <Text style={styles.unlockBtnText}>
+                    Unlock with Face ID / Passcode
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              /* UNLOCKED VIEW */
+              <View style={styles.unlockedBox}>
+                {/* PSN Email */}
+                <View style={styles.fieldSection}>
+                  <Text style={styles.fieldLabel}>PSN EMAIL</Text>
+                  <View style={styles.credentialRow}>
+                    <Text style={styles.credentialValue}>{game.psn_email}</Text>
+                    <Pressable
+                      onPress={() => copyToClipboard(game.psn_email, 'email')}
+                      style={styles.copyRow}
+                    >
+                      {copiedField === 'email' ? (
+                        <Check size={12} color={styles.successColor.color} strokeWidth={2.4} />
+                      ) : (
+                        <Copy size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
+                      )}
+                      <Text style={[styles.copyText, copiedField === 'email' && styles.copyTextSuccess]}>
+                        {copiedField === 'email' ? 'Copied' : 'Copy'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* PSN Password */}
+                <View style={styles.fieldSection}>
+                  <Text style={styles.fieldLabel}>PSN PASSWORD</Text>
+                  <View style={styles.credentialRow}>
+                    <Text style={styles.credentialValue}>{game.psn_password}</Text>
+                    <Pressable
+                      onPress={() => copyToClipboard(game.psn_password, 'password')}
+                      style={styles.copyRow}
+                    >
+                      {copiedField === 'password' ? (
+                        <Check size={12} color={styles.successColor.color} strokeWidth={2.4} />
+                      ) : (
+                        <Copy size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
+                      )}
+                      <Text style={[styles.copyText, copiedField === 'password' && styles.copyTextSuccess]}>
+                        {copiedField === 'password' ? 'Copied' : 'Copy'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* 2FA Backup Codes */}
+                {game.backup_codes && game.backup_codes.length > 0 && (
+                  <View style={styles.fieldSection}>
+                    <Text style={styles.fieldLabel}>2FA BACKUP CODES</Text>
+                    <View style={styles.codesBox}>
+                      {game.backup_codes.map((code, index) => (
+                        <View
+                          key={index}
+                          style={[
+                            styles.codeRow,
+                            index < game.backup_codes!.length - 1 && styles.codeRowDivider,
+                          ]}
+                        >
+                          <Text style={styles.monoCodeText}>{code}</Text>
+                          <Pressable
+                            onPress={() => copyToClipboard(code, `code-${index}`)}
+                            style={styles.copyRow}
+                          >
+                            {copiedField === `code-${index}` ? (
+                              <Check size={12} color={styles.successColor.color} strokeWidth={2.4} />
+                            ) : (
+                              <Copy size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
+                            )}
+                            <Text
+                              style={[
+                                styles.copyText,
+                                copiedField === `code-${index}` && styles.copyTextSuccess,
+                              ]}
+                            >
+                              {copiedField === `code-${index}` ? 'Copied' : 'Copy'}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Replace Credentials Action */}
+                <Pressable
+                  onPress={() => setReplaceModalVisible(true)}
+                  style={({ pressed }) => [styles.replaceCredentialsBtn, pressed && styles.replaceCredentialsBtnPressed]}
+                >
+                  <RefreshCw size={14} color={styles.accentIcon.color} strokeWidth={2.2} />
+                  <Text style={styles.replaceCredentialsText}>
+                    Replace Credentials (Archive Old to History)
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          {/* STATUS ACTIONS */}
+          <View style={styles.statusActionsSection}>
+            <Text style={styles.sectionHeader}>Account Status Actions</Text>
+
+            {!isLocked ? (
+              <Pressable
+                onPress={() => toggleGameStatus('Locked')}
+                style={({ pressed }) => [styles.markLockedBtn, pressed && styles.markLockedBtnPressed]}
+              >
+                <Lock size={15} color="#FFFFFF" strokeWidth={2.4} />
+                <Text style={styles.statusActionText}>
+                  Mark as Locked (Padlock Protocol)
                 </Text>
               </Pressable>
-            </View>
-          )}
-        </View>
-
-        {/* STATUS ACTIONS */}
-        <View style={{ marginTop: 20 }}>
-          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 10 }}>
-            Account Status Actions
-          </Text>
-
-          {!isLocked ? (
-            <Pressable
-              onPress={() => toggleGameStatus('Locked')}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? '#DC2626' : colors.danger,
-                paddingVertical: 14,
-                borderRadius: 14,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: 8,
-              })}
-            >
-              <Lock size={15} color="#FFFFFF" strokeWidth={2.4} />
-              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
-                Mark as Locked (Padlock Protocol)
-              </Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              onPress={() => toggleGameStatus('Active')}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? '#059669' : colors.success,
-                paddingVertical: 14,
-                borderRadius: 14,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: 8,
-              })}
-            >
-              <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
-                Mark as Active / Restored
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
-    </ScrollView>
-
-      {/* CREDENTIAL REPLACEMENT MODAL */}
-      <Modal visible={replaceModalVisible} transparent animationType="slide">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              padding: 24,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 4 }}>
-              Replace PSN Credentials
-            </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 16 }}>
-              The existing email and password will be archived into your credential history log.
-            </Text>
-
-            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
-              NEW PSN EMAIL
-            </Text>
-            <TextInput
-              placeholder="new.psn.account@gmail.com"
-              placeholderTextColor={colors.textMuted}
-              value={newEmail}
-              onChangeText={setNewEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={{
-                backgroundColor: colors.surfaceSubtle,
-                color: colors.text,
-                borderRadius: 12,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                marginBottom: 14,
-              }}
-            />
-
-            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
-              NEW PSN PASSWORD
-            </Text>
-            <TextInput
-              placeholder="NewPassword#2024"
-              placeholderTextColor={colors.textMuted}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              autoCapitalize="none"
-              secureTextEntry
-              style={{
-                backgroundColor: colors.surfaceSubtle,
-                color: colors.text,
-                borderRadius: 12,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                marginBottom: 20,
-              }}
-            />
-
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            ) : (
               <Pressable
-                onPress={() => setReplaceModalVisible(false)}
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.surfaceSubtle,
-                  paddingVertical: 14,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                }}
+                onPress={() => toggleGameStatus('Active')}
+                style={({ pressed }) => [styles.markActiveBtn, pressed && styles.markActiveBtnPressed]}
               >
-                <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Cancel</Text>
+                <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.statusActionText}>
+                  Mark as Active / Restored
+                </Text>
               </Pressable>
-
-              <Pressable
-                onPress={handleCredentialReplacement}
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.text,
-                  paddingVertical: 14,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: colors.bg, fontWeight: '800' }}>Save & Archive</Text>
-              </Pressable>
-            </View>
+            )}
           </View>
         </View>
-      </Modal>
+      </ScrollView>
+
+      {/* CREDENTIAL REPLACEMENT MODAL */}
+      <ReplaceCredentialsModal
+        visible={replaceModalVisible}
+        onClose={() => setReplaceModalVisible(false)}
+        onSave={handleCredentialReplacement}
+      />
     </View>
   );
 }
+
+const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    notFoundContainer: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    notFoundText: {
+      color: colors.text,
+      fontSize: 16,
+    },
+    goBackBtn: {
+      marginTop: 12,
+    },
+    goBackText: {
+      color: colors.accent,
+      fontWeight: '700',
+    },
+    heroWrapper: {
+      width: '100%',
+      height: 280,
+      position: 'relative',
+    },
+    heroCoverImage: {
+      width: '100%',
+      height: '100%',
+    },
+    heroCoverPlaceholder: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: theme === 'dark' ? '#0B1120' : '#E2E8F0',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    placeholderIcon: {
+      color: colors.textMuted,
+    },
+    vignette: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    },
+    floatingHeader: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    headerCircleBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme === 'dark' ? colors.surfaceElevated : '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      elevation: 5,
+    },
+    headerCircleBtnPressed: {
+      opacity: 0.8,
+    },
+    headerIconColor: {
+      color: colors.text,
+    },
+    headerRightActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    sheetScroll: {
+      flex: 1,
+      marginTop: -32,
+    },
+    sheetScrollContent: {
+      paddingBottom: 60,
+    },
+    sheetContent: {
+      backgroundColor: colors.bg,
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    sheetHandle: {
+      width: 38,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+      alignSelf: 'center',
+      marginBottom: 16,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginBottom: 8,
+    },
+    gameTitle: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: '800',
+      letterSpacing: -0.4,
+    },
+    ratingBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 215, 0, 0.12)' : '#FEF3C7',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#F59E0B',
+    },
+    ratingText: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    badgesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 18,
+      flexWrap: 'wrap',
+    },
+    accountTypeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    statusIndicatorDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    dotDanger: {
+      backgroundColor: colors.danger,
+    },
+    dotSuccess: {
+      backgroundColor: colors.success,
+    },
+    accountTypeText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+      borderWidth: 0.5,
+    },
+    statusBadgeActive: {
+      backgroundColor: theme === 'dark' ? 'rgba(48, 209, 88, 0.2)' : '#ECFDF5',
+      borderColor: colors.success,
+    },
+    statusBadgeLocked: {
+      backgroundColor: theme === 'dark' ? 'rgba(255, 59, 48, 0.2)' : '#FEE2E2',
+      borderColor: colors.danger,
+    },
+    statusBadgeWarning: {
+      backgroundColor: 'rgba(255, 159, 10, 0.2)',
+      borderColor: colors.warning,
+    },
+    statusBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    statusTextSuccess: {
+      color: colors.success,
+    },
+    statusTextDanger: {
+      color: colors.danger,
+    },
+    statusTextWarning: {
+      color: colors.warning,
+    },
+    purchaseDateText: {
+      color: colors.textMuted,
+      fontSize: 12,
+    },
+    sellerCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 14,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
+      shadowRadius: 4,
+    },
+    sellerCardPressed: {
+      backgroundColor: colors.surfaceElevated,
+    },
+    sellerCardLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    sellerAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surfaceSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    accentIcon: {
+      color: colors.accent,
+    },
+    successColor: {
+      color: colors.success,
+    },
+    sellerCardName: {
+      color: colors.text,
+      fontWeight: '800',
+      fontSize: 14,
+    },
+    sellerSubtextRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      marginTop: 2,
+    },
+    sellerSubtext: {
+      color: colors.accent,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    sellerRatingPill: {
+      backgroundColor: 'rgba(255, 215, 0, 0.12)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    sellerRatingText: {
+      color: '#FFD700',
+      fontWeight: '800',
+      fontSize: 12,
+    },
+    padlockBanner: {
+      backgroundColor: theme === 'dark' ? '#1E0E12' : '#FEF2F2',
+      borderRadius: 20,
+      padding: 16,
+      marginTop: 14,
+      borderWidth: 1.5,
+      borderColor: colors.danger,
+    },
+    padlockHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    padlockTitle: {
+      color: colors.danger,
+      fontWeight: '800',
+      fontSize: 14,
+    },
+    padlockDescription: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      marginTop: 6,
+      lineHeight: 18,
+    },
+    padlockDispatchBtn: {
+      backgroundColor: colors.danger,
+      paddingVertical: 12,
+      borderRadius: 12,
+      marginTop: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    padlockDispatchBtnPressed: {
+      backgroundColor: '#DC2626',
+    },
+    padlockDispatchText: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+      fontSize: 13,
+    },
+    warrantyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 16,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
+      shadowRadius: 4,
+    },
+    sectionHeader: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    warrantyRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      marginTop: 8,
+    },
+    warrantyDaysText: {
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    warrantyMonthsTotal: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    warrantyExpiresText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    credentialsCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 18,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: theme === 'dark' ? 0.25 : 0.05,
+      shadowRadius: 6,
+    },
+    credentialsCardUnlocked: {
+      borderColor: colors.accent,
+    },
+    credentialsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    credentialsTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    lockText: {
+      color: colors.danger,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    biometricPromptBox: {
+      alignItems: 'center',
+      paddingVertical: 20,
+    },
+    lockIconMargin: {
+      marginBottom: 10,
+    },
+    credentialsProtectedTitle: {
+      color: colors.text,
+      fontWeight: '800',
+      fontSize: 15,
+    },
+    credentialsProtectedSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      textAlign: 'center',
+      marginTop: 4,
+      marginBottom: 16,
+    },
+    unlockBtn: {
+      backgroundColor: colors.text,
+      paddingHorizontal: 22,
+      paddingVertical: 12,
+      borderRadius: 14,
+    },
+    unlockBtnPressed: {
+      opacity: 0.8,
+    },
+    unlockBtnText: {
+      color: colors.bg,
+      fontWeight: '800',
+      fontSize: 13,
+    },
+    unlockedBox: {
+      marginTop: 14,
+    },
+    fieldSection: {
+      marginBottom: 12,
+    },
+    fieldLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+      marginBottom: 4,
+    },
+    credentialRow: {
+      backgroundColor: colors.surfaceSubtle,
+      borderRadius: 12,
+      padding: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    credentialValue: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    copyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    copyText: {
+      color: colors.accent,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    copyTextSuccess: {
+      color: colors.success,
+    },
+    codesBox: {
+      backgroundColor: colors.surfaceSubtle,
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    codeRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 6,
+    },
+    codeRowDivider: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    monoCodeText: {
+      color: colors.text,
+      fontFamily: 'monospace',
+      fontSize: 13,
+    },
+    replaceCredentialsBtn: {
+      backgroundColor: colors.surfaceSubtle,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginTop: 6,
+    },
+    replaceCredentialsBtnPressed: {
+      opacity: 0.8,
+    },
+    replaceCredentialsText: {
+      color: colors.accent,
+      fontWeight: '800',
+      fontSize: 13,
+    },
+    statusActionsSection: {
+      marginTop: 20,
+    },
+    markLockedBtn: {
+      backgroundColor: colors.danger,
+      paddingVertical: 14,
+      borderRadius: 14,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    markLockedBtnPressed: {
+      backgroundColor: '#DC2626',
+    },
+    markActiveBtn: {
+      backgroundColor: colors.success,
+      paddingVertical: 14,
+      borderRadius: 14,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    markActiveBtnPressed: {
+      backgroundColor: '#059669',
+    },
+    statusActionText: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+      fontSize: 14,
+    },
+  });

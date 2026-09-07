@@ -1,0 +1,276 @@
+import React from 'react';
+import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { Gamepad2, ChevronRight } from 'lucide-react-native';
+import { Game } from '../types/vault';
+import { calculateWarranty } from '../utils/padlock';
+import { useThemedStyles } from '../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../context/ThemeContext';
+
+interface GameCardProps {
+  game: Game;
+  sellerName?: string;
+  onPress: () => void;
+  onSellerPress?: () => void;
+}
+
+export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardProps) {
+  const styles = useThemedStyles(createStyles);
+  const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
+  const isLocked = game.status === 'Locked';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        isLocked && styles.cardLocked,
+        pressed && styles.cardPressed,
+      ]}
+    >
+      {/* THUMBNAIL */}
+      {game.cover_image_url ? (
+        <Image source={{ uri: game.cover_image_url }} style={styles.coverImage} />
+      ) : (
+        <View style={styles.coverPlaceholder}>
+          <Gamepad2 size={24} color={styles.placeholderIcon.color} strokeWidth={1.8} />
+        </View>
+      )}
+
+      {/* DETAILS */}
+      <View style={styles.details}>
+        <Text style={styles.title} numberOfLines={1}>
+          {game.title}
+        </Text>
+
+        {/* PILLS */}
+        <View style={styles.pillRow}>
+          <View
+            style={[
+              styles.typeBadge,
+              game.account_type === 'Primary' ? styles.primaryBadge : styles.secondaryBadge,
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                game.account_type === 'Primary' ? styles.primaryText : styles.secondaryText,
+              ]}
+            >
+              {game.account_type}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.statusBadge,
+              isLocked
+                ? styles.statusLocked
+                : game.status === 'Active'
+                ? styles.statusActive
+                : styles.statusWarning,
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                isLocked
+                  ? styles.statusLockedText
+                  : game.status === 'Active'
+                  ? styles.statusActiveText
+                  : styles.statusWarningText,
+              ]}
+            >
+              {game.status}
+            </Text>
+          </View>
+        </View>
+
+        {/* WARRANTY & SELLER LINK */}
+        <View style={styles.warrantyContainer}>
+          <Text style={styles.warrantyText}>
+            {warranty.isWarrantyActive ? (
+              <>
+                Warranty:{' '}
+                <Text
+                  style={[
+                    styles.warrantyHighlight,
+                    warranty.isExpiringSoon ? styles.warrantyExpiring : styles.warrantyGood,
+                  ]}
+                >
+                  {warranty.daysRemaining} days left
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.warrantyExpired}>Warranty Expired</Text>
+            )}
+          </Text>
+
+          {sellerName && (
+            <Pressable
+              onPress={(e) => {
+                if (onSellerPress) {
+                  e.stopPropagation();
+                  onSellerPress();
+                }
+              }}
+              style={styles.sellerLink}
+            >
+              <Text style={styles.sellerName}>Seller: {sellerName}</Text>
+              <ChevronRight size={11} color={styles.sellerChevron.color} strokeWidth={2.4} />
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* CIRCULAR ARROW ACTION */}
+      <View style={styles.arrowCircle}>
+        <ChevronRight size={16} color={styles.arrowIcon.color} strokeWidth={2.4} />
+      </View>
+    </Pressable>
+  );
+}
+
+const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 14,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: theme === 'dark' ? 0.25 : 0.05,
+      shadowRadius: 6,
+    },
+    cardLocked: {
+      borderColor: colors.danger,
+    },
+    cardPressed: {
+      backgroundColor: colors.surfaceElevated,
+    },
+    coverImage: {
+      width: 62,
+      height: 82,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceSubtle,
+    },
+    coverPlaceholder: {
+      width: 62,
+      height: 82,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    placeholderIcon: {
+      color: colors.textMuted,
+    },
+    details: {
+      flex: 1,
+      marginLeft: 14,
+    },
+    title: {
+      color: colors.text,
+      fontWeight: '800',
+      fontSize: 15,
+    },
+    pillRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 4,
+    },
+    typeBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    primaryBadge: {
+      backgroundColor: 'rgba(0, 112, 209, 0.15)',
+    },
+    secondaryBadge: {
+      backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    },
+    primaryText: {
+      color: '#0070D1',
+    },
+    secondaryText: {
+      color: '#9333EA',
+    },
+    badgeText: {
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    statusBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    statusActive: {
+      backgroundColor: theme === 'dark' ? 'rgba(48, 209, 88, 0.2)' : '#ECFDF5',
+    },
+    statusActiveText: {
+      color: colors.success,
+    },
+    statusLocked: {
+      backgroundColor: theme === 'dark' ? 'rgba(255, 59, 48, 0.2)' : '#FEE2E2',
+    },
+    statusLockedText: {
+      color: colors.danger,
+    },
+    statusWarning: {
+      backgroundColor: 'rgba(255, 159, 10, 0.2)',
+    },
+    statusWarningText: {
+      color: colors.warning,
+    },
+    warrantyContainer: {
+      marginTop: 6,
+    },
+    warrantyText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    warrantyHighlight: {
+      fontWeight: '800',
+    },
+    warrantyGood: {
+      color: colors.success,
+    },
+    warrantyExpiring: {
+      color: colors.warning,
+    },
+    warrantyExpired: {
+      color: colors.textMuted,
+    },
+    sellerLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      marginTop: 2,
+    },
+    sellerName: {
+      color: colors.accent,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    sellerChevron: {
+      color: colors.accent,
+    },
+    arrowCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: colors.surfaceSubtle,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 10,
+    },
+    arrowIcon: {
+      color: colors.text,
+    },
+  });

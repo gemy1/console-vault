@@ -4,30 +4,30 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Linking,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Game, Seller } from '../../types/vault';
 import {
   calculateWarranty,
-  generateSellerDeepLink,
   generateWarrantyClaimMessage,
 } from '../../utils/padlock';
 import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
 import { Copy, Check, ChevronRight } from 'lucide-react-native';
 import { PlatformIcon } from '../../components/PlatformIcon';
 import { getSellerContactList, openSellerContact } from '../../utils/contacts';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 
 export default function PadlockProtocolModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { colors, theme } = useVaultTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [game, setGame] = useState<Game | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -49,8 +49,8 @@ export default function PadlockProtocolModal() {
 
   if (!game) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.text }}>No game selected.</Text>
+      <SafeAreaView style={styles.notFoundContainer}>
+        <Text style={styles.notFoundText}>No game selected.</Text>
       </SafeAreaView>
     );
   }
@@ -75,147 +75,83 @@ export default function PadlockProtocolModal() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView style={styles.container}>
       {/* HEADER */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingVertical: 14,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        }}
-      >
+      <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={{ color: colors.textSecondary, fontSize: 15, fontWeight: '700' }}>Close</Text>
+          <Text style={styles.closeText}>Close</Text>
         </Pressable>
-        <Text style={{ color: colors.danger, fontSize: 16, fontWeight: '800' }}>
-          PADLOCK PROTOCOL
-        </Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>PADLOCK PROTOCOL</Text>
+        <View style={styles.headerPlaceholder} />
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* ALERT HEADER */}
-        <View
-          style={{
-            backgroundColor: theme === 'dark' ? '#261014' : '#FEF2F2',
-            borderRadius: 22,
-            padding: 18,
-            borderWidth: 1.5,
-            borderColor: colors.danger,
-            alignItems: 'center',
-          }}
-        >
+        <View style={styles.alertCard}>
           <PulsingPadlockBadge size="lg" showLabel={false} />
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 10 }}>
-            License Revocation Protocol
-          </Text>
-          <Text style={{ color: colors.danger, fontSize: 13, textAlign: 'center', marginTop: 4, fontWeight: '600' }}>
+          <Text style={styles.alertTitle}>License Revocation Protocol</Text>
+          <Text style={styles.alertSubtitle}>
             Generate and dispatch your automated warranty replacement claim.
           </Text>
         </View>
 
         {/* STATUS CARD */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 18,
-            padding: 16,
-            marginTop: 16,
-            borderWidth: 1,
-            borderColor: colors.border,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
-            shadowRadius: 4,
-          }}
-        >
-          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-            WARRANTY VERIFICATION
-          </Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>{game.title}</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionHeader}>WARRANTY VERIFICATION</Text>
+          <View style={styles.warrantyRow}>
+            <Text style={styles.gameTitle}>{game.title}</Text>
             <Text
-              style={{
-                color: warranty.isWarrantyActive ? colors.success : colors.danger,
-                fontWeight: '800',
-                fontSize: 13,
-              }}
+              style={[
+                styles.warrantyStatus,
+                warranty.isWarrantyActive ? styles.warrantyActive : styles.warrantyExpired,
+              ]}
             >
               {warranty.isWarrantyActive ? `ACTIVE (${warranty.daysRemaining}d left)` : 'EXPIRED'}
             </Text>
           </View>
-          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-            Seller: {seller?.name || 'Unknown'} • Available Channels: {contacts.length > 0 ? contacts.map((c) => c.platform).join(', ') : 'None'}
+          <Text style={styles.sellerInfo}>
+            Seller: {seller?.name || 'Unknown'} • Available Channels:{' '}
+            {contacts.length > 0 ? contacts.map((c) => c.platform).join(', ') : 'None'}
           </Text>
         </View>
 
         {/* GENERATED CLAIM STRING */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 18,
-            padding: 16,
-            marginTop: 16,
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-              PRE-FILLED CLAIM MESSAGE
-            </Text>
-            <Pressable onPress={handleCopy} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <View style={styles.card}>
+          <View style={styles.claimHeaderRow}>
+            <Text style={styles.sectionHeader}>PRE-FILLED CLAIM MESSAGE</Text>
+            <Pressable onPress={handleCopy} style={styles.copyBtn}>
               {copied ? (
-                <Check size={13} color={colors.success} strokeWidth={2.5} />
+                <Check size={13} color={styles.successColor.color} strokeWidth={2.5} />
               ) : (
-                <Copy size={13} color={colors.accent} strokeWidth={2.2} />
+                <Copy size={13} color={styles.accentColor.color} strokeWidth={2.2} />
               )}
-              <Text style={{ color: copied ? colors.success : colors.accent, fontSize: 12, fontWeight: '800' }}>
+              <Text style={[styles.copyBtnText, copied && styles.copyBtnTextSuccess]}>
                 {copied ? 'Copied' : 'Copy Text'}
               </Text>
             </Pressable>
           </View>
 
-          <View
-            style={{
-              backgroundColor: colors.surfaceSubtle,
-              borderRadius: 12,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: 12, fontFamily: 'monospace', lineHeight: 18 }}>
-              {claimMessage}
-            </Text>
+          <View style={styles.codeBox}>
+            <Text style={styles.codeText}>{claimMessage}</Text>
           </View>
         </View>
 
         {/* ACTIONS */}
-        <View style={{ marginTop: 20, gap: 10 }}>
+        <View style={styles.actionsContainer}>
           {seller && contacts.length > 0 && (
-            <View style={{ gap: 8 }}>
+            <View style={styles.channelsList}>
               {contacts.map((contact, idx) => (
                 <Pressable
                   key={contact.id || idx}
                   onPress={() => openSellerContact(contact.platform, contact.value, claimMessage)}
-                  style={({ pressed }) => ({
-                    backgroundColor: pressed ? '#DC2626' : colors.danger,
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderRadius: 14,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  })}
+                  style={({ pressed }) => [
+                    styles.dispatchBtn,
+                    pressed && styles.dispatchBtnPressed,
+                  ]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={styles.dispatchContent}>
                     <PlatformIcon platform={contact.platform} size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
+                    <Text style={styles.dispatchText}>
                       Dispatch via {contact.platform}
                       {contact.label ? ` (${contact.label})` : ''}
                     </Text>
@@ -228,21 +164,206 @@ export default function PadlockProtocolModal() {
 
           <Pressable
             onPress={handleMarkInResolution}
-            style={({ pressed }) => ({
-              backgroundColor: colors.surfaceSubtle,
-              paddingVertical: 15,
-              borderRadius: 14,
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: colors.border,
-            })}
+            style={({ pressed }) => [styles.resolutionBtn, pressed && styles.resolutionBtnPressed]}
           >
-            <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 14 }}>
-              Mark as "In Resolution"
-            </Text>
+            <Text style={styles.resolutionText}>Mark as "In Resolution"</Text>
           </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    notFoundContainer: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    notFoundText: {
+      color: colors.text,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    closeText: {
+      color: colors.textSecondary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    headerTitle: {
+      color: colors.danger,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    headerPlaceholder: {
+      width: 40,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 60,
+    },
+    alertCard: {
+      backgroundColor: theme === 'dark' ? '#261014' : '#FEF2F2',
+      borderRadius: 22,
+      padding: 18,
+      borderWidth: 1.5,
+      borderColor: colors.danger,
+      alignItems: 'center',
+    },
+    alertTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '800',
+      marginTop: 10,
+    },
+    alertSubtitle: {
+      color: colors.danger,
+      fontSize: 13,
+      textAlign: 'center',
+      marginTop: 4,
+      fontWeight: '600',
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 16,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
+      shadowRadius: 4,
+    },
+    sectionHeader: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    warrantyRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 6,
+    },
+    gameTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    warrantyStatus: {
+      fontWeight: '800',
+      fontSize: 13,
+    },
+    warrantyActive: {
+      color: colors.success,
+    },
+    warrantyExpired: {
+      color: colors.danger,
+    },
+    sellerInfo: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    claimHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    copyBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    successColor: {
+      color: colors.success,
+    },
+    accentColor: {
+      color: colors.accent,
+    },
+    copyBtnText: {
+      color: colors.accent,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    copyBtnTextSuccess: {
+      color: colors.success,
+    },
+    codeBox: {
+      backgroundColor: colors.surfaceSubtle,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    codeText: {
+      color: colors.text,
+      fontSize: 12,
+      fontFamily: 'monospace',
+      lineHeight: 18,
+    },
+    actionsContainer: {
+      marginTop: 20,
+      gap: 10,
+    },
+    channelsList: {
+      gap: 8,
+    },
+    dispatchBtn: {
+      backgroundColor: colors.danger,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    dispatchBtnPressed: {
+      backgroundColor: '#DC2626',
+    },
+    dispatchContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    dispatchText: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+      fontSize: 14,
+    },
+    resolutionBtn: {
+      backgroundColor: colors.surfaceSubtle,
+      paddingVertical: 15,
+      borderRadius: 14,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    resolutionBtnPressed: {
+      backgroundColor: colors.surfaceElevated,
+    },
+    resolutionText: {
+      color: colors.accent,
+      fontWeight: '800',
+      fontSize: 14,
+    },
+  });

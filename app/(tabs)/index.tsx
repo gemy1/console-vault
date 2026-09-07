@@ -7,28 +7,29 @@ import {
   Image,
   RefreshControl,
   Linking,
-  StatusBar,
+  StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useVaultTheme } from "../../context/ThemeContext";
 import { OfflineVault } from "../../services/storage";
 import { Game, Seller } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
 import { PulsingPadlockBadge } from "../../components/PulsingPadlockBadge";
 import { ModernHeader } from "../../components/ModernHeader";
+import { GameCard } from "../../components/GameCard";
 import {
   Gamepad2,
   ShieldCheck,
   Lock,
-  AlertTriangle,
   ChevronRight,
   Clock,
 } from "lucide-react-native";
+import { useThemedStyles } from "../../hooks/useThemedStyles";
+import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { colors, theme } = useVaultTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [games, setGames] = useState<Game[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -58,204 +59,91 @@ export default function DashboardScreen() {
   const lockedGames = games.filter((g) => g.status === "Locked");
   const activeWarranties = games.filter((g) => {
     const w = calculateWarranty(g.purchase_date, g.warranty_months);
-    return (
-      w.isWarrantyActive && g.status !== "Dead Loss" && g.status !== "Archived"
-    );
+    return w.isWarrantyActive;
   });
 
+  const categories = [
+    { key: "All", label: "All Games" },
+    { key: "Active", label: "Active" },
+    { key: "Locked", label: "Locked / Revoked" },
+  ];
+
   const displayedGames = games.filter((g) => {
-    if (selectedCategory === "All") return true;
     if (selectedCategory === "Active") return g.status === "Active";
     if (selectedCategory === "Locked") return g.status === "Locked";
     return true;
   });
 
-  const categories = [
-    { key: "All", label: `All (${totalGames})` },
-    { key: "Active", label: `Active (${activeWarranties.length})` },
-    { key: "Locked", label: `Locked (${lockedGames.length})` },
-  ];
-
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <StatusBar translucent backgroundColor="transparent" />
-      {/* MODERN HEADER (Sits comfortably below the notification bar with circular buttons) */}
+    <View style={styles.container}>
       <ModernHeader
         title="Console Vault"
-        subtitle="PS5 Operations Hub"
+        subtitle="PS5 Digital Library"
         showAddButton={true}
         onAddPress={() => router.push("/game/add")}
       />
+
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.accent}
+            tintColor={styles.accentColor.color}
           />
         }
       >
-        {/* METRICS ROW (Inspired by Fintech / Invoice Image 2) */}
-        <View
-          style={{
-            flexDirection: "row",
-            paddingHorizontal: 20,
-            gap: 10,
-            marginBottom: 18,
-          }}
-        >
+        {/* METRICS ROW */}
+        <View style={styles.metricsRow}>
           {/* Total Games */}
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: colors.surface,
-              borderRadius: 18,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: colors.border,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: theme === "dark" ? 0.2 : 0.04,
-              shadowRadius: 6,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text
-                style={{
-                  color: colors.textMuted,
-                  fontSize: 11,
-                  fontWeight: "700",
-                  textTransform: "uppercase",
-                }}
-              >
-                Vault Total
-              </Text>
-              <Gamepad2 size={15} color={colors.accent} strokeWidth={2.2} />
+          <View style={styles.metricCard}>
+            <View style={styles.metricCardHeader}>
+              <Text style={styles.metricLabel}>Vault Total</Text>
+              <Gamepad2 size={15} color={styles.accentColor.color} strokeWidth={2.2} />
             </View>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 24,
-                fontWeight: "800",
-                marginTop: 4,
-              }}
-            >
-              {totalGames}
-            </Text>
-            <Text
-              style={{
-                color: colors.textSecondary,
-                fontSize: 10,
-                marginTop: 2,
-              }}
-            >
-              Games Stored
-            </Text>
+            <Text style={styles.metricValue}>{totalGames}</Text>
+            <Text style={styles.metricSubtext}>Games Stored</Text>
           </View>
 
           {/* Active Warranties */}
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: colors.surface,
-              borderRadius: 18,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: colors.border,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: theme === "dark" ? 0.2 : 0.04,
-              shadowRadius: 6,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text
-                style={{
-                  color: colors.success,
-                  fontSize: 11,
-                  fontWeight: "700",
-                  textTransform: "uppercase",
-                }}
-              >
-                Warranty
-              </Text>
-              <ShieldCheck size={15} color={colors.success} strokeWidth={2.2} />
+          <View style={styles.metricCard}>
+            <View style={styles.metricCardHeader}>
+              <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>Protected</Text>
+              <ShieldCheck size={15} color={styles.successColor.color} strokeWidth={2.2} />
             </View>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 24,
-                fontWeight: "800",
-                marginTop: 4,
-              }}
-            >
-              {activeWarranties.length}
-            </Text>
-            <Text
-              style={{
-                color: colors.textSecondary,
-                fontSize: 10,
-                marginTop: 2,
-              }}
-            >
-              Guaranteed
-            </Text>
+            <Text style={styles.metricValue}>{activeWarranties.length}</Text>
+            <Text style={styles.metricSubtext}>Under Warranty</Text>
           </View>
 
-          {/* Locked */}
+          {/* Locked / Issues */}
           <View
-            style={{
-              flex: 1,
-              backgroundColor:
-                lockedGames.length > 0
-                  ? theme === "dark"
-                    ? "#261014"
-                    : "#FEF2F2"
-                  : colors.surface,
-              borderRadius: 18,
-              padding: 14,
-              borderWidth: 1,
-              borderColor:
-                lockedGames.length > 0 ? colors.danger : colors.border,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: theme === "dark" ? 0.2 : 0.04,
-              shadowRadius: 6,
-            }}
+            style={[
+              styles.metricCard,
+              lockedGames.length > 0 && styles.metricCardDanger,
+            ]}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={styles.metricCardHeader}>
               <Text
-                style={{
-                  color:
-                    lockedGames.length > 0 ? colors.danger : colors.textMuted,
-                  fontSize: 11,
-                  fontWeight: "700",
-                  textTransform: "uppercase",
-                }}
+                style={[
+                  styles.metricLabel,
+                  lockedGames.length > 0 && styles.metricLabelDanger,
+                ]}
               >
                 Locked
               </Text>
-              <Lock size={15} color={lockedGames.length > 0 ? colors.danger : colors.textMuted} strokeWidth={2.2} />
+              <Lock
+                size={15}
+                color={lockedGames.length > 0 ? styles.dangerColor.color : styles.mutedColor.color}
+                strokeWidth={2.2}
+              />
             </View>
+            <Text style={styles.metricValue}>{lockedGames.length}</Text>
             <Text
-              style={{
-                color: colors.text,
-                fontSize: 24,
-                fontWeight: "800",
-                marginTop: 4,
-              }}
-            >
-              {lockedGames.length}
-            </Text>
-            <Text
-              style={{
-                color:
-                  lockedGames.length > 0 ? colors.danger : colors.textSecondary,
-                fontSize: 10,
-                marginTop: 2,
-              }}
+              style={[
+                styles.metricSubtext,
+                lockedGames.length > 0 && styles.metricSubtextDanger,
+              ]}
             >
               {lockedGames.length > 0 ? "Padlock Alert" : "All Clear"}
             </Text>
@@ -264,164 +152,60 @@ export default function DashboardScreen() {
 
         {/* PADLOCK PROTOCOL SECTION (IF ANY LOCKED) */}
         {lockedGames.length > 0 && (
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <View
-              style={{
-                backgroundColor: theme === "dark" ? "#1E0E12" : "#FEF2F2",
-                borderRadius: 20,
-                padding: 16,
-                borderWidth: 1.5,
-                borderColor: colors.danger,
-                shadowColor: colors.danger,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: theme === "dark" ? 0.3 : 0.08,
-                shadowRadius: 10,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
+          <View style={styles.padlockSection}>
+            <View style={styles.padlockAlertBanner}>
+              <View style={styles.padlockHeaderRow}>
+                <View style={styles.padlockTitleGroup}>
                   <PulsingPadlockBadge size="md" showLabel={false} />
-                  <Text
-                    style={{
-                      color: colors.danger,
-                      fontWeight: "800",
-                      fontSize: 13,
-                      letterSpacing: 0.5,
-                    }}
-                  >
+                  <Text style={styles.padlockBannerTitle}>
                     PADLOCK PROTOCOL ACTIVE
                   </Text>
                 </View>
-                <View
-                  style={{
-                    backgroundColor:
-                      theme === "dark"
-                        ? "rgba(255, 59, 48, 0.2)"
-                        : "rgba(239, 68, 68, 0.1)",
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 10,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: colors.danger,
-                      fontSize: 11,
-                      fontWeight: "800",
-                    }}
-                  >
+                <View style={styles.padlockBadge}>
+                  <Text style={styles.padlockBadgeText}>
                     {lockedGames.length} Revoked
                   </Text>
                 </View>
               </View>
 
-              <Text
-                style={{
-                  color: colors.textSecondary,
-                  fontSize: 12,
-                  marginTop: 8,
-                  lineHeight: 17,
-                }}
-              >
-                Sony has revoked access for the account(s) below. Tap to
-                generate warranty replacement claim text.
+              <Text style={styles.padlockInstruction}>
+                Sony has revoked access for the account(s) below. Tap to generate warranty replacement claim text.
               </Text>
 
               {lockedGames.map((game) => {
-                const seller = game.seller_id
-                  ? sellerMap.get(game.seller_id)
-                  : undefined;
-                const warranty = calculateWarranty(
-                  game.purchase_date,
-                  game.warranty_months,
-                );
+                const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
+                const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
 
                 return (
-                  <View
-                    key={game.id}
-                    style={{
-                      backgroundColor: theme === "dark" ? "#2A1318" : "#FFFFFF",
-                      borderRadius: 16,
-                      padding: 12,
-                      marginTop: 12,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      borderWidth: 1,
-                      borderColor: theme === "dark" ? "#4A1D24" : "#FEE2E2",
-                    }}
-                  >
+                  <View key={game.id} style={styles.lockedGameItem}>
                     {game.cover_image_url ? (
-                      <Image
-                        source={{ uri: game.cover_image_url }}
-                        style={{
-                          width: 48,
-                          height: 64,
-                          borderRadius: 10,
-                          backgroundColor: colors.surfaceSubtle,
-                        }}
-                      />
+                      <Image source={{ uri: game.cover_image_url }} style={styles.lockedCoverImage} />
                     ) : (
-                      <View
-                        style={{
-                          width: 48,
-                          height: 64,
-                          borderRadius: 10,
-                          backgroundColor: colors.surfaceSubtle,
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Gamepad2 size={20} color={colors.textMuted} strokeWidth={1.8} />
+                      <View style={styles.lockedCoverPlaceholder}>
+                        <Gamepad2 size={20} color={styles.mutedColor.color} strokeWidth={1.8} />
                       </View>
                     )}
 
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text
-                        style={{
-                          color: colors.text,
-                          fontWeight: "800",
-                          fontSize: 14,
-                        }}
-                        numberOfLines={1}
-                      >
+                    <View style={styles.lockedGameDetails}>
+                      <Text style={styles.lockedGameTitle} numberOfLines={1}>
                         {game.title}
                       </Text>
 
                       {seller && (
                         <Pressable
                           onPress={() => router.push(`/seller/${seller.id}`)}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}
+                          style={styles.lockedSellerRow}
                         >
-                          <Text
-                            style={{
-                              color: colors.accent,
-                              fontSize: 11,
-                              fontWeight: "700",
-                            }}
-                          >
-                            Seller: {seller.name}
-                          </Text>
-                          <ChevronRight size={11} color={colors.accent} strokeWidth={2.4} />
+                          <Text style={styles.lockedSellerText}>Seller: {seller.name}</Text>
+                          <ChevronRight size={11} color={styles.accentColor.color} strokeWidth={2.4} />
                         </Pressable>
                       )}
 
                       <Text
-                        style={{
-                          color: warranty.isWarrantyActive
-                            ? colors.success
-                            : colors.danger,
-                          fontSize: 11,
-                          fontWeight: "700",
-                          marginTop: 2,
-                        }}
+                        style={[
+                          styles.lockedWarrantyText,
+                          warranty.isWarrantyActive ? styles.warrantyActiveText : styles.warrantyExpiredText,
+                        ]}
                       >
                         {warranty.isWarrantyActive
                           ? `Warranty: ${warranty.daysRemaining} days left`
@@ -432,9 +216,7 @@ export default function DashboardScreen() {
                     <Pressable
                       onPress={() => {
                         try {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Medium,
-                          );
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         } catch {}
                         const deepLink = generateSellerDeepLink(game, seller);
                         if (deepLink) {
@@ -443,22 +225,9 @@ export default function DashboardScreen() {
                           router.push(`/game/${game.id}`);
                         }
                       }}
-                      style={({ pressed }) => ({
-                        backgroundColor: pressed ? "#DC2626" : colors.danger,
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: 10,
-                      })}
+                      style={({ pressed }) => [styles.claimBtn, pressed && styles.claimBtnPressed]}
                     >
-                      <Text
-                        style={{
-                          color: "#FFFFFF",
-                          fontSize: 12,
-                          fontWeight: "800",
-                        }}
-                      >
-                        Claim
-                      </Text>
+                      <Text style={styles.claimBtnText}>Claim</Text>
                     </Pressable>
                   </View>
                 );
@@ -467,20 +236,11 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* CATEGORY PILLS (TripGlide Style) */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text
-            style={{
-              color: colors.text,
-              fontSize: 18,
-              fontWeight: "800",
-              marginBottom: 12,
-            }}
-          >
-            Vault Collection
-          </Text>
+        {/* CATEGORY PILLS */}
+        <View style={styles.categorySection}>
+          <Text style={styles.categoryHeading}>Vault Collection</Text>
 
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={styles.categoryPillsRow}>
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat.key;
               return (
@@ -492,31 +252,16 @@ export default function DashboardScreen() {
                     } catch {}
                     setSelectedCategory(cat.key as any);
                   }}
-                  style={{
-                    backgroundColor: isSelected
-                      ? colors.pillActiveBg
-                      : colors.surface,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: isSelected
-                      ? colors.pillActiveBg
-                      : colors.border,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: isSelected ? 0.12 : 0.02,
-                    shadowRadius: 3,
-                  }}
+                  style={[
+                    styles.categoryPill,
+                    isSelected ? styles.categoryPillActive : styles.categoryPillInactive,
+                  ]}
                 >
                   <Text
-                    style={{
-                      color: isSelected
-                        ? colors.pillActiveText
-                        : colors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: isSelected ? "800" : "600",
-                    }}
+                    style={[
+                      styles.categoryPillText,
+                      isSelected ? styles.categoryPillTextActive : styles.categoryPillTextInactive,
+                    ]}
                   >
                     {cat.label}
                   </Text>
@@ -527,254 +272,24 @@ export default function DashboardScreen() {
         </View>
 
         {/* MODERN GAME CARDS LIST */}
-        <View style={{ paddingHorizontal: 20 }}>
+        <View style={styles.gamesListSection}>
           {displayedGames.map((game) => {
-            const seller = game.seller_id
-              ? sellerMap.get(game.seller_id)
-              : undefined;
-            const warranty = calculateWarranty(
-              game.purchase_date,
-              game.warranty_months,
-            );
-            const isLocked = game.status === "Locked";
-
-            const totalDays = game.warranty_months * 30.4;
-            const progressPercent = Math.min(
-              100,
-              Math.max(0, (warranty.daysRemaining / totalDays) * 100),
-            );
-
+            const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
             return (
-              <Pressable
+              <GameCard
                 key={game.id}
+                game={game}
+                sellerName={seller?.name}
                 onPress={() => {
                   try {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   } catch {}
                   router.push(`/game/${game.id}`);
                 }}
-                style={({ pressed }) => ({
-                  backgroundColor: pressed
-                    ? colors.surfaceElevated
-                    : colors.surface,
-                  borderRadius: 20,
-                  padding: 14,
-                  marginBottom: 12,
-                  borderWidth: 1,
-                  borderColor: isLocked ? colors.danger : colors.border,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: theme === "dark" ? 0.25 : 0.05,
-                  shadowRadius: 6,
-                })}
-              >
-                {/* Cover Art */}
-                {game.cover_image_url ? (
-                  <Image
-                    source={{ uri: game.cover_image_url }}
-                    style={{
-                      width: 62,
-                      height: 82,
-                      borderRadius: 12,
-                      backgroundColor: colors.surfaceSubtle,
-                    }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 62,
-                      height: 82,
-                      borderRadius: 12,
-                      backgroundColor: colors.surfaceSubtle,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Gamepad2 size={24} color={colors.textMuted} strokeWidth={1.8} />
-                  </View>
-                )}
-
-                {/* Info */}
-                <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text
-                    style={{
-                      color: colors.text,
-                      fontWeight: "800",
-                      fontSize: 15,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {game.title}
-                  </Text>
-
-                  {/* Badges Row */}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                      marginTop: 5,
-                    }}
-                  >
-                    <View
-                      style={{
-                        backgroundColor:
-                          game.account_type === "Primary"
-                            ? "rgba(0, 112, 209, 0.15)"
-                            : "rgba(147, 51, 234, 0.15)",
-                        paddingHorizontal: 7,
-                        paddingVertical: 2,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color:
-                            game.account_type === "Primary"
-                              ? "#0070D1"
-                              : "#9333EA",
-                          fontSize: 10,
-                          fontWeight: "800",
-                        }}
-                      >
-                        {game.account_type}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={{
-                        backgroundColor: isLocked
-                          ? theme === "dark"
-                            ? "rgba(255, 59, 48, 0.2)"
-                            : "#FEE2E2"
-                          : game.status === "Active"
-                            ? theme === "dark"
-                              ? "rgba(48, 209, 88, 0.2)"
-                              : "#ECFDF5"
-                            : "rgba(255, 159, 10, 0.2)",
-                        paddingHorizontal: 7,
-                        paddingVertical: 2,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: isLocked
-                            ? colors.danger
-                            : game.status === "Active"
-                              ? colors.success
-                              : colors.warning,
-                          fontSize: 10,
-                          fontWeight: "800",
-                        }}
-                      >
-                        {game.status}
-                      </Text>
-                    </View>
-
-                    {seller && (
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          router.push(`/seller/${seller.id}`);
-                        }}
-                        style={{
-                          backgroundColor: colors.surfaceSubtle,
-                          paddingHorizontal: 7,
-                          paddingVertical: 2,
-                          borderRadius: 6,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: colors.textSecondary,
-                            fontSize: 10,
-                            fontWeight: "600",
-                          }}
-                          numberOfLines={1}
-                        >
-                          {seller.name}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </View>
-
-                  {/* Warranty Countdown & Progress Track */}
-                  <View style={{ marginTop: 8 }}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text
-                        style={{ color: colors.textSecondary, fontSize: 11 }}
-                      >
-                        {warranty.isWarrantyActive ? (
-                          <>
-                            <Text
-                              style={{
-                                color: warranty.isExpiringSoon
-                                  ? colors.warning
-                                  : colors.success,
-                                fontWeight: "800",
-                              }}
-                            >
-                              {warranty.daysRemaining} days left
-                            </Text>{" "}
-                            ({game.warranty_months}m warranty)
-                          </>
-                        ) : (
-                          <Text style={{ color: colors.textMuted }}>
-                            Expired ({warranty.expiryDate})
-                          </Text>
-                        )}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={{
-                        height: 5,
-                        backgroundColor: colors.surfaceSubtle,
-                        borderRadius: 3,
-                        marginTop: 5,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: `${progressPercent}%`,
-                          height: "100%",
-                          backgroundColor: warranty.isExpiringSoon
-                            ? colors.warning
-                            : warranty.isWarrantyActive
-                              ? colors.success
-                              : colors.textMuted,
-                          borderRadius: 3,
-                        }}
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                {/* Circular Arrow Button */}
-                <View
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 17,
-                    backgroundColor: colors.surfaceSubtle,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginLeft: 10,
-                  }}
-                >
-                  <ChevronRight size={16} color={colors.text} strokeWidth={2.4} />
-                </View>
-              </Pressable>
+                onSellerPress={
+                  seller ? () => router.push(`/seller/${seller.id}`) : undefined
+                }
+              />
             );
           })}
         </View>
@@ -782,3 +297,247 @@ export default function DashboardScreen() {
     </View>
   );
 }
+
+const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingTop: 16,
+      paddingBottom: 40,
+    },
+    accentColor: {
+      color: colors.accent,
+    },
+    successColor: {
+      color: colors.success,
+    },
+    dangerColor: {
+      color: colors.danger,
+    },
+    mutedColor: {
+      color: colors.textMuted,
+    },
+    metricsRow: {
+      flexDirection: "row",
+      paddingHorizontal: 20,
+      gap: 10,
+      marginBottom: 18,
+    },
+    metricCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: theme === "dark" ? 0.2 : 0.04,
+      shadowRadius: 6,
+    },
+    metricCardDanger: {
+      backgroundColor: theme === "dark" ? "#261014" : "#FEF2F2",
+      borderColor: colors.danger,
+    },
+    metricCardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    metricLabel: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+      textTransform: "uppercase",
+    },
+    metricLabelSuccess: {
+      color: colors.success,
+    },
+    metricLabelDanger: {
+      color: colors.danger,
+    },
+    metricValue: {
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: "800",
+      marginTop: 4,
+    },
+    metricSubtext: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      marginTop: 2,
+    },
+    metricSubtextDanger: {
+      color: colors.danger,
+    },
+    padlockSection: {
+      paddingHorizontal: 20,
+      marginBottom: 20,
+    },
+    padlockAlertBanner: {
+      backgroundColor: theme === "dark" ? "#1E0E12" : "#FEF2F2",
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1.5,
+      borderColor: colors.danger,
+      shadowColor: colors.danger,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: theme === "dark" ? 0.3 : 0.08,
+      shadowRadius: 10,
+    },
+    padlockHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    padlockTitleGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    padlockBannerTitle: {
+      color: colors.danger,
+      fontWeight: "800",
+      fontSize: 13,
+      letterSpacing: 0.5,
+    },
+    padlockBadge: {
+      backgroundColor: theme === "dark" ? "rgba(255, 59, 48, 0.2)" : "rgba(239, 68, 68, 0.1)",
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    padlockBadgeText: {
+      color: colors.danger,
+      fontSize: 11,
+      fontWeight: "800",
+    },
+    padlockInstruction: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 8,
+      lineHeight: 17,
+    },
+    lockedGameItem: {
+      backgroundColor: theme === "dark" ? "#2A1318" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 12,
+      marginTop: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme === "dark" ? "#4A1D24" : "#FEE2E2",
+    },
+    lockedCoverImage: {
+      width: 48,
+      height: 64,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceSubtle,
+    },
+    lockedCoverPlaceholder: {
+      width: 48,
+      height: 64,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceSubtle,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    lockedGameDetails: {
+      flex: 1,
+      marginLeft: 12,
+    },
+    lockedGameTitle: {
+      color: colors.text,
+      fontWeight: "800",
+      fontSize: 14,
+    },
+    lockedSellerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+      marginTop: 2,
+    },
+    lockedSellerText: {
+      color: colors.accent,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    lockedWarrantyText: {
+      fontSize: 11,
+      fontWeight: "700",
+      marginTop: 2,
+    },
+    warrantyActiveText: {
+      color: colors.success,
+    },
+    warrantyExpiredText: {
+      color: colors.danger,
+    },
+    claimBtn: {
+      backgroundColor: colors.danger,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    claimBtnPressed: {
+      backgroundColor: "#DC2626",
+    },
+    claimBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+    },
+    categorySection: {
+      paddingHorizontal: 20,
+      marginBottom: 16,
+    },
+    categoryHeading: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: "800",
+      marginBottom: 12,
+    },
+    categoryPillsRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    categoryPill: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowRadius: 3,
+    },
+    categoryPillActive: {
+      backgroundColor: colors.pillActiveBg,
+      borderColor: colors.pillActiveBg,
+      shadowOpacity: 0.12,
+    },
+    categoryPillInactive: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      shadowOpacity: 0.02,
+    },
+    categoryPillText: {
+      fontSize: 12,
+    },
+    categoryPillTextActive: {
+      color: colors.pillActiveText,
+      fontWeight: "800",
+    },
+    categoryPillTextInactive: {
+      color: colors.textSecondary,
+      fontWeight: "600",
+    },
+    gamesListSection: {
+      paddingHorizontal: 20,
+    },
+  });
