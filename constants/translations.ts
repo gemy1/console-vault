@@ -311,6 +311,20 @@ export const TRANSLATIONS = {
     alertResetTitle: 'Reset Vault Data',
     alertResetMessage: 'Are you sure you want to clear all locally cached games and sellers? Cloud data will remain safe if synced.',
     alertResetConfirm: 'Clear & Start Fresh',
+
+    // Deletion Actions & Dialogs
+    btnDelete: 'Delete',
+    btnDeleteGame: 'Delete Game',
+    btnDeleteSeller: 'Delete Seller',
+    confirmDeleteGameTitle: 'Delete Game',
+    confirmDeleteGameDesc: 'Are you sure you want to permanently delete "{title}" from your vault? This action cannot be undone.',
+    confirmDeleteSellerTitle: 'Delete Seller',
+    confirmDeleteSellerDesc: 'Are you sure you want to delete seller "{name}"? This action cannot be undone.',
+    confirmDeleteSellerWithGamesWarning: 'This seller is linked to {count} game(s) in your vault. Deleting the seller will remove the seller association from those games. Are you sure you want to proceed?',
+    deleteSuccessGameTitle: 'Game Deleted',
+    deleteSuccessGameDesc: 'The game has been permanently removed from your vault.',
+    deleteSuccessSellerTitle: 'Seller Deleted',
+    deleteSuccessSellerDesc: 'The seller has been removed from your vault.',
   },
   ar: {
     // Navigation Tabs
@@ -622,6 +636,20 @@ export const TRANSLATIONS = {
     alertResetTitle: 'تصفير بيانات الخزينة',
     alertResetMessage: 'هل أنت متأكد من مسح جميع الألعاب والمتاجر المخزنة محلياً على هذا الجهاز؟ بياناتك السحابية ستظل آمنة إذا كنت متزامناً.',
     alertResetConfirm: 'مسح والبدء من جديد',
+
+    // Deletion Actions & Dialogs
+    btnDelete: 'حذف',
+    btnDeleteGame: 'حذف اللعبة',
+    btnDeleteSeller: 'حذف المتجر',
+    confirmDeleteGameTitle: 'حذف اللعبة',
+    confirmDeleteGameDesc: 'هل أنت متأكد من حذف لعبة "{title}" نهائياً من خزينتك؟ لا يمكن التراجع عن هذا الإجراء.',
+    confirmDeleteSellerTitle: 'حذف المتجر',
+    confirmDeleteSellerDesc: 'هل أنت متأكد من حذف متجر "{name}"؟ لا يمكن التراجع عن هذا الإجراء.',
+    confirmDeleteSellerWithGamesWarning: 'هذا المتجر مرتبط بعدد {count} لعبة في خزينتك. حذفه سيؤدي إلى إزالة ارتباطه بهذه الألعاب. هل تريد المتابعة بالتأكيد؟',
+    deleteSuccessGameTitle: 'تم حذف اللعبة',
+    deleteSuccessGameDesc: 'تمت إزالة اللعبة نهائياً من خزينتك بنجاح.',
+    deleteSuccessSellerTitle: 'تم حذف المتجر',
+    deleteSuccessSellerDesc: 'تمت إزالة المتجر من خزينتك بنجاح.',
   },
 } as const;
 

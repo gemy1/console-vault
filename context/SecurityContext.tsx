@@ -20,7 +20,7 @@ interface SecurityContextType {
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
 
-export function SecurityProvider({ children }: { children: React.ReactNode }) {
+export function SecurityProvider({ children }: { children: ReactNode }) {
   const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
   const [isBiometricsEnabled, setIsBiometricsEnabled] = useState<boolean>(() => {
     return VaultStorage.getItem(BIOMETRICS_ENABLED_KEY) === 'true';

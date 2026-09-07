@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { Game, Seller, SyncStatus } from '../types/vault';
 import { OfflineVault, VaultStorage } from '../services/storage';
 import { SyncQueue } from '../services/syncQueue';
@@ -24,7 +24,7 @@ interface VaultSyncContextType {
 
 const VaultSyncContext = createContext<VaultSyncContextType | undefined>(undefined);
 
-export function VaultSyncProvider({ children, userId }: { children: React.ReactNode; userId?: string }) {
+export function VaultSyncProvider({ children, userId }: { children: ReactNode; userId?: string }) {
   const [games, setGames] = useState<Game[]>(() => OfflineVault.getGames());
   const [sellers, setSellers] = useState<Seller[]>(() => OfflineVault.getSellers());
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as Haptics from 'expo-haptics';
 import { VaultStorage } from '../services/storage';
 
@@ -107,7 +107,7 @@ const ThemeContext = createContext<ThemeContextType>({
   setTheme: () => {},
 });
 
-export function VaultThemeProvider({ children }: { children: React.ReactNode }) {
+export function VaultThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
       const saved = VaultStorage.getItem(THEME_STORAGE_KEY);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { SellerFormModal } from '../../components/sellers';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useVaultSync } from '../../context/VaultSyncContext';
 import {
   ShieldCheck,
   Star,
@@ -24,6 +25,7 @@ import {
   FileText,
   Plus,
   ExternalLink,
+  Trash2,
 } from 'lucide-react-native';
 
 export default function SellerDetailsScreen() {
@@ -93,6 +95,47 @@ export default function SellerDetailsScreen() {
     setEditModalVisible(false);
   };
 
+  let vaultSync: ReturnType<typeof useVaultSync> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    vaultSync = useVaultSync();
+  } catch {}
+
+  const handleDeleteSeller = () => {
+    if (!seller) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch {}
+
+    const message =
+      games.length > 0
+        ? t('confirmDeleteSellerWithGamesWarning', { count: games.length })
+        : t('confirmDeleteSellerDesc', { name: seller.name });
+
+    Alert.alert(
+      t('confirmDeleteSellerTitle'),
+      message,
+      [
+        { text: t('btnCancel'), style: 'cancel' },
+        {
+          text: t('btnDelete'),
+          style: 'destructive',
+          onPress: () => {
+            if (vaultSync) {
+              vaultSync.deleteSeller(seller.id);
+            } else {
+              OfflineVault.deleteSeller(seller.id);
+            }
+            try {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {}
+            router.replace('/(tabs)/sellers');
+          },
+        },
+      ]
+    );
+  };
+
   const lockedGamesCount = games.filter((g) => g.status === 'Locked').length;
   const activeWarrantiesCount = games.filter((g) => {
     const w = calculateWarranty(g.purchase_date, g.warranty_months);
@@ -101,22 +144,36 @@ export default function SellerDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* MODERN HEADER WITH BACK AND EDIT BUTTON */}
+      {/* MODERN HEADER WITH BACK AND ACTION BUTTONS */}
       <ModernHeader
         title={t('sellerProfileTitle')}
         subtitle={seller.name}
         showBackButton={true}
         rightAction={
-          <Pressable
-            onPress={() => {
-              try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-              setEditModalVisible(true);
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [styles.headerEditBtn, pressed && styles.headerEditBtnPressed]}
-          >
-            <Pencil size={20} color={styles.accentIcon.color} strokeWidth={2.2} />
-          </Pressable>
+          <View style={styles.headerActionsRow}>
+            <Pressable
+              onPress={() => {
+                try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                setEditModalVisible(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [styles.headerCircleBtn, pressed && styles.headerCircleBtnPressed]}
+            >
+              <Pencil size={18} color={styles.accentIcon.color} strokeWidth={2.2} />
+            </Pressable>
+
+            <Pressable
+              onPress={handleDeleteSeller}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [
+                styles.headerCircleBtn,
+                styles.headerDeleteBtn,
+                pressed && styles.headerCircleBtnPressed,
+              ]}
+            >
+              <Trash2 size={18} color="#EF4444" strokeWidth={2.2} />
+            </Pressable>
+          </View>
         }
       />
 
@@ -310,6 +367,21 @@ export default function SellerDetailsScreen() {
             />
           ))
         )}
+
+        {/* DANGER ZONE / DELETE SELLER */}
+        <View style={styles.dangerSection}>
+          <Pressable
+            onPress={handleDeleteSeller}
+            style={({ pressed }) => [
+              styles.deleteSellerBtn,
+              pressed && styles.deleteSellerBtnPressed,
+              isRTL && { flexDirection: 'row-reverse' },
+            ]}
+          >
+            <Trash2 size={16} color="#EF4444" strokeWidth={2.2} />
+            <Text style={styles.deleteSellerBtnText}>{t('btnDeleteSeller')}</Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       {/* REUSABLE SELLER FORM MODAL */}
@@ -362,10 +434,15 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     mutedText: {
       color: colors.textSecondary,
     },
-    headerEditBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+    headerActionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    headerCircleBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme === 'dark' ? colors.surfaceElevated : '#FFFFFF',
       alignItems: 'center',
       justifyContent: 'center',
@@ -374,8 +451,12 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.18)',
       elevation: 4,
     },
-    headerEditBtnPressed: {
+    headerCircleBtnPressed: {
       opacity: 0.8,
+    },
+    headerDeleteBtn: {
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+      borderColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.25)',
     },
     heroCard: {
       backgroundColor: colors.surface,
@@ -669,5 +750,31 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     rtlText: {
       textAlign: 'right',
+    },
+    dangerSection: {
+      marginTop: 28,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderSubtle,
+    },
+    deleteSellerBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+      borderRadius: 14,
+      paddingVertical: 14,
+    },
+    deleteSellerBtnPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.99 }],
+    },
+    deleteSellerBtnText: {
+      color: '#EF4444',
+      fontSize: 14,
+      fontWeight: '700',
     },
   });

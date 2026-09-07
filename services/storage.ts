@@ -342,6 +342,26 @@ export const OfflineVault = {
     const sellers = OfflineVault.getSellers();
     const filtered = sellers.filter((s) => s.id !== id);
     OfflineVault.saveSellers(filtered);
+
+    // Unlink deleted seller from any games that referenced it
+    const games = OfflineVault.getGames();
+    let hasLinkedGames = false;
+    const updatedGames = games.map((g) => {
+      if (g.seller_id === id) {
+        hasLinkedGames = true;
+        return { ...g, seller_id: undefined };
+      }
+      return g;
+    });
+    if (hasLinkedGames) {
+      OfflineVault.saveGames(updatedGames);
+      getDatabase()
+        .then(async (db) => {
+          await db.runAsync(`UPDATE games SET seller_id = NULL WHERE seller_id = ?;`, [id]);
+        })
+        .catch(() => {});
+    }
+
     SellerRepository.delete(id).catch((err) => {
       console.warn('[SQLite] deleteSeller error:', err);
     });

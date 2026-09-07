@@ -40,6 +40,7 @@ import {
   Check,
   RefreshCw,
   Pencil,
+  Trash2,
 } from "lucide-react-native";
 
 export default function GameDetailsScreen() {
@@ -163,6 +164,36 @@ export default function GameDetailsScreen() {
     }
   };
 
+  const handleDeleteGame = () => {
+    if (!game) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch {}
+
+    Alert.alert(
+      t('confirmDeleteGameTitle'),
+      t('confirmDeleteGameDesc', { title: game.title }),
+      [
+        { text: t('btnCancel'), style: 'cancel' },
+        {
+          text: t('btnDelete'),
+          style: 'destructive',
+          onPress: () => {
+            if (vaultSync) {
+              vaultSync.deleteGame(game.id);
+            } else {
+              OfflineVault.deleteGame(game.id);
+            }
+            try {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {}
+            router.replace('/(tabs)/vault');
+          },
+        },
+      ]
+    );
+  };
+
   const androidStatusBar =
     Platform.OS === "android" ? RNStatusBar.currentHeight || 36 : 0;
   const safeTop = Math.max(
@@ -257,6 +288,22 @@ export default function GameDetailsScreen() {
               <Pencil
                 size={18}
                 color={styles.headerIconColor.color}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+
+            <Pressable
+              onPress={handleDeleteGame}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [
+                styles.headerCircleBtn,
+                styles.headerDeleteBtn,
+                pressed && styles.headerCircleBtnPressed,
+              ]}
+            >
+              <Trash2
+                size={18}
+                color="#EF4444"
                 strokeWidth={2.2}
               />
             </Pressable>
@@ -712,6 +759,21 @@ export default function GameDetailsScreen() {
               </Pressable>
             )}
           </View>
+
+          {/* DANGER ZONE / DELETE GAME */}
+          <View style={styles.dangerSection}>
+            <Pressable
+              onPress={handleDeleteGame}
+              style={({ pressed }) => [
+                styles.deleteGameBtn,
+                pressed && styles.deleteGameBtnPressed,
+                isNativeRTL && { flexDirection: 'row-reverse' },
+              ]}
+            >
+              <Trash2 size={16} color="#EF4444" strokeWidth={2.2} />
+              <Text style={styles.deleteGameBtnText}>{t('btnDeleteGame')}</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
 
@@ -806,6 +868,10 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     headerCircleBtnPressed: {
       opacity: 0.8,
+    },
+    headerDeleteBtn: {
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+      borderColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.25)',
     },
     headerIconColor: {
       color: colors.text,
@@ -1282,5 +1348,31 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     rtlText: {
       textAlign: 'right',
+    },
+    dangerSection: {
+      marginTop: 24,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderSubtle,
+    },
+    deleteGameBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+      borderRadius: 14,
+      paddingVertical: 14,
+    },
+    deleteGameBtnPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.99 }],
+    },
+    deleteGameBtnText: {
+      color: '#EF4444',
+      fontSize: 14,
+      fontWeight: '700',
     },
   });
