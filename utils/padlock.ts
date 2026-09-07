@@ -57,6 +57,12 @@ export function generateSellerDeepLink(game: Game, seller?: Seller): string | nu
   } else if (seller.contact_platform === 'Telegram') {
     const handle = cleanContact.replace(/^@/, '');
     return `https://t.me/${handle}?text=${encodedMsg}`;
+  } else if (seller.contact_platform === 'Facebook') {
+    if (cleanContact.startsWith('http://') || cleanContact.startsWith('https://')) {
+      return cleanContact;
+    }
+    const handle = cleanContact.replace(/^@/, '');
+    return `https://m.me/${handle}`;
   }
 
   return cleanContact;

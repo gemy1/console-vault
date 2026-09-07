@@ -15,10 +15,26 @@ begin
 
     if v_user_id is not null then
         -- Insert Test Sellers
-        insert into public.sellers (user_id, name, contact_platform, contact_link, reputation_score, notes)
+        insert into public.sellers (user_id, name, contact_platform, contact_link, contact_methods, reputation_score, notes)
         values 
-            (v_user_id, 'PSN Master Store', 'WhatsApp', '+12025550192', 4.9, 'Fast replacement on warranty claims'),
-            (v_user_id, 'Digital Vault Keys', 'Telegram', 'digitalvault_support', 4.2, 'Requires order invoice screenshot')
+            (
+                v_user_id, 
+                'PSN Master Store', 
+                'WhatsApp', 
+                '+12025550192', 
+                '[{"id":"cm-1","platform":"WhatsApp","value":"+12025550192","label":"WhatsApp Support"},{"id":"cm-2","platform":"Facebook","value":"m.me/psnmasterstore","label":"FB Messenger Page"}]'::jsonb,
+                4.9, 
+                'Fast replacement on warranty claims. Accepts PayPal, card, crypto.'
+            ),
+            (
+                v_user_id, 
+                'Digital Vault Keys', 
+                'Telegram', 
+                'digitalvault_support', 
+                '[{"id":"cm-3","platform":"Telegram","value":"digitalvault_support","label":"Official Telegram"},{"id":"cm-4","platform":"Facebook","value":"facebook.com/digitalvault","label":"Facebook Page"}]'::jsonb,
+                4.2, 
+                'Requires order invoice screenshot. 24/7 coverage.'
+            )
         returning id into v_seller_1;
 
         select id into v_seller_2 from public.sellers where user_id = v_user_id and contact_platform = 'Telegram' limit 1;

@@ -20,7 +20,7 @@ exception
 end $$;
 
 do $$ begin
-    create type contact_platform as enum ('WhatsApp', 'Telegram', 'Discord', 'Other');
+    create type contact_platform as enum ('WhatsApp', 'Telegram', 'Discord', 'Facebook', 'Other');
 exception
     when duplicate_object then null;
 end $$;
@@ -32,8 +32,9 @@ create table if not exists public.sellers (
     name text not null,
     contact_platform contact_platform not null default 'WhatsApp',
     contact_link text not null, -- Phone number (with country code) or handle/URL
+    contact_methods jsonb default '[]'::jsonb, -- Array of multiple connection methods { id, platform, value, label }
     reputation_score numeric(3, 1) default 5.0 check (reputation_score between 1.0 and 5.0),
-    notes text,
+    notes text, -- Free text notes for terms, warranty policies, etc.
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

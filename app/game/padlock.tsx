@@ -21,6 +21,8 @@ import {
 } from '../../utils/padlock';
 import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
 import { Copy, Check, ChevronRight } from 'lucide-react-native';
+import { PlatformIcon } from '../../components/PlatformIcon';
+import { getSellerContactList, openSellerContact } from '../../utils/contacts';
 
 export default function PadlockProtocolModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -55,7 +57,7 @@ export default function PadlockProtocolModal() {
 
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
   const claimMessage = generateWarrantyClaimMessage(game, seller || undefined);
-  const deepLink = generateSellerDeepLink(game, seller || undefined);
+  const contacts = seller ? getSellerContactList(seller) : [];
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(claimMessage);
@@ -64,14 +66,6 @@ export default function PadlockProtocolModal() {
     } catch {}
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
-  };
-
-  const handleLaunchDeepLink = () => {
-    if (!deepLink) {
-      Alert.alert('No Contact Info', 'Seller contact information is missing.');
-      return;
-    }
-    Linking.openURL(deepLink);
   };
 
   const handleMarkInResolution = () => {
@@ -155,7 +149,7 @@ export default function PadlockProtocolModal() {
             </Text>
           </View>
           <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-            Seller: {seller?.name || 'Unknown'} • Platform: {seller?.contact_platform || 'N/A'}
+            Seller: {seller?.name || 'Unknown'} • Available Channels: {contacts.length > 0 ? contacts.map((c) => c.platform).join(', ') : 'None'}
           </Text>
         </View>
 
@@ -203,24 +197,33 @@ export default function PadlockProtocolModal() {
 
         {/* ACTIONS */}
         <View style={{ marginTop: 20, gap: 10 }}>
-          {seller && deepLink && (
-            <Pressable
-              onPress={handleLaunchDeepLink}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? '#DC2626' : colors.danger,
-                paddingVertical: 15,
-                borderRadius: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              })}
-            >
-              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
-                Open {seller.contact_platform} with Pre-filled Claim
-              </Text>
-              <ChevronRight size={16} color="#FFFFFF" strokeWidth={2.5} />
-            </Pressable>
+          {seller && contacts.length > 0 && (
+            <View style={{ gap: 8 }}>
+              {contacts.map((contact, idx) => (
+                <Pressable
+                  key={contact.id || idx}
+                  onPress={() => openSellerContact(contact.platform, contact.value, claimMessage)}
+                  style={({ pressed }) => ({
+                    backgroundColor: pressed ? '#DC2626' : colors.danger,
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 14,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  })}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <PlatformIcon platform={contact.platform} size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
+                      Dispatch via {contact.platform}
+                      {contact.label ? ` (${contact.label})` : ''}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color="#FFFFFF" strokeWidth={2.5} />
+                </Pressable>
+              ))}
+            </View>
           )}
 
           <Pressable

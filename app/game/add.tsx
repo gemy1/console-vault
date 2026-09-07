@@ -13,6 +13,7 @@ import { OfflineVault } from '../../services/storage';
 import { Game, Seller, AccountType } from '../../types/vault';
 import { ModernHeader } from '../../components/ModernHeader';
 import { Check, Lock } from 'lucide-react-native';
+import { PlatformIcon } from '../../components/PlatformIcon';
 
 export default function AddGameScreen() {
   const router = useRouter();
@@ -208,10 +209,18 @@ export default function AddGameScreen() {
                     borderRadius: 12,
                     borderWidth: 1,
                     borderColor: isSelected ? colors.pillActiveBg : colors.border,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
                   }}
                 >
+                  <PlatformIcon
+                    platform={s.contact_platform}
+                    size={14}
+                    color={isSelected ? colors.pillActiveText : undefined}
+                  />
                   <Text style={{ color: isSelected ? colors.pillActiveText : colors.text, fontWeight: '800', fontSize: 12 }}>
-                    {s.name} ({s.contact_platform})
+                    {s.name}
                   </Text>
                 </Pressable>
               );

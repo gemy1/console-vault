@@ -454,8 +454,7 @@ export default function GameDetailsScreen() {
               <Pressable
                 onPress={() => {
                   try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-                  const link = generateSellerDeepLink(game, seller);
-                  if (link) Linking.openURL(link);
+                  router.push(`/game/padlock?id=${game.id}`);
                 }}
                 style={({ pressed }) => ({
                   backgroundColor: pressed ? '#DC2626' : colors.danger,
@@ -469,7 +468,7 @@ export default function GameDetailsScreen() {
                 })}
               >
                 <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
-                  Send Warranty Claim via {seller.contact_platform}
+                  Dispatch Warranty Claim via Padlock Protocol
                 </Text>
                 <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
               </Pressable>

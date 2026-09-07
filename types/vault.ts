@@ -1,16 +1,25 @@
 export type GameStatus = 'Active' | 'Locked' | 'In Resolution' | 'Archived' | 'Dead Loss';
 export type AccountType = 'Primary' | 'Secondary';
-export type ContactPlatform = 'WhatsApp' | 'Telegram' | 'Discord' | 'Other';
+export type ContactPlatform = 'WhatsApp' | 'Telegram' | 'Discord' | 'Facebook' | 'Other';
+
+export interface SellerContactMethod {
+  id: string;
+  platform: ContactPlatform;
+  value: string; // Phone number, username, URL, or handle
+  label?: string; // e.g. 'Main Support', 'Sales', 'Backup'
+}
 
 export interface Seller {
   id: string;
   user_id: string;
   name: string;
-  contact_platform: ContactPlatform;
-  contact_link: string; // Phone number or handle
+  contact_platform: ContactPlatform; // Primary platform for backward compatibility
+  contact_link: string; // Primary link for backward compatibility
+  contact_methods?: SellerContactMethod[]; // Multiple connection methods
   reputation_score: number; // 1.0 - 5.0
-  notes?: string;
+  notes?: string; // Free text notes
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Game {

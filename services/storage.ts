@@ -27,8 +27,12 @@ const INITIAL_SELLERS: Seller[] = [
     name: 'PlayStation Elite Deals',
     contact_platform: 'WhatsApp',
     contact_link: '+12025550192',
+    contact_methods: [
+      { id: 'cm-1-1', platform: 'WhatsApp', value: '+12025550192', label: 'VIP Hotline' },
+      { id: 'cm-1-2', platform: 'Facebook', value: 'm.me/ps5elitedeals', label: 'FB Messenger Page' },
+    ],
     reputation_score: 4.9,
-    notes: 'Warranty response time < 15 mins.',
+    notes: 'Warranty response time < 15 mins. Accepts PayPal and Crypto. Replaces revoked accounts within 2 hours.',
   },
   {
     id: 's-2',
@@ -36,8 +40,12 @@ const INITIAL_SELLERS: Seller[] = [
     name: 'DigitalVault PSN Keys',
     contact_platform: 'Telegram',
     contact_link: 'digitalvault_support',
+    contact_methods: [
+      { id: 'cm-2-1', platform: 'Telegram', value: 'digitalvault_support', label: 'Direct Telegram' },
+      { id: 'cm-2-2', platform: 'WhatsApp', value: '+14155552671', label: 'Support WhatsApp' },
+    ],
     reputation_score: 4.3,
-    notes: 'Fast replacements, sends screenshot proof.',
+    notes: 'Fast replacements, sends screenshot proof. Working hours: 10:00 AM - 11:00 PM UTC.',
   },
   {
     id: 's-3',
@@ -45,8 +53,13 @@ const INITIAL_SELLERS: Seller[] = [
     name: 'GameKey Galaxy',
     contact_platform: 'WhatsApp',
     contact_link: '+447911123456',
+    contact_methods: [
+      { id: 'cm-3-1', platform: 'WhatsApp', value: '+447911123456', label: 'UK WhatsApp' },
+      { id: 'cm-3-2', platform: 'Facebook', value: 'facebook.com/gamekeygalaxy', label: 'Official Facebook' },
+      { id: 'cm-3-3', platform: 'Discord', value: 'GameKeyGalaxy#9901', label: 'Discord Server' },
+    ],
     reputation_score: 4.7,
-    notes: '12-month full primary warranties.',
+    notes: '12-month full primary warranties. Offers discount codes on 3rd purchase.',
   }
 ];
 
@@ -161,5 +174,20 @@ export const OfflineVault = {
     const updated = [seller, ...sellers];
     VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(updated));
     return seller;
+  },
+  updateSeller: (id: string, partial: Partial<Seller>): Seller | null => {
+    const sellers = OfflineVault.getSellers();
+    const index = sellers.findIndex((s) => s.id === id);
+    if (index === -1) return null;
+    const updatedSeller = { ...sellers[index], ...partial, updated_at: new Date().toISOString() };
+    sellers[index] = updatedSeller;
+    VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(sellers));
+    return updatedSeller;
+  },
+  deleteSeller: (id: string): boolean => {
+    const sellers = OfflineVault.getSellers();
+    const filtered = sellers.filter((s) => s.id !== id);
+    VaultStorage.setItem(SELLERS_STORAGE_KEY, JSON.stringify(filtered));
+    return true;
   },
 };
