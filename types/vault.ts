@@ -33,7 +33,7 @@ export interface Game {
   purchase_date: string; // YYYY-MM-DD
   warranty_months: number;
   psn_email: string;
-  psn_password: string;
+  psn_password?: string;
   backup_codes?: string[];
   notes?: string;
   created_at?: string;

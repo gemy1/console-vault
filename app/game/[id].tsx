@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,19 +9,22 @@ import {
   Platform,
   StatusBar as RNStatusBar,
   StyleSheet,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import { OfflineVault } from '../../services/storage';
-import { Game, Seller, GameStatus } from '../../types/vault';
-import { calculateWarranty } from '../../utils/padlock';
-import { useBiometricGuard } from '../../hooks/useBiometricGuard';
-import { ThemeToggleButton } from '../../components/common';
-import { PulsingPadlockBadge, ReplaceCredentialsModal } from '../../components/games';
-import { useThemedStyles } from '../../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import { OfflineVault } from "../../services/storage";
+import { Game, Seller, GameStatus } from "../../types/vault";
+import { calculateWarranty } from "../../utils/padlock";
+import { useBiometricGuard } from "../../hooks/useBiometricGuard";
+import { ThemeToggleButton } from "../../components/common";
+import {
+  PulsingPadlockBadge,
+  ReplaceCredentialsModal,
+} from "../../components/games";
+import { useThemedStyles } from "../../hooks/useThemedStyles";
+import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import {
   ChevronLeft,
   Heart,
@@ -34,7 +37,7 @@ import {
   Copy,
   Check,
   RefreshCw,
-} from 'lucide-react-native';
+} from "lucide-react-native";
 
 export default function GameDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,7 +79,7 @@ export default function GameDetailsScreen() {
   }
 
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
-  const isLocked = game.status === 'Locked';
+  const isLocked = game.status === "Locked";
 
   const copyToClipboard = async (text: string, fieldKey: string) => {
     await Clipboard.setStringAsync(text);
@@ -93,30 +96,40 @@ export default function GameDetailsScreen() {
       setGame(updated);
       try {
         Haptics.notificationAsync(
-          newStatus === 'Locked'
+          newStatus === "Locked"
             ? Haptics.NotificationFeedbackType.Warning
-            : Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Success,
         );
       } catch {}
     }
   };
 
-  const handleCredentialReplacement = (newEmailVal: string, newPasswordVal: string) => {
+  const handleCredentialReplacement = (
+    newEmailVal: string,
+    newPasswordVal: string,
+  ) => {
     if (!game) return;
     const updated = OfflineVault.updateGame(game.id, {
       psn_email: newEmailVal,
       psn_password: newPasswordVal,
-      status: 'Active',
+      status: "Active",
     });
 
     if (updated) {
       setGame(updated);
-      Alert.alert('Credentials Updated', 'Old credentials archived to history. Game restored to Active.');
+      Alert.alert(
+        "Credentials Updated",
+        "Old credentials archived to history. Game restored to Active.",
+      );
     }
   };
 
-  const androidStatusBar = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 36) : 0;
-  const safeTop = Math.max(insets.top, Platform.OS === 'android' ? androidStatusBar : 48);
+  const androidStatusBar =
+    Platform.OS === "android" ? RNStatusBar.currentHeight || 36 : 0;
+  const safeTop = Math.max(
+    insets.top,
+    Platform.OS === "android" ? androidStatusBar : 48,
+  );
   const headerPaddingTop = safeTop + 12;
 
   return (
@@ -131,7 +144,11 @@ export default function GameDetailsScreen() {
           />
         ) : (
           <View style={styles.heroCoverPlaceholder}>
-            <Gamepad2 size={64} color={styles.placeholderIcon.color} strokeWidth={1.5} />
+            <Gamepad2
+              size={64}
+              color={styles.placeholderIcon.color}
+              strokeWidth={1.5}
+            />
           </View>
         )}
 
@@ -143,9 +160,16 @@ export default function GameDetailsScreen() {
           <Pressable
             onPress={() => router.back()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [styles.headerCircleBtn, pressed && styles.headerCircleBtnPressed]}
+            style={({ pressed }) => [
+              styles.headerCircleBtn,
+              pressed && styles.headerCircleBtnPressed,
+            ]}
           >
-            <ChevronLeft size={24} color={styles.headerIconColor.color} strokeWidth={2.4} />
+            <ChevronLeft
+              size={24}
+              color={styles.headerIconColor.color}
+              strokeWidth={2.4}
+            />
           </Pressable>
 
           <View style={styles.headerRightActions}>
@@ -157,12 +181,15 @@ export default function GameDetailsScreen() {
                 setIsFavorite(!isFavorite);
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={({ pressed }) => [styles.headerCircleBtn, pressed && styles.headerCircleBtnPressed]}
+              style={({ pressed }) => [
+                styles.headerCircleBtn,
+                pressed && styles.headerCircleBtnPressed,
+              ]}
             >
               <Heart
                 size={20}
-                color={isFavorite ? '#EF4444' : styles.headerIconColor.color}
-                fill={isFavorite ? '#EF4444' : 'transparent'}
+                color={isFavorite ? "#EF4444" : styles.headerIconColor.color}
+                fill={isFavorite ? "#EF4444" : "transparent"}
                 strokeWidth={2.2}
               />
             </Pressable>
@@ -184,14 +211,14 @@ export default function GameDetailsScreen() {
 
           {/* TITLE & REPUTATION / RATING ROW */}
           <View style={styles.titleRow}>
-            <Text style={styles.gameTitle}>
-              {game.title}
-            </Text>
+            <Text style={styles.gameTitle}>{game.title}</Text>
 
             <View style={styles.ratingBadge}>
               <Star size={12} color="#F59E0B" fill="#F59E0B" />
               <Text style={styles.ratingText}>
-                {seller?.reputation_score ? seller.reputation_score.toFixed(1) : '5.0'}
+                {seller?.reputation_score
+                  ? seller.reputation_score.toFixed(1)
+                  : "5.0"}
               </Text>
             </View>
           </View>
@@ -215,9 +242,9 @@ export default function GameDetailsScreen() {
                 styles.statusBadge,
                 isLocked
                   ? styles.statusBadgeLocked
-                  : game.status === 'Active'
-                  ? styles.statusBadgeActive
-                  : styles.statusBadgeWarning,
+                  : game.status === "Active"
+                    ? styles.statusBadgeActive
+                    : styles.statusBadgeWarning,
               ]}
             >
               <Text
@@ -225,9 +252,9 @@ export default function GameDetailsScreen() {
                   styles.statusBadgeText,
                   isLocked
                     ? styles.statusTextDanger
-                    : game.status === 'Active'
-                    ? styles.statusTextSuccess
-                    : styles.statusTextWarning,
+                    : game.status === "Active"
+                      ? styles.statusTextSuccess
+                      : styles.statusTextWarning,
                 ]}
               >
                 {game.status}
@@ -243,11 +270,18 @@ export default function GameDetailsScreen() {
           {seller && (
             <Pressable
               onPress={() => router.push(`/seller/${seller.id}`)}
-              style={({ pressed }) => [styles.sellerCard, pressed && styles.sellerCardPressed]}
+              style={({ pressed }) => [
+                styles.sellerCard,
+                pressed && styles.sellerCardPressed,
+              ]}
             >
               <View style={styles.sellerCardLeft}>
                 <View style={styles.sellerAvatar}>
-                  <ShieldCheck size={20} color={styles.accentIcon.color} strokeWidth={2} />
+                  <ShieldCheck
+                    size={20}
+                    color={styles.accentIcon.color}
+                    strokeWidth={2}
+                  />
                 </View>
                 <View>
                   <Text style={styles.sellerCardName}>
@@ -257,7 +291,11 @@ export default function GameDetailsScreen() {
                     <Text style={styles.sellerSubtext}>
                       Tap to view seller profile & all games
                     </Text>
-                    <ChevronRight size={12} color={styles.accentIcon.color} strokeWidth={2.4} />
+                    <ChevronRight
+                      size={12}
+                      color={styles.accentIcon.color}
+                      strokeWidth={2.4}
+                    />
                   </View>
                 </View>
               </View>
@@ -276,24 +314,27 @@ export default function GameDetailsScreen() {
             <View style={styles.padlockBanner}>
               <View style={styles.padlockHeaderRow}>
                 <PulsingPadlockBadge size="sm" showLabel={false} />
-                <Text style={styles.padlockTitle}>
-                  LICENSE REVOKED BY SONY
-                </Text>
+                <Text style={styles.padlockTitle}>LICENSE REVOKED BY SONY</Text>
               </View>
 
               <Text style={styles.padlockDescription}>
                 {warranty.isWarrantyActive
-                  ? `Warranty is active (${warranty.daysRemaining} days remaining). Contact ${seller?.name || 'seller'} to request replacement credentials.`
+                  ? `Warranty is active (${warranty.daysRemaining} days remaining). Contact ${seller?.name || "seller"} to request replacement credentials.`
                   : `Warranty expired on ${warranty.expiryDate}.`}
               </Text>
 
               {seller && (
                 <Pressable
                   onPress={() => {
-                    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+                    try {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    } catch {}
                     router.push(`/game/padlock?id=${game.id}`);
                   }}
-                  style={({ pressed }) => [styles.padlockDispatchBtn, pressed && styles.padlockDispatchBtnPressed]}
+                  style={({ pressed }) => [
+                    styles.padlockDispatchBtn,
+                    pressed && styles.padlockDispatchBtnPressed,
+                  ]}
                 >
                   <Text style={styles.padlockDispatchText}>
                     Dispatch Warranty Claim via Padlock Protocol
@@ -312,10 +353,14 @@ export default function GameDetailsScreen() {
               <Text
                 style={[
                   styles.warrantyDaysText,
-                  warranty.isWarrantyActive ? styles.statusTextSuccess : styles.statusTextDanger,
+                  warranty.isWarrantyActive
+                    ? styles.statusTextSuccess
+                    : styles.statusTextDanger,
                 ]}
               >
-                {warranty.isWarrantyActive ? `${warranty.daysRemaining} Days Left` : 'Expired'}
+                {warranty.isWarrantyActive
+                  ? `${warranty.daysRemaining} Days Left`
+                  : "Expired"}
               </Text>
               <Text style={styles.warrantyMonthsTotal}>
                 {game.warranty_months} Months Total
@@ -328,7 +373,12 @@ export default function GameDetailsScreen() {
           </View>
 
           {/* SENSITIVE CREDENTIALS (BIOMETRIC SHIELD) */}
-          <View style={[styles.credentialsCard, isUnlocked && styles.credentialsCardUnlocked]}>
+          <View
+            style={[
+              styles.credentialsCard,
+              isUnlocked && styles.credentialsCardUnlocked,
+            ]}
+          >
             <View style={styles.credentialsHeader}>
               <Text style={styles.credentialsTitle}>
                 PSN Account Credentials
@@ -343,17 +393,26 @@ export default function GameDetailsScreen() {
             {!isUnlocked ? (
               /* LOCKED VIEW */
               <View style={styles.biometricPromptBox}>
-                <Lock size={36} color={styles.accentIcon.color} strokeWidth={2} style={styles.lockIconMargin} />
+                <Lock
+                  size={36}
+                  color={styles.accentIcon.color}
+                  strokeWidth={2}
+                  style={styles.lockIconMargin}
+                />
                 <Text style={styles.credentialsProtectedTitle}>
                   Credentials Protected
                 </Text>
                 <Text style={styles.credentialsProtectedSubtitle}>
-                  Biometric authentication required to view PSN email, password, and 2FA codes.
+                  Biometric authentication required to view PSN email, password,
+                  and 2FA codes.
                 </Text>
 
                 <Pressable
                   onPress={requestUnlock}
-                  style={({ pressed }) => [styles.unlockBtn, pressed && styles.unlockBtnPressed]}
+                  style={({ pressed }) => [
+                    styles.unlockBtn,
+                    pressed && styles.unlockBtnPressed,
+                  ]}
                 >
                   <Text style={styles.unlockBtnText}>
                     Unlock with Face ID / Passcode
@@ -369,16 +428,29 @@ export default function GameDetailsScreen() {
                   <View style={styles.credentialRow}>
                     <Text style={styles.credentialValue}>{game.psn_email}</Text>
                     <Pressable
-                      onPress={() => copyToClipboard(game.psn_email, 'email')}
+                      onPress={() => copyToClipboard(game.psn_email, "email")}
                       style={styles.copyRow}
                     >
-                      {copiedField === 'email' ? (
-                        <Check size={12} color={styles.successColor.color} strokeWidth={2.4} />
+                      {copiedField === "email" ? (
+                        <Check
+                          size={12}
+                          color={styles.successColor.color}
+                          strokeWidth={2.4}
+                        />
                       ) : (
-                        <Copy size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
+                        <Copy
+                          size={12}
+                          color={styles.accentIcon.color}
+                          strokeWidth={2.2}
+                        />
                       )}
-                      <Text style={[styles.copyText, copiedField === 'email' && styles.copyTextSuccess]}>
-                        {copiedField === 'email' ? 'Copied' : 'Copy'}
+                      <Text
+                        style={[
+                          styles.copyText,
+                          copiedField === "email" && styles.copyTextSuccess,
+                        ]}
+                      >
+                        {copiedField === "email" ? "Copied" : "Copy"}
                       </Text>
                     </Pressable>
                   </View>
@@ -388,20 +460,39 @@ export default function GameDetailsScreen() {
                 <View style={styles.fieldSection}>
                   <Text style={styles.fieldLabel}>PSN PASSWORD</Text>
                   <View style={styles.credentialRow}>
-                    <Text style={styles.credentialValue}>{game.psn_password}</Text>
-                    <Pressable
-                      onPress={() => copyToClipboard(game.psn_password, 'password')}
-                      style={styles.copyRow}
-                    >
-                      {copiedField === 'password' ? (
-                        <Check size={12} color={styles.successColor.color} strokeWidth={2.4} />
-                      ) : (
-                        <Copy size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
-                      )}
-                      <Text style={[styles.copyText, copiedField === 'password' && styles.copyTextSuccess]}>
-                        {copiedField === 'password' ? 'Copied' : 'Copy'}
-                      </Text>
-                    </Pressable>
+                    <Text style={styles.credentialValue}>
+                      {game.psn_password || '—'}
+                    </Text>
+                    {game.psn_password ? (
+                      <Pressable
+                        onPress={() =>
+                          copyToClipboard(game.psn_password || '', "password")
+                        }
+                        style={styles.copyRow}
+                      >
+                        {copiedField === "password" ? (
+                          <Check
+                            size={12}
+                            color={styles.successColor.color}
+                            strokeWidth={2.4}
+                          />
+                        ) : (
+                          <Copy
+                            size={12}
+                            color={styles.accentIcon.color}
+                            strokeWidth={2.2}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.copyText,
+                            copiedField === "password" && styles.copyTextSuccess,
+                          ]}
+                        >
+                          {copiedField === "password" ? "Copied" : "Copy"}
+                        </Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                 </View>
 
@@ -415,26 +506,40 @@ export default function GameDetailsScreen() {
                           key={index}
                           style={[
                             styles.codeRow,
-                            index < game.backup_codes!.length - 1 && styles.codeRowDivider,
+                            index < game.backup_codes!.length - 1 &&
+                              styles.codeRowDivider,
                           ]}
                         >
                           <Text style={styles.monoCodeText}>{code}</Text>
                           <Pressable
-                            onPress={() => copyToClipboard(code, `code-${index}`)}
+                            onPress={() =>
+                              copyToClipboard(code, `code-${index}`)
+                            }
                             style={styles.copyRow}
                           >
                             {copiedField === `code-${index}` ? (
-                              <Check size={12} color={styles.successColor.color} strokeWidth={2.4} />
+                              <Check
+                                size={12}
+                                color={styles.successColor.color}
+                                strokeWidth={2.4}
+                              />
                             ) : (
-                              <Copy size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
+                              <Copy
+                                size={12}
+                                color={styles.accentIcon.color}
+                                strokeWidth={2.2}
+                              />
                             )}
                             <Text
                               style={[
                                 styles.copyText,
-                                copiedField === `code-${index}` && styles.copyTextSuccess,
+                                copiedField === `code-${index}` &&
+                                  styles.copyTextSuccess,
                               ]}
                             >
-                              {copiedField === `code-${index}` ? 'Copied' : 'Copy'}
+                              {copiedField === `code-${index}`
+                                ? "Copied"
+                                : "Copy"}
                             </Text>
                           </Pressable>
                         </View>
@@ -446,9 +551,16 @@ export default function GameDetailsScreen() {
                 {/* Replace Credentials Action */}
                 <Pressable
                   onPress={() => setReplaceModalVisible(true)}
-                  style={({ pressed }) => [styles.replaceCredentialsBtn, pressed && styles.replaceCredentialsBtnPressed]}
+                  style={({ pressed }) => [
+                    styles.replaceCredentialsBtn,
+                    pressed && styles.replaceCredentialsBtnPressed,
+                  ]}
                 >
-                  <RefreshCw size={14} color={styles.accentIcon.color} strokeWidth={2.2} />
+                  <RefreshCw
+                    size={14}
+                    color={styles.accentIcon.color}
+                    strokeWidth={2.2}
+                  />
                   <Text style={styles.replaceCredentialsText}>
                     Replace Credentials (Archive Old to History)
                   </Text>
@@ -463,8 +575,11 @@ export default function GameDetailsScreen() {
 
             {!isLocked ? (
               <Pressable
-                onPress={() => toggleGameStatus('Locked')}
-                style={({ pressed }) => [styles.markLockedBtn, pressed && styles.markLockedBtnPressed]}
+                onPress={() => toggleGameStatus("Locked")}
+                style={({ pressed }) => [
+                  styles.markLockedBtn,
+                  pressed && styles.markLockedBtnPressed,
+                ]}
               >
                 <Lock size={15} color="#FFFFFF" strokeWidth={2.4} />
                 <Text style={styles.statusActionText}>
@@ -473,8 +588,11 @@ export default function GameDetailsScreen() {
               </Pressable>
             ) : (
               <Pressable
-                onPress={() => toggleGameStatus('Active')}
-                style={({ pressed }) => [styles.markActiveBtn, pressed && styles.markActiveBtnPressed]}
+                onPress={() => toggleGameStatus("Active")}
+                style={({ pressed }) => [
+                  styles.markActiveBtn,
+                  pressed && styles.markActiveBtnPressed,
+                ]}
               >
                 <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
                 <Text style={styles.statusActionText}>
@@ -505,8 +623,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     notFoundContainer: {
       flex: 1,
       backgroundColor: colors.bg,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     notFoundText: {
       color: colors.text,
@@ -517,53 +635,54 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     goBackText: {
       color: colors.accent,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     heroWrapper: {
-      width: '100%',
+      width: "100%",
       height: 280,
-      position: 'relative',
+      position: "relative",
     },
     heroCoverImage: {
-      width: '100%',
-      height: '100%',
+      width: "100%",
+      height: "100%",
     },
     heroCoverPlaceholder: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: theme === 'dark' ? '#0B1120' : '#E2E8F0',
-      alignItems: 'center',
-      justifyContent: 'center',
+      width: "100%",
+      height: "100%",
+      backgroundColor: theme === "dark" ? "#0B1120" : "#E2E8F0",
+      alignItems: "center",
+      justifyContent: "center",
     },
     placeholderIcon: {
       color: colors.textMuted,
     },
     vignette: {
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.25)',
+      backgroundColor: "rgba(0, 0, 0, 0.25)",
     },
     floatingHeader: {
-      position: 'absolute',
+      position: "absolute",
       left: 20,
       right: 20,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
     },
     headerCircleBtn: {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: theme === 'dark' ? colors.surfaceElevated : '#FFFFFF',
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: theme === "dark" ? colors.surfaceElevated : "#FFFFFF",
+      alignItems: "center",
+      justifyContent: "center",
       borderWidth: 1,
-      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
-      boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.18)',
+      borderColor:
+        theme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.08)",
+      boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.18)",
       elevation: 5,
     },
     headerCircleBtnPressed: {
@@ -573,8 +692,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: colors.text,
     },
     headerRightActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 10,
     },
     sheetScroll: {
@@ -590,7 +709,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderTopRightRadius: 32,
       paddingHorizontal: 20,
       paddingTop: 14,
-      boxShadow: '0px -4px 10px rgba(0, 0, 0, 0.12)',
+      boxShadow: "0px -4px 10px rgba(0, 0, 0, 0.12)",
       elevation: 6,
     },
     sheetHandle: {
@@ -598,13 +717,13 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       height: 5,
       borderRadius: 3,
       backgroundColor: colors.border,
-      alignSelf: 'center',
+      alignSelf: "center",
       marginBottom: 16,
     },
     titleRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
       gap: 12,
       marginBottom: 8,
     },
@@ -612,35 +731,35 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       flex: 1,
       color: colors.text,
       fontSize: 24,
-      fontWeight: '800',
+      fontWeight: "800",
       letterSpacing: -0.4,
     },
     ratingBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 4,
-      backgroundColor: theme === 'dark' ? 'rgba(255, 215, 0, 0.12)' : '#FEF3C7',
+      backgroundColor: theme === "dark" ? "rgba(255, 215, 0, 0.12)" : "#FEF3C7",
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: '#F59E0B',
+      borderColor: "#F59E0B",
     },
     ratingText: {
       color: colors.text,
       fontSize: 13,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     badgesRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
       marginBottom: 18,
-      flexWrap: 'wrap',
+      flexWrap: "wrap",
     },
     accountTypeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 6,
     },
     statusIndicatorDot: {
@@ -657,7 +776,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     accountTypeText: {
       color: colors.textSecondary,
       fontSize: 13,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     statusBadge: {
       paddingHorizontal: 8,
@@ -666,20 +785,20 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderWidth: 0.5,
     },
     statusBadgeActive: {
-      backgroundColor: theme === 'dark' ? 'rgba(48, 209, 88, 0.2)' : '#ECFDF5',
+      backgroundColor: theme === "dark" ? "rgba(48, 209, 88, 0.2)" : "#ECFDF5",
       borderColor: colors.success,
     },
     statusBadgeLocked: {
-      backgroundColor: theme === 'dark' ? 'rgba(255, 59, 48, 0.2)' : '#FEE2E2',
+      backgroundColor: theme === "dark" ? "rgba(255, 59, 48, 0.2)" : "#FEE2E2",
       borderColor: colors.danger,
     },
     statusBadgeWarning: {
-      backgroundColor: 'rgba(255, 159, 10, 0.2)',
+      backgroundColor: "rgba(255, 159, 10, 0.2)",
       borderColor: colors.warning,
     },
     statusBadgeText: {
       fontSize: 11,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     statusTextSuccess: {
       color: colors.success,
@@ -701,18 +820,21 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       marginTop: 14,
       borderWidth: 1,
       borderColor: colors.border,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      boxShadow: theme === 'dark' ? '0px 1px 4px rgba(0, 0, 0, 0.2)' : '0px 1px 4px rgba(0, 0, 0, 0.04)',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      boxShadow:
+        theme === "dark"
+          ? "0px 1px 4px rgba(0, 0, 0, 0.2)"
+          : "0px 1px 4px rgba(0, 0, 0, 0.04)",
       elevation: 2,
     },
     sellerCardPressed: {
       backgroundColor: colors.surfaceElevated,
     },
     sellerCardLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 10,
     },
     sellerAvatar: {
@@ -720,8 +842,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       height: 40,
       borderRadius: 20,
       backgroundColor: colors.surfaceSubtle,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     accentIcon: {
       color: colors.accent,
@@ -731,36 +853,36 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     sellerCardName: {
       color: colors.text,
-      fontWeight: '800',
+      fontWeight: "800",
       fontSize: 14,
     },
     sellerSubtextRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 2,
       marginTop: 2,
     },
     sellerSubtext: {
       color: colors.accent,
       fontSize: 11,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     sellerRatingPill: {
-      backgroundColor: 'rgba(255, 215, 0, 0.12)',
+      backgroundColor: "rgba(255, 215, 0, 0.12)",
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 4,
     },
     sellerRatingText: {
-      color: '#FFD700',
-      fontWeight: '800',
+      color: "#FFD700",
+      fontWeight: "800",
       fontSize: 12,
     },
     padlockBanner: {
-      backgroundColor: theme === 'dark' ? '#1E0E12' : '#FEF2F2',
+      backgroundColor: theme === "dark" ? "#1E0E12" : "#FEF2F2",
       borderRadius: 20,
       padding: 16,
       marginTop: 14,
@@ -768,13 +890,13 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderColor: colors.danger,
     },
     padlockHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
     },
     padlockTitle: {
       color: colors.danger,
-      fontWeight: '800',
+      fontWeight: "800",
       fontSize: 14,
     },
     padlockDescription: {
@@ -788,17 +910,17 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       paddingVertical: 12,
       borderRadius: 12,
       marginTop: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       gap: 6,
     },
     padlockDispatchBtnPressed: {
-      backgroundColor: '#DC2626',
+      backgroundColor: "#DC2626",
     },
     padlockDispatchText: {
-      color: '#FFFFFF',
-      fontWeight: '800',
+      color: "#FFFFFF",
+      fontWeight: "800",
       fontSize: 13,
     },
     warrantyCard: {
@@ -808,24 +930,27 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       marginTop: 14,
       borderWidth: 1,
       borderColor: colors.border,
-      boxShadow: theme === 'dark' ? '0px 1px 4px rgba(0, 0, 0, 0.2)' : '0px 1px 4px rgba(0, 0, 0, 0.04)',
+      boxShadow:
+        theme === "dark"
+          ? "0px 1px 4px rgba(0, 0, 0, 0.2)"
+          : "0px 1px 4px rgba(0, 0, 0, 0.04)",
       elevation: 2,
     },
     sectionHeader: {
       color: colors.textMuted,
       fontSize: 11,
-      fontWeight: '700',
-      textTransform: 'uppercase',
+      fontWeight: "700",
+      textTransform: "uppercase",
     },
     warrantyRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
       marginTop: 8,
     },
     warrantyDaysText: {
       fontSize: 20,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     warrantyMonthsTotal: {
       color: colors.textSecondary,
@@ -843,29 +968,32 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       marginTop: 14,
       borderWidth: 1,
       borderColor: colors.border,
-      boxShadow: theme === 'dark' ? '0px 2px 6px rgba(0, 0, 0, 0.25)' : '0px 2px 6px rgba(0, 0, 0, 0.05)',
+      boxShadow:
+        theme === "dark"
+          ? "0px 2px 6px rgba(0, 0, 0, 0.25)"
+          : "0px 2px 6px rgba(0, 0, 0, 0.05)",
       elevation: 2,
     },
     credentialsCardUnlocked: {
       borderColor: colors.accent,
     },
     credentialsHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
     },
     credentialsTitle: {
       color: colors.text,
       fontSize: 15,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     lockText: {
       color: colors.danger,
       fontSize: 12,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     biometricPromptBox: {
-      alignItems: 'center',
+      alignItems: "center",
       paddingVertical: 20,
     },
     lockIconMargin: {
@@ -873,13 +1001,13 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     credentialsProtectedTitle: {
       color: colors.text,
-      fontWeight: '800',
+      fontWeight: "800",
       fontSize: 15,
     },
     credentialsProtectedSubtitle: {
       color: colors.textSecondary,
       fontSize: 12,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: 4,
       marginBottom: 16,
     },
@@ -894,7 +1022,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     unlockBtnText: {
       color: colors.bg,
-      fontWeight: '800',
+      fontWeight: "800",
       fontSize: 13,
     },
     unlockedBox: {
@@ -906,33 +1034,33 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     fieldLabel: {
       color: colors.textSecondary,
       fontSize: 11,
-      fontWeight: '700',
+      fontWeight: "700",
       marginBottom: 4,
     },
     credentialRow: {
       backgroundColor: colors.surfaceSubtle,
       borderRadius: 12,
       padding: 12,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       borderWidth: 1,
       borderColor: colors.border,
     },
     credentialValue: {
       color: colors.text,
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     copyRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 4,
     },
     copyText: {
       color: colors.accent,
       fontSize: 12,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     copyTextSuccess: {
       color: colors.success,
@@ -945,8 +1073,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderColor: colors.border,
     },
     codeRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       paddingVertical: 6,
     },
     codeRowDivider: {
@@ -955,16 +1083,16 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     monoCodeText: {
       color: colors.text,
-      fontFamily: 'monospace',
+      fontFamily: "monospace",
       fontSize: 13,
     },
     replaceCredentialsBtn: {
       backgroundColor: colors.surfaceSubtle,
       paddingVertical: 12,
       borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
       gap: 8,
       borderWidth: 1,
       borderColor: colors.border,
@@ -975,7 +1103,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     replaceCredentialsText: {
       color: colors.accent,
-      fontWeight: '800',
+      fontWeight: "800",
       fontSize: 13,
     },
     statusActionsSection: {
@@ -985,29 +1113,29 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       backgroundColor: colors.danger,
       paddingVertical: 14,
       borderRadius: 14,
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'center',
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
       gap: 8,
     },
     markLockedBtnPressed: {
-      backgroundColor: '#DC2626',
+      backgroundColor: "#DC2626",
     },
     markActiveBtn: {
       backgroundColor: colors.success,
       paddingVertical: 14,
       borderRadius: 14,
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'center',
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
       gap: 8,
     },
     markActiveBtnPressed: {
-      backgroundColor: '#059669',
+      backgroundColor: "#059669",
     },
     statusActionText: {
-      color: '#FFFFFF',
-      fontWeight: '800',
+      color: "#FFFFFF",
+      fontWeight: "800",
       fontSize: 14,
     },
   });

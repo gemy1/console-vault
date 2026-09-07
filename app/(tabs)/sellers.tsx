@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { ShieldCheck } from 'lucide-react-native';
-import { OfflineVault } from '../../services/storage';
-import { Seller, Game } from '../../types/vault';
-import { ModernHeader, QuickAddWidget } from '../../components/common';
-import { SellerCard, SellerFormModal } from '../../components/sellers';
-import { useThemedStyles } from '../../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+} from "react-native";
+import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { ShieldCheck } from "lucide-react-native";
+import { OfflineVault } from "../../services/storage";
+import { Seller, Game } from "../../types/vault";
+import { ModernHeader, QuickAddWidget } from "../../components/common";
+import { SellerCard, SellerFormModal } from "../../components/sellers";
+import { useThemedStyles } from "../../hooks/useThemedStyles";
+import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 
 export default function SellersScreen() {
   const router = useRouter();
@@ -70,7 +77,7 @@ export default function SellersScreen() {
     } else {
       const newSeller: Seller = {
         id: `seller-${Date.now()}`,
-        user_id: 'user-demo',
+        user_id: "user-demo",
         ...sellerData,
         created_at: new Date().toISOString(),
       };
@@ -107,9 +114,9 @@ export default function SellersScreen() {
         <QuickAddWidget
           actions={[
             {
-              label: 'Register New Seller',
-              sublabel: 'Add WhatsApp, Telegram & custom notes',
-              icon: 'seller',
+              label: "Register New Seller",
+              sublabel: "Add WhatsApp, Telegram & custom notes",
+              icon: "seller",
               onPress: handleOpenAdd,
             },
           ]}
@@ -118,10 +125,16 @@ export default function SellersScreen() {
         {/* SELLERS LIST */}
         {sellers.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <ShieldCheck size={48} color={styles.emptyIcon.color} strokeWidth={1.5} style={styles.emptyIconStyle} />
+            <ShieldCheck
+              size={48}
+              color={styles.emptyIcon.color}
+              strokeWidth={1.5}
+              style={styles.emptyIconStyle}
+            />
             <Text style={styles.emptyTitle}>No Digital Sellers Found</Text>
             <Text style={styles.emptySubtitle}>
-              Tap above to register your first seller with multiple contact methods and notes.
+              Tap above to register your first seller with multiple contact
+              methods and notes.
             </Text>
           </View>
         ) : (
@@ -166,7 +179,7 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
       color: colors.accent,
     },
     emptyContainer: {
-      alignItems: 'center',
+      alignItems: "center",
       marginTop: 40,
     },
     emptyIcon: {
@@ -178,12 +191,12 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
     emptyTitle: {
       color: colors.text,
       fontSize: 16,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     emptySubtitle: {
       color: colors.textSecondary,
       fontSize: 13,
       marginTop: 4,
-      textAlign: 'center',
+      textAlign: "center",
     },
   });

@@ -29,7 +29,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
     action.onPress();
   };
 
-  // DUAL ACTIONS MODE (e.g. Dashboard: + Add Game & + Add Seller side-by-side)
+  // DUAL ACTIONS MODE (Dashboard: One unified horizontal widget containing both Add Game & Add Seller)
   if (actions.length > 1) {
     return (
       <View style={styles.container}>
@@ -40,54 +40,54 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
           </View>
         )}
 
-        <View style={styles.dualRow}>
+        <View style={styles.unifiedHorizontalCard}>
           {actions.map((item, index) => {
             const isGame = item.icon === 'game';
             return (
-              <Pressable
-                key={item.id || index}
-                onPress={() => handlePress(item)}
-                style={({ pressed }) => [
-                  styles.dualCard,
-                  isGame ? styles.dualCardGame : styles.dualCardSeller,
-                  pressed && styles.cardPressed,
-                ]}
-              >
-                <View style={styles.dualCardTop}>
+              <React.Fragment key={item.id || index}>
+                {index > 0 && <View style={styles.horizontalDivider} />}
+
+                <Pressable
+                  onPress={() => handlePress(item)}
+                  style={({ pressed }) => [
+                    styles.horizontalActionHalf,
+                    pressed && styles.actionHalfPressed,
+                  ]}
+                >
                   <View
                     style={[
-                      styles.iconCircleSmall,
+                      styles.iconCircleHorizontal,
                       isGame ? styles.iconCircleGame : styles.iconCircleSeller,
                     ]}
                   >
                     {isGame ? (
-                      <Gamepad2 size={16} color="#00D2FF" strokeWidth={2.2} />
+                      <Gamepad2 size={18} color="#00D2FF" strokeWidth={2.2} />
                     ) : (
-                      <ShieldCheck size={16} color="#38BDF8" strokeWidth={2.2} />
+                      <ShieldCheck size={18} color="#38BDF8" strokeWidth={2.2} />
+                    )}
+                  </View>
+
+                  <View style={styles.horizontalTextCol}>
+                    <Text style={styles.horizontalActionLabel} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                    {item.sublabel && (
+                      <Text style={styles.horizontalActionSublabel} numberOfLines={1}>
+                        {item.sublabel}
+                      </Text>
                     )}
                   </View>
 
                   <View
                     style={[
-                      styles.plusPill,
+                      styles.horizontalPlusPill,
                       isGame ? styles.plusPillGame : styles.plusPillSeller,
                     ]}
                   >
-                    <Plus size={12} color="#FFFFFF" strokeWidth={2.6} />
+                    <Plus size={11} color="#FFFFFF" strokeWidth={2.8} />
                   </View>
-                </View>
-
-                <View style={styles.dualCardBody}>
-                  <Text style={styles.dualCardLabel} numberOfLines={1}>
-                    {item.label}
-                  </Text>
-                  {item.sublabel && (
-                    <Text style={styles.dualCardSublabel} numberOfLines={1}>
-                      {item.sublabel}
-                    </Text>
-                  )}
-                </View>
-              </Pressable>
+                </Pressable>
+              </React.Fragment>
             );
           })}
         </View>
@@ -181,39 +181,39 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: colors.accent,
     },
 
-    /* DUAL CARDS LAYOUT */
-    dualRow: {
+    /* UNIFIED HORIZONTAL DUAL WIDGET */
+    unifiedHorizontalCard: {
       flexDirection: 'row',
-      gap: 10,
-    },
-    dualCard: {
-      flex: 1,
+      alignItems: 'center',
       backgroundColor: colors.surface,
       borderRadius: 18,
-      padding: 14,
       borderWidth: 1,
       borderColor: colors.border,
-      boxShadow: theme === 'dark' ? '0px 3px 8px rgba(0, 0, 0, 0.35)' : '0px 3px 8px rgba(0, 0, 0, 0.08)',
+      boxShadow: theme === 'dark' ? '0px 3px 10px rgba(0, 0, 0, 0.35)' : '0px 3px 10px rgba(0, 0, 0, 0.06)',
       elevation: 3,
+      overflow: 'hidden',
     },
-    dualCardGame: {
-      borderLeftWidth: 3,
-      borderLeftColor: '#00D2FF',
-    },
-    dualCardSeller: {
-      borderLeftWidth: 3,
-      borderLeftColor: '#0070D1',
-    },
-    dualCardTop: {
+    horizontalActionHalf: {
+      flex: 1,
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      gap: 10,
     },
-    iconCircleSmall: {
-      width: 34,
-      height: 34,
-      borderRadius: 10,
+    actionHalfPressed: {
+      backgroundColor: colors.surfaceSubtle,
+      opacity: 0.85,
+    },
+    horizontalDivider: {
+      width: 1,
+      height: 36,
+      backgroundColor: colors.border,
+    },
+    iconCircleHorizontal: {
+      width: 36,
+      height: 36,
+      borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -223,10 +223,25 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     iconCircleSeller: {
       backgroundColor: 'rgba(0, 112, 209, 0.12)',
     },
-    plusPill: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+    horizontalTextCol: {
+      flex: 1,
+      gap: 1,
+    },
+    horizontalActionLabel: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '800',
+      letterSpacing: -0.2,
+    },
+    horizontalActionSublabel: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '500',
+    },
+    horizontalPlusPill: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -236,22 +251,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     plusPillSeller: {
       backgroundColor: '#0F56B3',
     },
-    dualCardBody: {
-      gap: 2,
-    },
-    dualCardLabel: {
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '800',
-      letterSpacing: -0.2,
-    },
-    dualCardSublabel: {
-      color: colors.textSecondary,
-      fontSize: 11,
-      fontWeight: '500',
-    },
 
-    /* SINGLE CARD LAYOUT */
+    /* SINGLE CARD LAYOUT (Vault & Sellers) */
     singleCard: {
       backgroundColor: colors.surface,
       borderRadius: 18,
