@@ -16,7 +16,7 @@ import { OfflineVault } from "../../services/storage";
 import { Game, Seller, ContactPlatform, SellerContactMethod } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
 import { ModernHeader, QuickAddWidget } from "../../components/common";
-import { GameCard, PulsingPadlockBadge } from "../../components/games";
+import { GameCard, PulsingPadlockBadge, GameFormModal } from "../../components/games";
 import { SellerFormModal } from "../../components/sellers";
 import {
   Gamepad2,
@@ -39,10 +39,27 @@ export default function DashboardScreen() {
     "All" | "Active" | "Locked"
   >("All");
   const [sellerModalVisible, setSellerModalVisible] = useState(false);
+  const [gameModalVisible, setGameModalVisible] = useState(false);
 
   const loadData = () => {
     setGames(OfflineVault.getGames());
     setSellers(OfflineVault.getSellers());
+  };
+
+  const handleSaveGame = (gameData: any) => {
+    const newGame: Game = {
+      id: `game-${Date.now()}`,
+      user_id: 'user-demo',
+      status: 'Active',
+      purchase_date: new Date().toISOString().split('T')[0],
+      ...gameData,
+    };
+    OfflineVault.addGame(newGame);
+    setGameModalVisible(false);
+    loadData();
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
   };
 
   const handleSaveSeller = (sellerData: {
@@ -126,7 +143,7 @@ export default function DashboardScreen() {
                 label: "Add Game",
                 sublabel: "Store account",
                 icon: "game",
-                onPress: () => router.push("/game/add"),
+                onPress: () => setGameModalVisible(true),
               },
               {
                 label: "Add Seller",
@@ -390,6 +407,13 @@ export default function DashboardScreen() {
         visible={sellerModalVisible}
         onClose={() => setSellerModalVisible(false)}
         onSave={handleSaveSeller}
+      />
+
+      {/* QUICK GAME REGISTRATION MODAL */}
+      <GameFormModal
+        visible={gameModalVisible}
+        onClose={() => setGameModalVisible(false)}
+        onSave={handleSaveGame}
       />
     </View>
   );

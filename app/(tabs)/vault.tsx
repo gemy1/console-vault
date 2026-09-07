@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { OfflineVault } from '../../services/storage';
 import { ModernHeader, QuickAddWidget } from '../../components/common';
-import { GameCard } from '../../components/games';
+import { GameCard, GameFormModal } from '../../components/games';
 import { Game, Seller } from '../../types/vault';
 import { Search, X, Gamepad2 } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
@@ -29,10 +29,27 @@ export default function VaultScreen() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterType>('All');
   const [refreshing, setRefreshing] = useState(false);
+  const [gameModalVisible, setGameModalVisible] = useState(false);
 
   const loadData = () => {
     setGames(OfflineVault.getGames());
     setSellers(OfflineVault.getSellers());
+  };
+
+  const handleSaveGame = (gameData: any) => {
+    const newGame: Game = {
+      id: `game-${Date.now()}`,
+      user_id: 'user-demo',
+      status: 'Active',
+      purchase_date: new Date().toISOString().split('T')[0],
+      ...gameData,
+    };
+    OfflineVault.addGame(newGame);
+    setGameModalVisible(false);
+    loadData();
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
   };
 
   useEffect(() => {
@@ -79,7 +96,7 @@ export default function VaultScreen() {
               label: 'Add New Game',
               sublabel: 'Store credentials & set warranty',
               icon: 'game',
-              onPress: () => router.push('/game/add'),
+              onPress: () => setGameModalVisible(true),
             },
           ]}
         />
@@ -174,6 +191,13 @@ export default function VaultScreen() {
           })
         )}
       </ScrollView>
+
+      {/* QUICK GAME REGISTRATION MODAL */}
+      <GameFormModal
+        visible={gameModalVisible}
+        onClose={() => setGameModalVisible(false)}
+        onSave={handleSaveGame}
+      />
     </View>
   );
 }
