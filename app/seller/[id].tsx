@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet, Alert, Platform } from 'react-native';
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +33,8 @@ export default function SellerDetailsScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const vaultSync = useVaultSync();
 
   const [seller, setSeller] = useState<Seller | null>(null);
   const [games, setGames] = useState<Game[]>([]);
@@ -95,11 +97,7 @@ export default function SellerDetailsScreen() {
     setEditModalVisible(false);
   };
 
-  let vaultSync: ReturnType<typeof useVaultSync> | null = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    vaultSync = useVaultSync();
-  } catch {}
+
 
   const handleDeleteSeller = () => {
     if (!seller) return;
@@ -150,7 +148,7 @@ export default function SellerDetailsScreen() {
         subtitle={seller.name}
         showBackButton={true}
         rightAction={
-          <View style={styles.headerActionsRow}>
+          <View style={[styles.headerActionsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <Pressable
               onPress={() => {
                 try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
@@ -188,14 +186,14 @@ export default function SellerDetailsScreen() {
           <Text style={styles.sellerName}>{seller.name}</Text>
 
           {/* BADGES ROW */}
-          <View style={styles.heroBadgesRow}>
+          <View style={[styles.heroBadgesRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <View style={styles.channelCountBadge}>
               <Text style={styles.channelCountText}>
                 {contacts.length} {contacts.length === 1 ? t('channelCountSingular') : t('channelCountPlural')}
               </Text>
             </View>
 
-            <View style={styles.ratingBadge}>
+            <View style={[styles.ratingBadge, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Star size={12} color="#F59E0B" fill="#F59E0B" />
               <Text style={styles.ratingText}>
                 {seller.reputation_score.toFixed(1)} / 5.0
@@ -206,11 +204,11 @@ export default function SellerDetailsScreen() {
 
         {/* CONNECTION METHODS CARD */}
         <View style={styles.sectionCard}>
-          <View style={styles.sectionCardHeader}>
+          <View style={[styles.sectionCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
               {t('connectWithSeller')} ({contacts.length})
             </Text>
-            <Pressable onPress={() => setEditModalVisible(true)} style={styles.addMethodBtn}>
+            <Pressable onPress={() => setEditModalVisible(true)} style={[styles.addMethodBtn, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Plus size={13} color={styles.accentIcon.color} strokeWidth={2.4} />
               <Text style={styles.addMethodText}>{t('btnAddSellerMethod')}</Text>
             </Pressable>
@@ -223,13 +221,13 @@ export default function SellerDetailsScreen() {
 
               return (
                 <View key={contact.id || index} style={styles.contactItem}>
-                  <View style={styles.contactTopRow}>
-                    <View style={styles.contactInfoRow}>
+                  <View style={[styles.contactTopRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <View style={[styles.contactInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                       <View style={[styles.platformIconCircle, { backgroundColor: cfg.bgTint }]}>
                         <PlatformIcon platform={contact.platform} size={18} color={cfg.defaultColor} />
                       </View>
                       <View style={styles.contactDetailsCol}>
-                        <View style={styles.platformNameRow}>
+                        <View style={[styles.platformNameRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                           <Text style={[styles.platformName, isRTL && styles.rtlText]}>{contact.platform}</Text>
                           {contact.label && (
                             <View style={[styles.contactLabelBadge, { backgroundColor: `${cfg.defaultColor}20` }]}>
@@ -248,7 +246,7 @@ export default function SellerDetailsScreen() {
                     <Pressable
                       onPress={() => copyContact(contact.value, contact.id || `${index}`)}
                       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      style={styles.copyBtn}
+                      style={[styles.copyBtn, isNativeRTL && { flexDirection: 'row-reverse' }]}
                     >
                       {isCopied ? (
                         <Check size={11} color={styles.successColor.color} strokeWidth={2.4} />
@@ -265,6 +263,7 @@ export default function SellerDetailsScreen() {
                     onPress={() => openSellerContact(contact.platform, contact.value)}
                     style={({ pressed }) => [
                       styles.openChatBtn,
+                      isNativeRTL && { flexDirection: 'row-reverse' },
                       { backgroundColor: pressed ? `${cfg.defaultColor}CC` : cfg.defaultColor },
                     ]}
                   >
@@ -282,15 +281,15 @@ export default function SellerDetailsScreen() {
 
         {/* SELLER NOTES & POLICIES CARD */}
         <View style={styles.sectionCard}>
-          <View style={styles.notesHeaderRow}>
-            <View style={styles.notesTitleGroup}>
+          <View style={[styles.notesHeaderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            <View style={[styles.notesTitleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <FileText size={15} color={styles.accentIcon.color} strokeWidth={2.2} />
               <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
                 {t('sellerGuaranteeNotes')}
               </Text>
             </View>
 
-            <Pressable onPress={() => setEditModalVisible(true)} style={styles.editNotesBtn}>
+            <Pressable onPress={() => setEditModalVisible(true)} style={[styles.editNotesBtn, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Pencil size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
               <Text style={styles.editNotesText}>{t('btnEdit')}</Text>
             </Pressable>
@@ -310,7 +309,7 @@ export default function SellerDetailsScreen() {
         </View>
 
         {/* METRICS ROW */}
-        <View style={styles.metricsRow}>
+        <View style={[styles.metricsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           <View style={styles.metricCard}>
             <Text style={[styles.metricLabel, isRTL && styles.rtlText]}>{t('metricVaultTotal')}</Text>
             <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{games.length}</Text>
@@ -375,7 +374,7 @@ export default function SellerDetailsScreen() {
             style={({ pressed }) => [
               styles.deleteSellerBtn,
               pressed && styles.deleteSellerBtnPressed,
-              isRTL && { flexDirection: 'row-reverse' },
+              isNativeRTL && { flexDirection: 'row-reverse' },
             ]}
           >
             <Trash2 size={16} color="#EF4444" strokeWidth={2.2} />

@@ -59,11 +59,7 @@ export default function GameDetailsScreen() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  let vaultSync: ReturnType<typeof useVaultSync> | null = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    vaultSync = useVaultSync();
-  } catch {}
+  const vaultSync = useVaultSync();
 
   const { isUnlocked, requestUnlock, lock } = useBiometricGuard(60);
 

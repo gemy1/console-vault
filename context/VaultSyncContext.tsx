@@ -247,10 +247,25 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
   return <VaultSyncContext.Provider value={value}>{children}</VaultSyncContext.Provider>;
 }
 
+const DEFAULT_SYNC_FALLBACK: VaultSyncContextType = {
+  games: [],
+  sellers: [],
+  syncStatus: 'local_only',
+  pendingCount: 0,
+  lastSyncedAt: null,
+  syncNow: async () => false,
+  addGame: (g) => g,
+  updateGame: () => null,
+  deleteGame: () => false,
+  addSeller: (s) => s,
+  updateSeller: () => null,
+  deleteSeller: () => false,
+  refreshData: () => {},
+  pullFromCloud: async () => false,
+  clearLocalVault: () => {},
+};
+
 export function useVaultSync() {
   const context = useContext(VaultSyncContext);
-  if (!context) {
-    throw new Error('useVaultSync must be used within a VaultSyncProvider');
-  }
-  return context;
+  return context ?? DEFAULT_SYNC_FALLBACK;
 }
