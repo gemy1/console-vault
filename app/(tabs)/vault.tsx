@@ -9,7 +9,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
@@ -63,8 +62,8 @@ export default function VaultScreen() {
   const filterButtons: FilterType[] = ['All', 'Active', 'Locked', 'Primary', 'Secondary'];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right']}>
-      {/* MODERN HEADER */}
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* MODERN HEADER WITH CIRCULAR BUTTONS BELOW NOTIFICATION BAR */}
       <ModernHeader
         title="Game Vault"
         subtitle="Inventory & Licenses"
@@ -300,6 +299,6 @@ export default function VaultScreen() {
           })
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

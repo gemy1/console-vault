@@ -8,10 +8,10 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Game, Seller, AccountType } from '../../types/vault';
+import { ModernHeader } from '../../components/ModernHeader';
 
 export default function AddGameScreen() {
   const router = useRouter();
@@ -67,27 +67,34 @@ export default function AddGameScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* HEADER */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingVertical: 14,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        }}
-      >
-        <Pressable onPress={() => router.back()}>
-          <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>Cancel</Text>
-        </Pressable>
-        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }}>Add Digital Game</Text>
-        <Pressable onPress={handleSave}>
-          <Text style={{ color: colors.success, fontSize: 15, fontWeight: '800' }}>Save</Text>
-        </Pressable>
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ModernHeader
+        title="Add Digital Game"
+        subtitle="New Vault Entry"
+        showBackButton={true}
+        rightAction={
+          <Pressable
+            onPress={handleSave}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => ({
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: colors.success,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.8 : 1,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              elevation: 4,
+            })}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>✓</Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
         {/* GAME TITLE */}
@@ -307,6 +314,6 @@ export default function AddGameScreen() {
           </Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

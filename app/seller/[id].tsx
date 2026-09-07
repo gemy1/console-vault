@@ -15,6 +15,7 @@ import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Seller, Game } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
+import { ModernHeader } from '../../components/ModernHeader';
 
 export default function SellerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -82,35 +83,37 @@ export default function SellerDetailsScreen() {
   const isWhatsApp = seller.contact_platform === 'WhatsApp';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* HEADER BAR */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        }}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => ({
-            paddingVertical: 6,
-            paddingHorizontal: 8,
-            borderRadius: 8,
-            backgroundColor: pressed ? colors.surfaceSubtle : 'transparent',
-            flexDirection: 'row',
-            alignItems: 'center',
-          })}
-        >
-          <Text style={{ color: colors.accent, fontSize: 16, fontWeight: '700' }}>‹ Back</Text>
-        </Pressable>
-        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }}>Vendor Profile</Text>
-        <View style={{ width: 50 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* MODERN HEADER WITH CIRCULAR BACK BUTTON & CHAT ACTION */}
+      <ModernHeader
+        title="Vendor Profile"
+        subtitle={seller.name}
+        showBackButton={true}
+        rightAction={
+          <Pressable
+            onPress={openSellerChat}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => ({
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: theme === 'dark' ? colors.surfaceElevated : '#FFFFFF',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+              opacity: pressed ? 0.8 : 1,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.18,
+              shadowRadius: 10,
+              elevation: 4,
+            })}
+          >
+            <Text style={{ fontSize: 20 }}>💬</Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
         {/* SELLER HERO CARD (Inspired by Fintech Profile Card Image 2) */}
@@ -453,6 +456,6 @@ export default function SellerDetailsScreen() {
           })
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

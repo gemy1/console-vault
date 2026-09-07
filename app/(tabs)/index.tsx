@@ -9,7 +9,6 @@ import {
   Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
@@ -65,8 +64,8 @@ export default function DashboardScreen() {
   ];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right']}>
-      {/* MODERN POLISHED HEADER */}
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* MODERN HEADER (Sits comfortably below the notification bar with circular buttons) */}
       <ModernHeader
         title="Console Vault"
         subtitle="PS5 Operations Hub"
@@ -537,6 +536,6 @@ export default function DashboardScreen() {
           })}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

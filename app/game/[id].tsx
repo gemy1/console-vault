@@ -9,9 +9,11 @@ import {
   Modal,
   Alert,
   Linking,
+  Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useVaultTheme } from '../../context/ThemeContext';
@@ -20,10 +22,13 @@ import { Game, Seller, GameStatus } from '../../types/vault';
 import { calculateWarranty, generateSellerDeepLink } from '../../utils/padlock';
 import { useBiometricGuard } from '../../hooks/useBiometricGuard';
 import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
+import { ModernHeader } from '../../components/ModernHeader';
+import { ThemeToggleButton } from '../../components/ThemeToggleButton';
 
 export default function GameDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, theme } = useVaultTheme();
 
   const [game, setGame] = useState<Game | null>(null);
@@ -32,6 +37,7 @@ export default function GameDetailsScreen() {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const { isUnlocked, requestUnlock, lock } = useBiometricGuard(60);
 
@@ -51,12 +57,12 @@ export default function GameDetailsScreen() {
 
   if (!game) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
         <Text style={{ color: colors.text, fontSize: 16 }}>Game not found.</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 12 }}>
           <Text style={{ color: colors.accent, fontWeight: '700' }}>← Go Back</Text>
         </Pressable>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -103,138 +109,251 @@ export default function GameDetailsScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* HEADER WITH SMOOTH BACK */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        }}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => ({
-            paddingVertical: 6,
-            paddingHorizontal: 8,
-            borderRadius: 8,
-            backgroundColor: pressed ? colors.surfaceSubtle : 'transparent',
-            flexDirection: 'row',
-            alignItems: 'center',
-          })}
-        >
-          <Text style={{ color: colors.accent, fontSize: 16, fontWeight: '700' }}>‹ Back</Text>
-        </Pressable>
-        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }} numberOfLines={1}>
-          Account Details
-        </Text>
-        <View style={{ width: 50 }} />
-      </View>
+  const androidStatusBar = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 36) : 0;
+  const safeTop = Math.max(insets.top, Platform.OS === 'android' ? androidStatusBar : 48);
+  const headerPaddingTop = safeTop + 12;
+  const buttonBg = theme === 'dark' ? colors.surfaceElevated : '#FFFFFF';
+  const buttonBorder = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
-        {/* HERO CARD */}
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* HERO COVER WITH FLOATING CIRCULAR HEADER BUTTONS (MATCHING USER ATTACHED IMAGE) */}
+      <View style={{ width: '100%', height: 280, position: 'relative' }}>
+        {game.cover_image_url ? (
+          <Image
+            source={{ uri: game.cover_image_url }}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={{
+              width: '100%',
+              height: '100%',
+              backgroundColor: theme === 'dark' ? '#0B1120' : '#E2E8F0',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 64 }}>🎮</Text>
+          </View>
+        )}
+
+        {/* CONTRAST VIGNETTE */}
         <View
           style={{
-            backgroundColor: colors.surface,
-            borderRadius: 22,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: isLocked ? colors.danger : colors.border,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.25)',
+          }}
+        />
+
+        {/* FLOATING HEADER DIRECTLY BELOW NOTIFICATION BAR */}
+        <View
+          style={{
+            position: 'absolute',
+            top: headerPaddingTop,
+            left: 20,
+            right: 20,
             flexDirection: 'row',
             alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: theme === 'dark' ? 0.25 : 0.05,
-            shadowRadius: 6,
+            justifyContent: 'space-between',
           }}
         >
-          {game.cover_image_url ? (
-            <Image
-              source={{ uri: game.cover_image_url }}
-              style={{ width: 80, height: 106, borderRadius: 14, backgroundColor: colors.surfaceSubtle }}
-            />
-          ) : (
-            <View
+          {/* CIRCULAR BACK BUTTON (MATCHING REFERENCE IMAGE) */}
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => ({
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: buttonBg,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: buttonBorder,
+              opacity: pressed ? 0.8 : 1,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.18,
+              shadowRadius: 10,
+              elevation: 5,
+            })}
+          >
+            <Text
               style={{
-                width: 80,
-                height: 106,
-                borderRadius: 14,
-                backgroundColor: colors.surfaceSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
+                color: colors.text,
+                fontSize: 24,
+                fontWeight: '700',
+                marginLeft: -2,
+                marginTop: -1,
+                includeFontPadding: false,
               }}
             >
-              <Text style={{ fontSize: 36 }}>🎮</Text>
-            </View>
-          )}
-
-          <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{game.title}</Text>
-
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-              <View
-                style={{
-                  backgroundColor: game.account_type === 'Primary' ? 'rgba(0, 112, 209, 0.15)' : 'rgba(147, 51, 234, 0.15)',
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                  borderRadius: 6,
-                  borderWidth: 0.5,
-                  borderColor: game.account_type === 'Primary' ? '#0070D1' : '#9333EA',
-                }}
-              >
-                <Text
-                  style={{
-                    color: game.account_type === 'Primary' ? '#0070D1' : '#9333EA',
-                    fontSize: 11,
-                    fontWeight: '800',
-                  }}
-                >
-                  {game.account_type}
-                </Text>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor:
-                    isLocked
-                      ? (theme === 'dark' ? 'rgba(255, 59, 48, 0.2)' : '#FEE2E2')
-                      : game.status === 'Active'
-                      ? (theme === 'dark' ? 'rgba(48, 209, 88, 0.2)' : '#ECFDF5')
-                      : 'rgba(255, 159, 10, 0.2)',
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                  borderRadius: 6,
-                  borderWidth: 0.5,
-                  borderColor: isLocked ? colors.danger : game.status === 'Active' ? colors.success : colors.warning,
-                }}
-              >
-                <Text
-                  style={{
-                    color:
-                      isLocked
-                        ? colors.danger
-                        : game.status === 'Active'
-                        ? colors.success
-                        : colors.warning,
-                    fontSize: 11,
-                    fontWeight: '800',
-                  }}
-                >
-                  {game.status}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 8 }}>
-              Purchased: {game.purchase_date}
+              ‹
             </Text>
+          </Pressable>
+
+          {/* RIGHT CIRCULAR ACTIONS: FAVORITE BUTTON + THEME TOGGLE */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Pressable
+              onPress={() => {
+                try {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                } catch {}
+                setIsFavorite(!isFavorite);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => ({
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: buttonBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: buttonBorder,
+                opacity: pressed ? 0.8 : 1,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.18,
+                shadowRadius: 10,
+                elevation: 5,
+              })}
+            >
+              <Text style={{ fontSize: 20, color: isFavorite ? '#EF4444' : colors.text }}>
+                {isFavorite ? '❤️' : '♡'}
+              </Text>
+            </Pressable>
+
+            <ThemeToggleButton size={48} />
           </View>
         </View>
+      </View>
+
+      {/* OVERLAY SHEET (MATCHING "Rio de Janeiro" SHEET IN ATTACHED IMAGE) */}
+      <ScrollView
+        style={{ flex: 1, marginTop: -32 }}
+        contentContainerStyle={{ paddingBottom: 60 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View
+          style={{
+            backgroundColor: colors.bg,
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
+            paddingHorizontal: 20,
+            paddingTop: 14,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 10,
+            elevation: 6,
+          }}
+        >
+          {/* SHEET HANDLE BAR */}
+          <View
+            style={{
+              width: 38,
+              height: 5,
+              borderRadius: 3,
+              backgroundColor: colors.border,
+              alignSelf: 'center',
+              marginBottom: 16,
+            }}
+          />
+
+          {/* TITLE & REPUTATION / RATING ROW */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 12,
+              marginBottom: 8,
+            }}
+          >
+            <Text
+              style={{
+                flex: 1,
+                color: colors.text,
+                fontSize: 24,
+                fontWeight: '800',
+                letterSpacing: -0.4,
+              }}
+            >
+              {game.title}
+            </Text>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                backgroundColor: theme === 'dark' ? 'rgba(255, 215, 0, 0.12)' : '#FEF3C7',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: '#F59E0B',
+              }}
+            >
+              <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '800' }}>★</Text>
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>
+                {seller?.reputation_score ? seller.reputation_score.toFixed(1) : '5.0'}
+              </Text>
+            </View>
+          </View>
+
+          {/* BADGES & METADATA ROW */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: isLocked ? colors.danger : colors.success,
+                }}
+              />
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '700' }}>
+                PS5 {game.account_type}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: isLocked
+                  ? (theme === 'dark' ? 'rgba(255, 59, 48, 0.2)' : '#FEE2E2')
+                  : game.status === 'Active'
+                  ? (theme === 'dark' ? 'rgba(48, 209, 88, 0.2)' : '#ECFDF5')
+                  : 'rgba(255, 159, 10, 0.2)',
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 6,
+                borderWidth: 0.5,
+                borderColor: isLocked ? colors.danger : game.status === 'Active' ? colors.success : colors.warning,
+              }}
+            >
+              <Text
+                style={{
+                  color: isLocked ? colors.danger : game.status === 'Active' ? colors.success : colors.warning,
+                  fontSize: 11,
+                  fontWeight: '800',
+                }}
+              >
+                {game.status}
+              </Text>
+            </View>
+
+            <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+              Purchased {game.purchase_date}
+            </Text>
+          </View>
 
         {/* CLICKABLE SELLER CARD */}
         {seller && (
@@ -592,7 +711,8 @@ export default function GameDetailsScreen() {
             </Pressable>
           )}
         </View>
-      </ScrollView>
+      </View>
+    </ScrollView>
 
       {/* CREDENTIAL REPLACEMENT MODAL */}
       <Modal visible={replaceModalVisible} transparent animationType="slide">
@@ -692,6 +812,6 @@ export default function GameDetailsScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
