@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { isSupabaseConfigured } from '../services/supabase';
+import { Gamepad2, ShieldAlert, KeyRound, RefreshCw } from 'lucide-react-native';
 
 export default function AboutModal() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function AboutModal() {
             alignItems: 'center',
           }}
         >
-          <Text style={{ fontSize: 36, marginBottom: 8 }}>🎮</Text>
+          <Gamepad2 size={40} color="#00D2FF" strokeWidth={1.8} style={{ marginBottom: 8 }} />
           <Text style={{ color: '#F8FAFC', fontSize: 18, fontWeight: '800' }}>Console Vault</Text>
           <Text style={{ color: '#00D2FF', fontSize: 12, fontWeight: '700', marginTop: 2 }}>
             PS5 Account & Warranty Management
@@ -92,33 +93,42 @@ export default function AboutModal() {
             borderColor: '#1E293B',
           }}
         >
-          <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 10 }}>
+          <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>
             INTEGRATED PROTOCOLS
           </Text>
 
-          <View style={{ marginBottom: 12 }}>
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
-              🚨 The Padlock Protocol
-            </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2, lineHeight: 16 }}>
+          <View style={{ marginBottom: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <ShieldAlert size={14} color="#EF4444" strokeWidth={2.2} />
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+                The Padlock Protocol
+              </Text>
+            </View>
+            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 4, lineHeight: 16 }}>
               Instant license revocation claim dispatch via WhatsApp and Telegram with live warranty calculations.
             </Text>
           </View>
 
-          <View style={{ marginBottom: 12 }}>
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
-              🔐 Tap-to-Reveal Credentials
-            </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2, lineHeight: 16 }}>
+          <View style={{ marginBottom: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <KeyRound size={14} color="#F59E0B" strokeWidth={2.2} />
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+                Tap-to-Reveal Credentials
+              </Text>
+            </View>
+            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 4, lineHeight: 16 }}>
               Protected PSN emails, passwords, and 2FA backup codes behind on-device biometric security.
             </Text>
           </View>
 
           <View>
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
-              🔄 Automatic Credential Archival
-            </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2, lineHeight: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <RefreshCw size={14} color="#00D2FF" strokeWidth={2.2} />
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+                Automatic Credential Archival
+              </Text>
+            </View>
+            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 4, lineHeight: 16 }}>
               Whenever credentials are replaced by a seller, the old credentials are saved to your audit log.
             </Text>
           </View>

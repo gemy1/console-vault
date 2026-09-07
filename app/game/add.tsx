@@ -12,6 +12,7 @@ import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Game, Seller, AccountType } from '../../types/vault';
 import { ModernHeader } from '../../components/ModernHeader';
+import { Check, Lock } from 'lucide-react-native';
 
 export default function AddGameScreen() {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function AddGameScreen() {
               elevation: 4,
             })}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>✓</Text>
+            <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
           </Pressable>
         }
       />
@@ -229,9 +230,12 @@ export default function AddGameScreen() {
             marginTop: 8,
           }}
         >
-          <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '800', marginBottom: 12 }}>
-            🔒 SENSITIVE PSN CREDENTIALS
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Lock size={15} color={colors.accent} strokeWidth={2.2} />
+            <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '800' }}>
+              SENSITIVE PSN CREDENTIALS
+            </Text>
+          </View>
 
           {/* EMAIL */}
           <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>

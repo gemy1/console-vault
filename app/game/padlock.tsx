@@ -20,6 +20,7 @@ import {
   generateWarrantyClaimMessage,
 } from '../../utils/padlock';
 import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
+import { Copy, Check, ChevronRight } from 'lucide-react-native';
 
 export default function PadlockProtocolModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -173,9 +174,14 @@ export default function PadlockProtocolModal() {
             <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
               PRE-FILLED CLAIM MESSAGE
             </Text>
-            <Pressable onPress={handleCopy}>
+            <Pressable onPress={handleCopy} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              {copied ? (
+                <Check size={13} color={colors.success} strokeWidth={2.5} />
+              ) : (
+                <Copy size={13} color={colors.accent} strokeWidth={2.2} />
+              )}
               <Text style={{ color: copied ? colors.success : colors.accent, fontSize: 12, fontWeight: '800' }}>
-                {copied ? '✓ Copied!' : 'Copy Text'}
+                {copied ? 'Copied' : 'Copy Text'}
               </Text>
             </Pressable>
           </View>
@@ -204,12 +210,16 @@ export default function PadlockProtocolModal() {
                 backgroundColor: pressed ? '#DC2626' : colors.danger,
                 paddingVertical: 15,
                 borderRadius: 14,
+                flexDirection: 'row',
                 alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
               })}
             >
               <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
-                Open {seller.contact_platform} with Pre-filled Claim →
+                Open {seller.contact_platform} with Pre-filled Claim
               </Text>
+              <ChevronRight size={16} color="#FFFFFF" strokeWidth={2.5} />
             </Pressable>
           )}
 

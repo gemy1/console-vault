@@ -24,6 +24,19 @@ import { useBiometricGuard } from '../../hooks/useBiometricGuard';
 import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
 import { ModernHeader } from '../../components/ModernHeader';
 import { ThemeToggleButton } from '../../components/ThemeToggleButton';
+import {
+  ChevronLeft,
+  Heart,
+  Gamepad2,
+  Star,
+  ShieldCheck,
+  ChevronRight,
+  Lock,
+  KeyRound,
+  Copy,
+  Check,
+  RefreshCw,
+} from 'lucide-react-native';
 
 export default function GameDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -135,7 +148,7 @@ export default function GameDetailsScreen() {
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 64 }}>🎮</Text>
+            <Gamepad2 size={64} color={colors.textMuted} strokeWidth={1.5} />
           </View>
         )}
 
@@ -184,18 +197,7 @@ export default function GameDetailsScreen() {
               elevation: 5,
             })}
           >
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 24,
-                fontWeight: '700',
-                marginLeft: -2,
-                marginTop: -1,
-                includeFontPadding: false,
-              }}
-            >
-              ‹
-            </Text>
+            <ChevronLeft size={24} color={colors.text} strokeWidth={2.4} />
           </Pressable>
 
           {/* RIGHT CIRCULAR ACTIONS: FAVORITE BUTTON + THEME TOGGLE */}
@@ -225,9 +227,12 @@ export default function GameDetailsScreen() {
                 elevation: 5,
               })}
             >
-              <Text style={{ fontSize: 20, color: isFavorite ? '#EF4444' : colors.text }}>
-                {isFavorite ? '❤️' : '♡'}
-              </Text>
+              <Heart
+                size={20}
+                color={isFavorite ? '#EF4444' : colors.text}
+                fill={isFavorite ? '#EF4444' : 'transparent'}
+                strokeWidth={2.2}
+              />
             </Pressable>
 
             <ThemeToggleButton size={48} />
@@ -302,7 +307,7 @@ export default function GameDetailsScreen() {
                 borderColor: '#F59E0B',
               }}
             >
-              <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '800' }}>★</Text>
+              <Star size={12} color="#F59E0B" fill="#F59E0B" />
               <Text style={{ color: colors.text, fontSize: 13, fontWeight: '800' }}>
                 {seller?.reputation_score ? seller.reputation_score.toFixed(1) : '5.0'}
               </Text>
@@ -386,15 +391,18 @@ export default function GameDetailsScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ fontSize: 18 }}>🛡️</Text>
+                <ShieldCheck size={20} color={colors.accent} strokeWidth={2} />
               </View>
               <View>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 14 }}>
                   Seller: {seller.name}
                 </Text>
-                <Text style={{ color: colors.accent, fontSize: 11, marginTop: 2, fontWeight: '700' }}>
-                  Tap to view vendor profile & all games ›
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
+                  <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700' }}>
+                    Tap to view vendor profile & all games
+                  </Text>
+                  <ChevronRight size={12} color={colors.accent} strokeWidth={2.4} />
+                </View>
               </View>
             </View>
 
@@ -404,10 +412,14 @@ export default function GameDetailsScreen() {
                 paddingHorizontal: 8,
                 paddingVertical: 4,
                 borderRadius: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
               }}
             >
+              <Star size={11} color="#FFD700" fill="#FFD700" />
               <Text style={{ color: '#FFD700', fontWeight: '800', fontSize: 12 }}>
-                ★ {seller.reputation_score.toFixed(1)}
+                {seller.reputation_score.toFixed(1)}
               </Text>
             </View>
           </Pressable>
@@ -449,13 +461,17 @@ export default function GameDetailsScreen() {
                   backgroundColor: pressed ? '#DC2626' : colors.danger,
                   paddingVertical: 12,
                   borderRadius: 12,
-                  alignItems: 'center',
                   marginTop: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 })}
               >
                 <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
-                  Send Warranty Claim via {seller.contact_platform} →
+                  Send Warranty Claim via {seller.contact_platform}
                 </Text>
+                <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
               </Pressable>
             )}
           </View>
@@ -529,7 +545,7 @@ export default function GameDetailsScreen() {
           {!isUnlocked ? (
             /* LOCKED VIEW */
             <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-              <Text style={{ fontSize: 38, marginBottom: 10 }}>🔒</Text>
+              <Lock size={36} color={colors.accent} strokeWidth={2} style={{ marginBottom: 10 }} />
               <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
                 Credentials Protected
               </Text>
@@ -575,9 +591,17 @@ export default function GameDetailsScreen() {
                   <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
                     {game.psn_email}
                   </Text>
-                  <Pressable onPress={() => copyToClipboard(game.psn_email, 'email')}>
+                  <Pressable
+                    onPress={() => copyToClipboard(game.psn_email, 'email')}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    {copiedField === 'email' ? (
+                      <Check size={12} color={colors.success} strokeWidth={2.4} />
+                    ) : (
+                      <Copy size={12} color={colors.accent} strokeWidth={2.2} />
+                    )}
                     <Text style={{ color: copiedField === 'email' ? colors.success : colors.accent, fontSize: 12, fontWeight: '800' }}>
-                      {copiedField === 'email' ? '✓ Copied' : 'Copy'}
+                      {copiedField === 'email' ? 'Copied' : 'Copy'}
                     </Text>
                   </Pressable>
                 </View>
@@ -603,9 +627,17 @@ export default function GameDetailsScreen() {
                   <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
                     {game.psn_password}
                   </Text>
-                  <Pressable onPress={() => copyToClipboard(game.psn_password, 'password')}>
+                  <Pressable
+                    onPress={() => copyToClipboard(game.psn_password, 'password')}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    {copiedField === 'password' ? (
+                      <Check size={12} color={colors.success} strokeWidth={2.4} />
+                    ) : (
+                      <Copy size={12} color={colors.accent} strokeWidth={2.2} />
+                    )}
                     <Text style={{ color: copiedField === 'password' ? colors.success : colors.accent, fontSize: 12, fontWeight: '800' }}>
-                      {copiedField === 'password' ? '✓ Copied' : 'Copy'}
+                      {copiedField === 'password' ? 'Copied' : 'Copy'}
                     </Text>
                   </Pressable>
                 </View>
@@ -640,9 +672,17 @@ export default function GameDetailsScreen() {
                         <Text style={{ color: colors.text, fontFamily: 'monospace', fontSize: 13 }}>
                           {code}
                         </Text>
-                        <Pressable onPress={() => copyToClipboard(code, `code-${index}`)}>
+                        <Pressable
+                          onPress={() => copyToClipboard(code, `code-${index}`)}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                        >
+                          {copiedField === `code-${index}` ? (
+                            <Check size={12} color={colors.success} strokeWidth={2.4} />
+                          ) : (
+                            <Copy size={12} color={colors.accent} strokeWidth={2.2} />
+                          )}
                           <Text style={{ color: copiedField === `code-${index}` ? colors.success : colors.accent, fontSize: 12, fontWeight: '700' }}>
-                            {copiedField === `code-${index}` ? '✓ Copied' : 'Copy'}
+                            {copiedField === `code-${index}` ? 'Copied' : 'Copy'}
                           </Text>
                         </Pressable>
                       </View>
@@ -659,13 +699,18 @@ export default function GameDetailsScreen() {
                   paddingVertical: 12,
                   borderRadius: 12,
                   alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  gap: 8,
                   borderWidth: 1,
                   borderColor: colors.border,
                   marginTop: 6,
+                  opacity: pressed ? 0.8 : 1,
                 })}
               >
+                <RefreshCw size={14} color={colors.accent} strokeWidth={2.2} />
                 <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 13 }}>
-                  🔄 Replace Credentials (Archive Old to History)
+                  Replace Credentials (Archive Old to History)
                 </Text>
               </Pressable>
             </View>
@@ -691,8 +736,9 @@ export default function GameDetailsScreen() {
                 gap: 8,
               })}
             >
+              <Lock size={15} color="#FFFFFF" strokeWidth={2.4} />
               <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
-                🔒 Mark as Locked (Padlock Protocol)
+                Mark as Locked (Padlock Protocol)
               </Text>
             </Pressable>
           ) : (
@@ -703,10 +749,14 @@ export default function GameDetailsScreen() {
                 paddingVertical: 14,
                 borderRadius: 14,
                 alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
               })}
             >
+              <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
               <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
-                ✅ Mark as Active / Restored
+                Mark as Active / Restored
               </Text>
             </Pressable>
           )}

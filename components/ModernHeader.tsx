@@ -11,6 +11,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import { ChevronLeft, Gamepad2, Plus } from "lucide-react-native";
 import { useVaultTheme } from "../context/ThemeContext";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 
@@ -179,18 +180,7 @@ export function ModernHeader({
               },
             ]}
           >
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 22,
-                fontWeight: "500",
-                marginLeft: -1,
-                lineHeight: 26,
-                includeFontPadding: false,
-              }}
-            >
-              ‹
-            </Text>
+            <ChevronLeft size={24} color={colors.text} strokeWidth={2.4} />
           </Pressable>
         ) : (
           <View
@@ -203,7 +193,7 @@ export function ModernHeader({
               },
             ]}
           >
-            <Text style={{ fontSize: 20 }}>🎮</Text>
+            <Gamepad2 size={22} color={colors.accent} strokeWidth={2.2} />
           </View>
         )}
 
@@ -258,18 +248,7 @@ export function ModernHeader({
                 },
               ]}
             >
-              <Text
-                style={{
-                  color: "#FFFFFF",
-                  fontSize: 22,
-                  fontWeight: "300",
-                  lineHeight: 26,
-                  marginTop: -1,
-                  includeFontPadding: false,
-                }}
-              >
-                +
-              </Text>
+              <Plus size={22} color="#FFFFFF" strokeWidth={2.5} />
             </Pressable>
           )}
 

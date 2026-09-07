@@ -14,16 +14,32 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import {
+  ShieldCheck,
+  MessageCircle,
+  Send,
+  Gamepad2,
+  Globe,
+  Star,
+  Plus,
+  X,
+  ChevronRight,
+} from 'lucide-react-native';
 import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Seller, Game, ContactPlatform } from '../../types/vault';
 import { ModernHeader } from '../../components/ModernHeader';
 
-const PLATFORMS: { key: ContactPlatform; label: string; icon: string; color: string }[] = [
-  { key: 'WhatsApp', label: 'WhatsApp', icon: '💬', color: '#25D366' },
-  { key: 'Telegram', label: 'Telegram', icon: '✈️', color: '#0088CC' },
-  { key: 'Discord', label: 'Discord', icon: '👾', color: '#5865F2' },
-  { key: 'Other', label: 'Other', icon: '🌐', color: '#8E8E93' },
+const PLATFORMS: {
+  key: ContactPlatform;
+  label: string;
+  icon: React.ComponentType<{ size: number; color: string; strokeWidth?: number }>;
+  color: string;
+}[] = [
+  { key: 'WhatsApp', label: 'WhatsApp', icon: MessageCircle, color: '#25D366' },
+  { key: 'Telegram', label: 'Telegram', icon: Send, color: '#0088CC' },
+  { key: 'Discord', label: 'Discord', icon: Gamepad2, color: '#5865F2' },
+  { key: 'Other', label: 'Other', icon: Globe, color: '#8E8E93' },
 ];
 
 const RATING_PRESETS = ['5.0', '4.8', '4.5', '4.0'];
@@ -191,7 +207,7 @@ export default function SellersScreen() {
               justifyContent: 'center',
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginTop: -2 }}>+</Text>
+            <Plus size={18} color="#FFFFFF" strokeWidth={2.4} />
           </View>
           <Text style={{ color: colors.accent, fontSize: 14, fontWeight: '800' }}>
             Add New Digital Vendor
@@ -248,7 +264,7 @@ export default function SellersScreen() {
                       borderColor: colors.border,
                     }}
                   >
-                    <Text style={{ fontSize: 22 }}>🛡️</Text>
+                    <ShieldCheck size={24} color={colors.accent} strokeWidth={2} />
                   </View>
 
                   <View style={{ flex: 1 }}>
@@ -309,7 +325,7 @@ export default function SellersScreen() {
                     borderColor: '#FFD700',
                   }}
                 >
-                  <Text style={{ color: '#FFD700', fontSize: 12 }}>★</Text>
+                  <Star size={12} color="#F59E0B" fill="#F59E0B" />
                   <Text style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>
                     {seller.reputation_score.toFixed(1)}
                   </Text>
@@ -335,9 +351,12 @@ export default function SellersScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>
-                  View {sellerGamesCount} Games →
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                  <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>
+                    View {sellerGamesCount} Games
+                  </Text>
+                  <ChevronRight size={13} color={colors.accent} strokeWidth={2.4} />
+                </View>
 
                 <Pressable
                   onPress={(e) => openQuickChat(seller, e)}
@@ -346,8 +365,12 @@ export default function SellersScreen() {
                     paddingHorizontal: 14,
                     paddingVertical: 6,
                     borderRadius: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
                   })}
                 >
+                  <MessageCircle size={12} color="#FFFFFF" strokeWidth={2.4} />
                   <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
                     Chat Now
                   </Text>
@@ -395,7 +418,7 @@ export default function SellersScreen() {
               {/* MODAL HEADER */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 24 }}>🛡️</Text>
+                  <ShieldCheck size={24} color={colors.accent} strokeWidth={2.2} />
                   <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>
                     Register Vendor
                   </Text>
@@ -411,7 +434,7 @@ export default function SellersScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={{ color: colors.textSecondary, fontSize: 16, fontWeight: '700' }}>✕</Text>
+                  <X size={16} color={colors.textSecondary} strokeWidth={2.2} />
                 </Pressable>
               </View>
 
@@ -447,6 +470,7 @@ export default function SellersScreen() {
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                 {PLATFORMS.map((p) => {
                   const isSelected = platform === p.key;
+                  const IconComponent = p.icon;
                   return (
                     <Pressable
                       key={p.key}
@@ -467,13 +491,13 @@ export default function SellersScreen() {
                         borderColor: isSelected ? p.color : colors.border,
                       }}
                     >
-                      <Text style={{ fontSize: 16 }}>{p.icon}</Text>
+                      <IconComponent size={18} color={isSelected ? '#FFFFFF' : p.color} strokeWidth={2.2} />
                       <Text
                         style={{
                           color: isSelected ? '#FFFFFF' : colors.text,
                           fontSize: 11,
                           fontWeight: '800',
-                          marginTop: 2,
+                          marginTop: 4,
                         }}
                       >
                         {p.label}
@@ -530,10 +554,14 @@ export default function SellersScreen() {
                         paddingVertical: 10,
                         borderRadius: 12,
                         alignItems: 'center',
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        gap: 4,
                         borderWidth: 1,
                         borderColor: isSelected ? '#F59E0B' : colors.border,
                       }}
                     >
+                      <Star size={13} color={isSelected ? '#D97706' : '#F59E0B'} fill={isSelected ? '#D97706' : '#F59E0B'} />
                       <Text
                         style={{
                           color: isSelected ? '#D97706' : colors.textSecondary,
@@ -541,7 +569,7 @@ export default function SellersScreen() {
                           fontWeight: '800',
                         }}
                       >
-                        ★ {preset}
+                        {preset}
                       </Text>
                     </Pressable>
                   );

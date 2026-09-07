@@ -15,6 +15,7 @@ import { OfflineVault } from '../../services/storage';
 import { Game, Seller } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
 import { ModernHeader } from '../../components/ModernHeader';
+import { Search, X, Gamepad2, ChevronRight } from 'lucide-react-native';
 
 type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary';
 
@@ -89,7 +90,7 @@ export default function VaultScreen() {
             shadowRadius: 4,
           }}
         >
-          <Text style={{ fontSize: 15, marginRight: 8 }}>🔍</Text>
+          <Search size={16} color={colors.textMuted} strokeWidth={2.2} style={{ marginRight: 8 }} />
           <TextInput
             placeholder="Search by game title or PSN email..."
             placeholderTextColor={colors.textMuted}
@@ -99,7 +100,7 @@ export default function VaultScreen() {
           />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch('')}>
-              <Text style={{ color: colors.textSecondary, fontSize: 14, paddingHorizontal: 4 }}>✕</Text>
+              <X size={16} color={colors.textSecondary} strokeWidth={2} style={{ paddingHorizontal: 4 }} />
             </Pressable>
           )}
         </View>
@@ -156,7 +157,7 @@ export default function VaultScreen() {
       >
         {filteredGames.length === 0 ? (
           <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 60 }}>
-            <Text style={{ fontSize: 44, marginBottom: 12 }}>🎮</Text>
+            <Gamepad2 size={48} color={colors.textMuted} strokeWidth={1.5} style={{ marginBottom: 12 }} />
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '800' }}>No Games Found</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, textAlign: 'center' }}>
               {search ? 'Try adjusting your search query or filter.' : 'Your vault is currently empty.'}
@@ -206,7 +207,7 @@ export default function VaultScreen() {
                       justifyContent: 'center',
                     }}
                   >
-                    <Text style={{ fontSize: 24 }}>🎮</Text>
+                    <Gamepad2 size={24} color={colors.textMuted} strokeWidth={1.8} />
                   </View>
                 )}
 
@@ -292,7 +293,7 @@ export default function VaultScreen() {
                     marginLeft: 10,
                   }}
                 >
-                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>→</Text>
+                  <ChevronRight size={16} color={colors.text} strokeWidth={2.4} />
                 </View>
               </Pressable>
             );

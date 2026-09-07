@@ -16,6 +16,15 @@ import { OfflineVault } from '../../services/storage';
 import { Seller, Game } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
 import { ModernHeader } from '../../components/ModernHeader';
+import {
+  MessageCircle,
+  ShieldCheck,
+  Star,
+  Copy,
+  Check,
+  Gamepad2,
+  ChevronRight,
+} from 'lucide-react-native';
 
 export default function SellerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -110,7 +119,7 @@ export default function SellerDetailsScreen() {
               elevation: 4,
             })}
           >
-            <Text style={{ fontSize: 20 }}>💬</Text>
+            <MessageCircle size={20} color={colors.accent} strokeWidth={2.2} />
           </Pressable>
         }
       />
@@ -145,7 +154,7 @@ export default function SellerDetailsScreen() {
               marginBottom: 12,
             }}
           >
-            <Text style={{ fontSize: 34 }}>🛡️</Text>
+            <ShieldCheck size={38} color={colors.accent} strokeWidth={2} />
           </View>
 
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{seller.name}</Text>
@@ -183,10 +192,10 @@ export default function SellerDetailsScreen() {
                 borderColor: '#FFD700',
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 4,
+                gap: 5,
               }}
             >
-              <Text style={{ color: '#FFD700', fontSize: 13 }}>★</Text>
+              <Star size={12} color="#F59E0B" fill="#F59E0B" />
               <Text style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>
                 {seller.reputation_score.toFixed(1)} / 5.0
               </Text>
@@ -209,9 +218,16 @@ export default function SellerDetailsScreen() {
           >
             <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Handle:</Text>
             <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{seller.contact_link}</Text>
-            <Text style={{ color: copied ? colors.success : colors.accent, fontSize: 11, fontWeight: '800', marginLeft: 4 }}>
-              {copied ? '✓ Copied' : 'Copy'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 4 }}>
+              {copied ? (
+                <Check size={12} color={colors.success} strokeWidth={2.4} />
+              ) : (
+                <Copy size={12} color={colors.accent} strokeWidth={2.2} />
+              )}
+              <Text style={{ color: copied ? colors.success : colors.accent, fontSize: 11, fontWeight: '800' }}>
+                {copied ? 'Copied' : 'Copy'}
+              </Text>
+            </View>
           </Pressable>
 
           {seller.notes && (
@@ -230,13 +246,17 @@ export default function SellerDetailsScreen() {
               borderRadius: 14,
               marginTop: 18,
               width: '100%',
+              flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
               opacity: pressed ? 0.8 : 1,
             })}
           >
             <Text style={{ color: colors.bg, fontWeight: '800', fontSize: 14 }}>
-              Open Direct Chat in {seller.contact_platform} →
+              Open Direct Chat in {seller.contact_platform}
             </Text>
+            <ChevronRight size={16} color={colors.bg} strokeWidth={2.5} />
           </Pressable>
         </View>
 
@@ -362,7 +382,7 @@ export default function SellerDetailsScreen() {
                       justifyContent: 'center',
                     }}
                   >
-                    <Text style={{ fontSize: 24 }}>🎮</Text>
+                    <Gamepad2 size={24} color={colors.textMuted} strokeWidth={1.8} />
                   </View>
                 )}
 
@@ -449,7 +469,7 @@ export default function SellerDetailsScreen() {
                     marginLeft: 10,
                   }}
                 >
-                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>→</Text>
+                  <ChevronRight size={16} color={colors.text} strokeWidth={2.4} />
                 </View>
               </Pressable>
             );

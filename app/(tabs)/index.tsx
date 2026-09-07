@@ -17,6 +17,14 @@ import { Game, Seller } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
 import { PulsingPadlockBadge } from "../../components/PulsingPadlockBadge";
 import { ModernHeader } from "../../components/ModernHeader";
+import {
+  Gamepad2,
+  ShieldCheck,
+  Lock,
+  AlertTriangle,
+  ChevronRight,
+  Clock,
+} from "lucide-react-native";
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -113,16 +121,19 @@ export default function DashboardScreen() {
               shadowRadius: 6,
             }}
           >
-            <Text
-              style={{
-                color: colors.textMuted,
-                fontSize: 11,
-                fontWeight: "700",
-                textTransform: "uppercase",
-              }}
-            >
-              Vault Total
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text
+                style={{
+                  color: colors.textMuted,
+                  fontSize: 11,
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                }}
+              >
+                Vault Total
+              </Text>
+              <Gamepad2 size={15} color={colors.accent} strokeWidth={2.2} />
+            </View>
             <Text
               style={{
                 color: colors.text,
@@ -159,16 +170,19 @@ export default function DashboardScreen() {
               shadowRadius: 6,
             }}
           >
-            <Text
-              style={{
-                color: colors.success,
-                fontSize: 11,
-                fontWeight: "700",
-                textTransform: "uppercase",
-              }}
-            >
-              Warranty
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text
+                style={{
+                  color: colors.success,
+                  fontSize: 11,
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                }}
+              >
+                Warranty
+              </Text>
+              <ShieldCheck size={15} color={colors.success} strokeWidth={2.2} />
+            </View>
             <Text
               style={{
                 color: colors.text,
@@ -211,17 +225,20 @@ export default function DashboardScreen() {
               shadowRadius: 6,
             }}
           >
-            <Text
-              style={{
-                color:
-                  lockedGames.length > 0 ? colors.danger : colors.textMuted,
-                fontSize: 11,
-                fontWeight: "700",
-                textTransform: "uppercase",
-              }}
-            >
-              Locked
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text
+                style={{
+                  color:
+                    lockedGames.length > 0 ? colors.danger : colors.textMuted,
+                  fontSize: 11,
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                }}
+              >
+                Locked
+              </Text>
+              <Lock size={15} color={lockedGames.length > 0 ? colors.danger : colors.textMuted} strokeWidth={2.2} />
+            </View>
             <Text
               style={{
                 color: colors.text,
@@ -362,7 +379,7 @@ export default function DashboardScreen() {
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ fontSize: 22 }}>🎮</Text>
+                        <Gamepad2 size={20} color={colors.textMuted} strokeWidth={1.8} />
                       </View>
                     )}
 
@@ -381,17 +398,18 @@ export default function DashboardScreen() {
                       {seller && (
                         <Pressable
                           onPress={() => router.push(`/seller/${seller.id}`)}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}
                         >
                           <Text
                             style={{
                               color: colors.accent,
                               fontSize: 11,
                               fontWeight: "700",
-                              marginTop: 2,
                             }}
                           >
-                            Seller: {seller.name} →
+                            Seller: {seller.name}
                           </Text>
+                          <ChevronRight size={11} color={colors.accent} strokeWidth={2.4} />
                         </Pressable>
                       )}
 
@@ -574,7 +592,7 @@ export default function DashboardScreen() {
                       justifyContent: "center",
                     }}
                   >
-                    <Text style={{ fontSize: 26 }}>🎮</Text>
+                    <Gamepad2 size={24} color={colors.textMuted} strokeWidth={1.8} />
                   </View>
                 )}
 
@@ -754,15 +772,7 @@ export default function DashboardScreen() {
                     marginLeft: 10,
                   }}
                 >
-                  <Text
-                    style={{
-                      color: colors.text,
-                      fontSize: 15,
-                      fontWeight: "700",
-                    }}
-                  >
-                    →
-                  </Text>
+                  <ChevronRight size={16} color={colors.text} strokeWidth={2.4} />
                 </View>
               </Pressable>
             );

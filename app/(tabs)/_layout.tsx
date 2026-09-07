@@ -4,41 +4,44 @@ import { View, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVaultTheme } from '../../context/ThemeContext';
 
-function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
+import { LayoutDashboard, Gamepad2, ShieldCheck } from 'lucide-react-native';
+
+function TabIcon({ label, focused, icon: Icon, activeColor, inactiveColor }: {
   label: string;
   focused: boolean;
-  symbol: string;
+  icon: React.ComponentType<{ size: number; color: string; strokeWidth?: number }>;
   activeColor: string;
   inactiveColor: string;
 }) {
+  const iconColor = focused ? activeColor : inactiveColor;
   return (
     <View
       style={{
         alignItems: 'center',
         justifyContent: 'center',
         paddingTop: 4,
-        minWidth: 70,   // ← ensures the label always has room
+        minWidth: 70,
       }}
     >
       <View
         style={{
-          width: 36,
-          height: 26,
-          borderRadius: 8,
-          backgroundColor: focused ? 'rgba(0, 112, 209, 0.12)' : 'transparent',
+          width: 38,
+          height: 28,
+          borderRadius: 10,
+          backgroundColor: focused ? 'rgba(0, 112, 209, 0.14)' : 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Text style={{ fontSize: 18 }}>{symbol}</Text>
+        <Icon size={19} color={iconColor} strokeWidth={focused ? 2.4 : 1.8} />
       </View>
       <Text
-        numberOfLines={1}          // ← never wraps to a second line
+        numberOfLines={1}
         style={{
           fontSize: 10,
           fontWeight: focused ? '800' : '600',
           color: focused ? activeColor : inactiveColor,
-          marginTop: 2,
+          marginTop: 3,
           letterSpacing: 0.1,
         }}
       >
@@ -87,7 +90,7 @@ export default function TabLayout() {
             <TabIcon
               label="Dashboard"
               focused={focused}
-              symbol="⚡"
+              icon={LayoutDashboard}
               activeColor={colors.accent}
               inactiveColor={colors.textMuted}
             />
@@ -102,7 +105,7 @@ export default function TabLayout() {
             <TabIcon
               label="Game Vault"
               focused={focused}
-              symbol="🎮"
+              icon={Gamepad2}
               activeColor={colors.accent}
               inactiveColor={colors.textMuted}
             />
@@ -115,9 +118,9 @@ export default function TabLayout() {
           title: 'Vendors',
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              label="Sellers"
+              label="Vendors"
               focused={focused}
-              symbol="🛡️"
+              icon={ShieldCheck}
               activeColor={colors.accent}
               inactiveColor={colors.textMuted}
             />
