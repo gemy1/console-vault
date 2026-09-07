@@ -1,0 +1,42 @@
+# ==============================================================================
+# CONSOLE VAULT - GITIGNORE
+# ==============================================================================
+
+# Secrets and Credentials (CRITICAL - DO NOT REMOVE)
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*.keystore
+*.jks
+
+# MCP Server Configs with Credentials
+.agents/mcp_config.json
+mcp_config.json
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo & Metro
+.expo/
+dist/
+web-build/
+
+# Native Builds (if using Expo Prebuild)
+ios/Pods/
+ios/build/
+android/app/build/
+android/.gradle/
+android/build/
+
+# Operating System & IDE
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
