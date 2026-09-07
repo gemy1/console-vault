@@ -243,8 +243,8 @@ export function GameFormModal({
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* HEADER */}
-            <View style={styles.headerRow}>
-              <View style={styles.titleGroup}>
+            <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              <View style={[styles.titleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 {initialGame ? (
                   <Pencil size={20} color={styles.accentIcon.color} strokeWidth={2.2} />
                 ) : (
@@ -322,11 +322,11 @@ export function GameFormModal({
             </View>
 
             {/* WARRANTY DURATION */}
-            <View style={styles.fieldHeaderWithIcon}>
+            <View style={[styles.fieldHeaderWithIcon, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Clock size={12} color={styles.fieldLabelIcon.color} strokeWidth={2.2} />
               <Text style={styles.fieldLabelInline}>{t('fieldWarrantyDuration')}</Text>
             </View>
-            <View style={styles.presetsRow}>
+            <View style={[styles.presetsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               {WARRANTY_PRESETS.map((preset) => {
                 const isSelected = warrantyMonths === preset;
                 return (
@@ -368,18 +368,19 @@ export function GameFormModal({
 
             {/* SELLER ASSIGNMENT SECTION (3 OPTIONS: DIRECT, SELECT SELLER, QUICK ADD SELLER) */}
             <View style={styles.sellerSectionContainer}>
-              <View style={styles.fieldHeaderWithIcon}>
+              <View style={[styles.fieldHeaderWithIcon, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <ShieldCheck size={12} color={styles.fieldLabelIcon.color} strokeWidth={2.2} />
                 <Text style={styles.fieldLabelInline}>{t('fieldSellerAssignment')}</Text>
               </View>
 
               {/* SELLER MODE SWITCHER (DIRECT vs REGISTERED SELLER) */}
-              <View style={styles.sellerModeRow}>
+              <View style={[styles.sellerModeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <Pressable
                   onPress={() => handleSelectSellerMode('direct')}
                   style={[
                     styles.sellerModeBtn,
                     sellerMode === 'direct' ? styles.sellerModeBtnActive : styles.sellerModeBtnInactive,
+                    isNativeRTL && { flexDirection: 'row-reverse' },
                   ]}
                 >
                   <Globe size={13} color={sellerMode === 'direct' ? styles.sellerModeTextActive.color : styles.sellerModeTextInactive.color} strokeWidth={2.2} />
@@ -398,6 +399,7 @@ export function GameFormModal({
                   style={[
                     styles.sellerModeBtn,
                     sellerMode === 'seller' ? styles.sellerModeBtnActive : styles.sellerModeBtnInactive,
+                    isNativeRTL && { flexDirection: 'row-reverse' },
                   ]}
                 >
                   <Store size={13} color={sellerMode === 'seller' ? styles.sellerModeTextActive.color : styles.sellerModeTextInactive.color} strokeWidth={2.2} />
@@ -430,10 +432,10 @@ export function GameFormModal({
                       } catch {}
                       setSellerDropdownOpen(!sellerDropdownOpen);
                     }}
-                    style={styles.dropdownTrigger}
+                    style={[styles.dropdownTrigger, isNativeRTL && { flexDirection: 'row-reverse' }]}
                   >
                     {selectedSeller ? (
-                      <View style={styles.dropdownSelectedRow}>
+                      <View style={[styles.dropdownSelectedRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                         <View style={styles.dropdownIconBadge}>
                           <PlatformIcon
                             platform={selectedSeller.contact_platform}
@@ -442,8 +444,8 @@ export function GameFormModal({
                           />
                         </View>
                         <View style={styles.dropdownSelectedInfo}>
-                          <Text style={styles.dropdownSelectedName}>{selectedSeller.name}</Text>
-                          <View style={styles.dropdownScoreRow}>
+                          <Text style={[styles.dropdownSelectedName, isRTL && styles.rtlText]}>{selectedSeller.name}</Text>
+                          <View style={[styles.dropdownScoreRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                             <Star size={10} color="#F59E0B" fill="#F59E0B" />
                             <Text style={styles.dropdownScoreText}>
                               {selectedSeller.reputation_score.toFixed(1)} • {selectedSeller.contact_platform}
@@ -452,7 +454,7 @@ export function GameFormModal({
                         </View>
                       </View>
                     ) : (
-                      <View style={styles.dropdownPlaceholderRow}>
+                      <View style={[styles.dropdownPlaceholderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                         <Store size={15} color={styles.placeholder.color} strokeWidth={2} />
                         <Text style={styles.dropdownPlaceholderText}>{t('sellerDropdownPlaceholder')}</Text>
                       </View>
@@ -481,6 +483,7 @@ export function GameFormModal({
                         style={({ pressed }) => [
                           styles.quickAddSellerBtn,
                           pressed && styles.quickAddSellerBtnPressed,
+                          isNativeRTL && { flexDirection: 'row-reverse' },
                         ]}
                       >
                         <View style={styles.quickAddPlusCircle}>
@@ -490,7 +493,7 @@ export function GameFormModal({
                       </Pressable>
 
                       {/* SEARCH INPUT */}
-                      <View style={styles.dropdownSearchBox}>
+                      <View style={[styles.dropdownSearchBox, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                         <Search size={14} color={styles.placeholder.color} strokeWidth={2.2} />
                         <TextInput
                           placeholder={t('sellerSearchPlaceholder')}
@@ -534,9 +537,10 @@ export function GameFormModal({
                                 style={[
                                   styles.dropdownItem,
                                   isSelected && styles.dropdownItemSelected,
+                                  isNativeRTL && { flexDirection: 'row-reverse' },
                                 ]}
                               >
-                                <View style={styles.dropdownItemLeft}>
+                                <View style={[styles.dropdownItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                                   <View style={styles.dropdownItemIconBox}>
                                     <PlatformIcon
                                       platform={s.contact_platform}
@@ -545,10 +549,10 @@ export function GameFormModal({
                                     />
                                   </View>
                                   <View style={styles.dropdownItemInfo}>
-                                    <Text style={styles.dropdownItemName} numberOfLines={1}>
+                                    <Text style={[styles.dropdownItemName, isRTL && styles.rtlText]} numberOfLines={1}>
                                       {s.name}
                                     </Text>
-                                    <View style={styles.dropdownItemMetaRow}>
+                                    <View style={[styles.dropdownItemMetaRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                                       <Star size={10} color="#F59E0B" fill="#F59E0B" />
                                       <Text style={styles.dropdownItemMetaText}>
                                         {s.reputation_score.toFixed(1)} • {s.contact_platform}
@@ -578,7 +582,7 @@ export function GameFormModal({
 
             {/* SENSITIVE CREDENTIALS BOX */}
             <View style={styles.sensitiveBox}>
-              <View style={styles.sensitiveTitleRow}>
+              <View style={[styles.sensitiveTitleRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <Lock size={15} color={styles.accentIcon.color} strokeWidth={2.2} />
                 <Text style={styles.sensitiveTitle}>{t('sensitiveHeader')}</Text>
               </View>
@@ -618,7 +622,7 @@ export function GameFormModal({
 
             {/* GAME NOTES */}
             <View style={styles.notesSection}>
-              <View style={styles.notesHeaderRow}>
+              <View style={[styles.notesHeaderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <FileText size={13} color={styles.closeIcon.color} strokeWidth={2.2} />
                 <Text style={styles.fieldLabelInline}>
                   {t('fieldGameNotes')}
@@ -636,7 +640,7 @@ export function GameFormModal({
             </View>
 
             {/* BUTTONS */}
-            <View style={styles.buttonRow}>
+            <View style={[styles.buttonRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Pressable onPress={onClose} style={styles.cancelBtn}>
                 <Text style={styles.cancelBtnText}>{t('btnCancel')}</Text>
               </Pressable>

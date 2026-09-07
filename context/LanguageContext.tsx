@@ -52,8 +52,17 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   } catch {}
 }
 
+// Prevent native iOS/Android Yoga engine from inverting row-directions unpredictably on modal mount
+if (Platform.OS !== 'web') {
+  try {
+    I18nManager.allowRTL(false);
+    I18nManager.forceRTL(false);
+  } catch {}
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(getStoredLanguage);
+  const isRTL = language === 'ar';
 
   // Load persisted language (ensures native AsyncStorage hydration is caught)
   useEffect(() => {
@@ -67,21 +76,22 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // Sync RTL attributes and Cairo font class
   useEffect(() => {
-    const isRtlMode = language === 'ar';
-    try {
-      if (I18nManager.isRTL !== isRtlMode) {
-        I18nManager.allowRTL(isRtlMode);
-        I18nManager.forceRTL(isRtlMode);
-      }
-    } catch {}
+    // Lock I18nManager native layout to false to prevent native Modals from dynamically
+    // flipping native Yoga into an inconsistent split-brain layout state.
+    if (Platform.OS !== 'web') {
+      try {
+        I18nManager.allowRTL(false);
+        I18nManager.forceRTL(false);
+      } catch {}
+    }
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      document.documentElement.dir = isRtlMode ? 'rtl' : 'ltr';
+      document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
       document.documentElement.lang = language;
       if (document.body) {
-        document.body.dir = isRtlMode ? 'rtl' : 'ltr';
+        document.body.dir = isRTL ? 'rtl' : 'ltr';
       }
-      if (isRtlMode) {
+      if (isRTL) {
         document.documentElement.classList.add('rtl-mode');
         if (document.body) document.body.classList.add('rtl-mode');
       } else {
@@ -89,7 +99,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         if (document.body) document.body.classList.remove('rtl-mode');
       }
     }
-  }, [language]);
+  }, [language, isRTL]);
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);

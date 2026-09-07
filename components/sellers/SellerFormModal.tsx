@@ -51,6 +51,7 @@ export function SellerFormModal({
 }: SellerFormModalProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [name, setName] = useState('');
   const [reputationScore, setReputationScore] = useState('5.0');
@@ -174,8 +175,8 @@ export function SellerFormModal({
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* HEADER */}
-            <View style={styles.headerRow}>
-              <View style={styles.titleGroup}>
+            <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              <View style={[styles.titleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 {initialSeller ? (
                   <Pencil size={20} color={styles.accentIcon.color} strokeWidth={2.2} />
                 ) : (
@@ -221,13 +222,13 @@ export function SellerFormModal({
                   {contactMethods.map((method, idx) => {
                     const cfg = PLATFORM_CONFIG[method.platform] || PLATFORM_CONFIG.Other;
                     return (
-                      <View key={method.id || idx} style={styles.methodItem}>
-                        <View style={styles.methodInfoRow}>
+                      <View key={method.id || idx} style={[styles.methodItem, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                        <View style={[styles.methodInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                           <View style={[styles.platformIconBox, { backgroundColor: cfg.bgTint }]}>
                             <PlatformIcon platform={method.platform} size={15} color={cfg.defaultColor} />
                           </View>
                           <View style={styles.methodTextCol}>
-                            <View style={styles.methodPlatformRow}>
+                            <View style={[styles.methodPlatformRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                               <Text style={styles.methodPlatformText}>{method.platform}</Text>
                               {idx === 0 && (
                                 <View style={styles.primaryBadge}>
@@ -335,6 +336,7 @@ export function SellerFormModal({
                 onPress={handleAddMethod}
                 style={({ pressed }) => [
                   styles.addMethodSubmitBtn,
+                  isNativeRTL && { flexDirection: 'row-reverse' },
                   pressed && styles.addMethodSubmitBtnPressed,
                 ]}
               >
@@ -347,7 +349,7 @@ export function SellerFormModal({
 
             {/* REPUTATION RATING */}
             <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldReputationRating')}</Text>
-            <View style={styles.presetsRow}>
+            <View style={[styles.presetsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               {RATING_PRESETS.map((preset) => {
                 const isSelected = reputationScore === preset;
                 return (
@@ -356,6 +358,7 @@ export function SellerFormModal({
                     onPress={() => setReputationScore(preset)}
                     style={[
                       styles.presetButton,
+                      isNativeRTL && { flexDirection: 'row-reverse' },
                       isSelected ? styles.presetButtonSelected : styles.presetButtonUnselected,
                     ]}
                   >
@@ -379,7 +382,7 @@ export function SellerFormModal({
 
             {/* FREE TEXT NOTES */}
             <View style={styles.notesSection}>
-              <View style={styles.notesHeaderRow}>
+              <View style={[styles.notesHeaderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <FileText size={13} color={styles.closeIcon.color} strokeWidth={2.2} />
                 <Text style={styles.fieldLabelInline}>
                   {t('fieldSellerNotes')}
@@ -397,7 +400,7 @@ export function SellerFormModal({
             </View>
 
             {/* BUTTONS */}
-            <View style={styles.buttonRow}>
+            <View style={[styles.buttonRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Pressable onPress={onClose} style={styles.cancelBtn}>
                 <Text style={styles.cancelBtnText}>{t('btnCancel')}</Text>
               </Pressable>
