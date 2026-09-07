@@ -12,7 +12,14 @@ function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
   inactiveColor: string;
 }) {
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 4 }}>
+    <View
+      style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 4,
+        minWidth: 70,   // ← ensures the label always has room
+      }}
+    >
       <View
         style={{
           width: 36,
@@ -26,8 +33,9 @@ function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
         <Text style={{ fontSize: 18 }}>{symbol}</Text>
       </View>
       <Text
+        numberOfLines={1}          // ← never wraps to a second line
         style={{
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: focused ? '800' : '600',
           color: focused ? activeColor : inactiveColor,
           marginTop: 2,
@@ -39,6 +47,7 @@ function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
     </View>
   );
 }
+
 
 export default function TabLayout() {
   const { colors } = useVaultTheme();
