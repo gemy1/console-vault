@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVaultTheme } from '../../context/ThemeContext';
 
 function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
@@ -11,13 +12,13 @@ function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
   inactiveColor: string;
 }) {
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 6 }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 4 }}>
       <View
         style={{
-          width: 38,
-          height: 28,
-          borderRadius: 14,
-          backgroundColor: focused ? 'rgba(0, 112, 209, 0.16)' : 'transparent',
+          width: 36,
+          height: 26,
+          borderRadius: 8,
+          backgroundColor: focused ? 'rgba(0, 112, 209, 0.12)' : 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -26,11 +27,11 @@ function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
       </View>
       <Text
         style={{
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: focused ? '800' : '600',
           color: focused ? activeColor : inactiveColor,
           marginTop: 2,
-          letterSpacing: 0.2,
+          letterSpacing: 0.1,
         }}
       >
         {label}
@@ -40,29 +41,31 @@ function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
 }
 
 export default function TabLayout() {
-  const { colors, theme } = useVaultTheme();
+  const { colors } = useVaultTheme();
+  const insets = useSafeAreaInsets();
+
+  // Flush to screen bottom with zero gap and zero radius
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 12 : 6);
+  const barHeight = 56 + bottomPadding;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 24 : 16,
-          left: 20,
-          right: 20,
           backgroundColor: colors.tabBarBg,
-          borderColor: colors.tabBarBorder,
-          borderWidth: 1,
-          borderRadius: 36,
-          height: 66,
-          paddingBottom: 8,
-          paddingTop: 4,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          borderWidth: 0,
+          borderRadius: 0, // Zero radius as requested
+          height: barHeight,
+          paddingBottom: bottomPadding,
+          paddingTop: 6,
+          elevation: 8,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: theme === 'dark' ? 0.45 : 0.12,
-          shadowRadius: 16,
-          elevation: 10,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 4,
         },
         tabBarShowLabel: false,
       }}
@@ -73,10 +76,10 @@ export default function TabLayout() {
           title: 'Dashboard',
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              label="Hub"
+              label="Dashboard"
               focused={focused}
               symbol="⚡"
-              activeColor={colors.neon}
+              activeColor={colors.accent}
               inactiveColor={colors.textMuted}
             />
           ),
@@ -85,13 +88,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="vault"
         options={{
-          title: 'Game Vault',
+          title: 'Vault',
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              label="Vault"
+              label="Game Vault"
               focused={focused}
               symbol="🎮"
-              activeColor={colors.neon}
+              activeColor={colors.accent}
               inactiveColor={colors.textMuted}
             />
           ),
@@ -100,13 +103,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="sellers"
         options={{
-          title: 'Sellers',
+          title: 'Vendors',
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              label="Vendors"
+              label="Sellers"
               focused={focused}
               symbol="🛡️"
-              activeColor={colors.neon}
+              activeColor={colors.accent}
               inactiveColor={colors.textMuted}
             />
           ),

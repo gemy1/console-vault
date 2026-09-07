@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Seller, Game } from '../../types/vault';
+import { ModernHeader } from '../../components/ModernHeader';
 
 export default function SellersScreen() {
   const router = useRouter();
@@ -66,25 +67,23 @@ export default function SellersScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* HEADER */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 16 }}>
-        <Text style={{ fontSize: 11, fontWeight: '800', color: colors.textSecondary, letterSpacing: 2 }}>
-          VENDOR NETWORK
-        </Text>
-        <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text, marginTop: 2 }}>
-          Digital Sellers
-        </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
-          Tap a vendor to inspect all supplied games, credentials, and warranty status.
-        </Text>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right']}>
+      {/* MODERN HEADER */}
+      <ModernHeader
+        title="Digital Vendors"
+        subtitle="Reputation & Contacts"
+        showAddButton={false}
+      />
 
       <ScrollView
         style={{ flex: 1, paddingHorizontal: 20 }}
-        contentContainerStyle={{ paddingBottom: 110 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.neon} />}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
+        <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 14 }}>
+          Tap a vendor to inspect all supplied games, credentials, and warranty status.
+        </Text>
+
         {sellers.map((seller) => {
           const sellerGamesCount = getSellerGamesCount(seller.id);
           const isWhatsApp = seller.contact_platform === 'WhatsApp';
@@ -95,7 +94,7 @@ export default function SellersScreen() {
               onPress={() => openSellerProfile(seller.id)}
               style={({ pressed }) => ({
                 backgroundColor: pressed ? colors.surfaceElevated : colors.surface,
-                borderRadius: 22,
+                borderRadius: 20,
                 padding: 16,
                 marginBottom: 12,
                 borderWidth: 1,

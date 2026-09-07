@@ -16,7 +16,7 @@ import { OfflineVault } from '../../services/storage';
 import { Game, Seller } from '../../types/vault';
 import { calculateWarranty, generateSellerDeepLink } from '../../utils/padlock';
 import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
-import { ThemeToggleButton } from '../../components/ThemeToggleButton';
+import { ModernHeader } from '../../components/ModernHeader';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -65,55 +65,20 @@ export default function DashboardScreen() {
   ];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right']}>
+      {/* MODERN POLISHED HEADER */}
+      <ModernHeader
+        title="Console Vault"
+        subtitle="PS5 Operations Hub"
+        showAddButton={true}
+        onAddPress={() => router.push('/game/add')}
+      />
+
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 110 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.neon} />}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
-        {/* TOP HEADER (Inspired by TripGlide Image 1) */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.5 }}>
-                PlayStation 5 Hub
-              </Text>
-              <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text, marginTop: 2 }}>
-                Console Vault
-              </Text>
-            </View>
-
-            {/* HEADER ACTIONS: THEME TOGGLE + ADD BUTTON */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <ThemeToggleButton size={40} />
-
-              <Pressable
-                onPress={() => {
-                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-                  router.push('/game/add');
-                }}
-                style={({ pressed }) => ({
-                  backgroundColor: colors.text,
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: pressed ? 0.8 : 1,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
-                  shadowRadius: 4,
-                })}
-              >
-                <Text style={{ color: colors.bg, fontSize: 20, fontWeight: '800', marginTop: -2 }}>
-                  +
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-
         {/* METRICS ROW (Inspired by Fintech / Invoice Image 2) */}
         <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 18 }}>
           {/* Total Games */}
@@ -121,7 +86,7 @@ export default function DashboardScreen() {
             style={{
               flex: 1,
               backgroundColor: colors.surface,
-              borderRadius: 20,
+              borderRadius: 18,
               padding: 14,
               borderWidth: 1,
               borderColor: colors.border,
@@ -145,7 +110,7 @@ export default function DashboardScreen() {
             style={{
               flex: 1,
               backgroundColor: colors.surface,
-              borderRadius: 20,
+              borderRadius: 18,
               padding: 14,
               borderWidth: 1,
               borderColor: colors.border,
@@ -169,7 +134,7 @@ export default function DashboardScreen() {
             style={{
               flex: 1,
               backgroundColor: lockedGames.length > 0 ? (theme === 'dark' ? '#261014' : '#FEF2F2') : colors.surface,
-              borderRadius: 20,
+              borderRadius: 18,
               padding: 14,
               borderWidth: 1,
               borderColor: lockedGames.length > 0 ? colors.danger : colors.border,
@@ -210,7 +175,7 @@ export default function DashboardScreen() {
             <View
               style={{
                 backgroundColor: theme === 'dark' ? '#1E0E12' : '#FEF2F2',
-                borderRadius: 24,
+                borderRadius: 20,
                 padding: 16,
                 borderWidth: 1.5,
                 borderColor: colors.danger,
@@ -232,7 +197,7 @@ export default function DashboardScreen() {
                     backgroundColor: theme === 'dark' ? 'rgba(255, 59, 48, 0.2)' : 'rgba(239, 68, 68, 0.1)',
                     paddingHorizontal: 8,
                     paddingVertical: 3,
-                    borderRadius: 12,
+                    borderRadius: 10,
                   }}
                 >
                   <Text style={{ color: colors.danger, fontSize: 11, fontWeight: '800' }}>
@@ -338,10 +303,10 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* CATEGORY PILLS (Inspired by TripGlide Image 1) */}
+        {/* CATEGORY PILLS (TripGlide Style) */}
         <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 12 }}>
-            Your Games
+            Vault Collection
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -363,7 +328,7 @@ export default function DashboardScreen() {
                     borderColor: isSelected ? colors.pillActiveBg : colors.border,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: isSelected ? 0.15 : 0.03,
+                    shadowOpacity: isSelected ? 0.12 : 0.02,
                     shadowRadius: 3,
                   }}
                 >
@@ -382,7 +347,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* MODERN GAME CARDS LIST (Inspired by TripGlide Image 1 cards) */}
+        {/* MODERN GAME CARDS LIST */}
         <View style={{ paddingHorizontal: 20 }}>
           {displayedGames.map((game) => {
             const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
@@ -401,7 +366,7 @@ export default function DashboardScreen() {
                 }}
                 style={({ pressed }) => ({
                   backgroundColor: pressed ? colors.surfaceElevated : colors.surface,
-                  borderRadius: 22,
+                  borderRadius: 20,
                   padding: 14,
                   marginBottom: 12,
                   borderWidth: 1,
@@ -418,14 +383,14 @@ export default function DashboardScreen() {
                 {game.cover_image_url ? (
                   <Image
                     source={{ uri: game.cover_image_url }}
-                    style={{ width: 62, height: 82, borderRadius: 14, backgroundColor: colors.surfaceSubtle }}
+                    style={{ width: 62, height: 82, borderRadius: 12, backgroundColor: colors.surfaceSubtle }}
                   />
                 ) : (
                   <View
                     style={{
                       width: 62,
                       height: 82,
-                      borderRadius: 14,
+                      borderRadius: 12,
                       backgroundColor: colors.surfaceSubtle,
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -553,7 +518,7 @@ export default function DashboardScreen() {
                   </View>
                 </View>
 
-                {/* Circular Arrow Button (Inspired by TripGlide Image 1) */}
+                {/* Circular Arrow Button */}
                 <View
                   style={{
                     width: 34,
