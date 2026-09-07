@@ -18,13 +18,14 @@ import { OfflineVault } from "../../services/storage";
 import { Game, Seller, GameStatus } from "../../types/vault";
 import { calculateWarranty } from "../../utils/padlock";
 import { useBiometricGuard } from "../../hooks/useBiometricGuard";
-import { ThemeToggleButton } from "../../components/common";
+import { ThemeToggleButton, LanguageToggleButton } from "../../components/common";
 import {
   PulsingPadlockBadge,
   ReplaceCredentialsModal,
 } from "../../components/games";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ChevronLeft,
   Heart,
@@ -44,6 +45,7 @@ export default function GameDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   const [game, setGame] = useState<Game | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -70,9 +72,9 @@ export default function GameDetailsScreen() {
   if (!game) {
     return (
       <View style={styles.notFoundContainer}>
-        <Text style={styles.notFoundText}>Game not found.</Text>
+        <Text style={styles.notFoundText}>{t('gameNotFound')}</Text>
         <Pressable onPress={() => router.back()} style={styles.goBackBtn}>
-          <Text style={styles.goBackText}>← Go Back</Text>
+          <Text style={styles.goBackText}>{t('btnGoBack')}</Text>
         </Pressable>
       </View>
     );
@@ -118,8 +120,8 @@ export default function GameDetailsScreen() {
     if (updated) {
       setGame(updated);
       Alert.alert(
-        "Credentials Updated",
-        "Old credentials archived to history. Game restored to Active.",
+        t('alertCredentialsUpdatedTitle'),
+        t('alertCredentialsUpdatedDesc'),
       );
     }
   };
@@ -165,11 +167,19 @@ export default function GameDetailsScreen() {
               pressed && styles.headerCircleBtnPressed,
             ]}
           >
-            <ChevronLeft
-              size={24}
-              color={styles.headerIconColor.color}
-              strokeWidth={2.4}
-            />
+            {isRTL ? (
+              <ChevronRight
+                size={24}
+                color={styles.headerIconColor.color}
+                strokeWidth={2.4}
+              />
+            ) : (
+              <ChevronLeft
+                size={24}
+                color={styles.headerIconColor.color}
+                strokeWidth={2.4}
+              />
+            )}
           </Pressable>
 
           <View style={styles.headerRightActions}>
@@ -194,6 +204,7 @@ export default function GameDetailsScreen() {
               />
             </Pressable>
 
+            <LanguageToggleButton size={48} />
             <ThemeToggleButton size={48} />
           </View>
         </View>
@@ -211,7 +222,7 @@ export default function GameDetailsScreen() {
 
           {/* TITLE & REPUTATION / RATING ROW */}
           <View style={styles.titleRow}>
-            <Text style={styles.gameTitle}>{game.title}</Text>
+            <Text style={[styles.gameTitle, isRTL && styles.rtlText]}>{game.title}</Text>
 
             <View style={styles.ratingBadge}>
               <Star size={12} color="#F59E0B" fill="#F59E0B" />
@@ -257,12 +268,12 @@ export default function GameDetailsScreen() {
                       : styles.statusTextWarning,
                 ]}
               >
-                {game.status}
+                {game.status === 'Active' ? t('statusActive') : game.status === 'Locked' ? t('statusLocked') : game.status}
               </Text>
             </View>
 
             <Text style={styles.purchaseDateText}>
-              Purchased {game.purchase_date}
+              {t('purchasedOn', { date: game.purchase_date })}
             </Text>
           </View>
 
@@ -284,18 +295,26 @@ export default function GameDetailsScreen() {
                   />
                 </View>
                 <View>
-                  <Text style={styles.sellerCardName}>
-                    Seller: {seller.name}
+                  <Text style={[styles.sellerCardName, isRTL && styles.rtlText]}>
+                    {t('sellerCardPrefix')} {seller.name}
                   </Text>
                   <View style={styles.sellerSubtextRow}>
                     <Text style={styles.sellerSubtext}>
-                      Tap to view seller profile & all games
+                      {t('sellerCardSubtext')}
                     </Text>
-                    <ChevronRight
-                      size={12}
-                      color={styles.accentIcon.color}
-                      strokeWidth={2.4}
-                    />
+                    {isRTL ? (
+                      <ChevronLeft
+                        size={12}
+                        color={styles.accentIcon.color}
+                        strokeWidth={2.4}
+                      />
+                    ) : (
+                      <ChevronRight
+                        size={12}
+                        color={styles.accentIcon.color}
+                        strokeWidth={2.4}
+                      />
+                    )}
                   </View>
                 </View>
               </View>
@@ -314,13 +333,13 @@ export default function GameDetailsScreen() {
             <View style={styles.padlockBanner}>
               <View style={styles.padlockHeaderRow}>
                 <PulsingPadlockBadge size="sm" showLabel={false} />
-                <Text style={styles.padlockTitle}>LICENSE REVOKED BY SONY</Text>
+                <Text style={[styles.padlockTitle, isRTL && styles.rtlText]}>{t('licenseRevokedTitle')}</Text>
               </View>
 
-              <Text style={styles.padlockDescription}>
+              <Text style={[styles.padlockDescription, isRTL && styles.rtlText]}>
                 {warranty.isWarrantyActive
-                  ? `Warranty is active (${warranty.daysRemaining} days remaining). Contact ${seller?.name || "seller"} to request replacement credentials.`
-                  : `Warranty expired on ${warranty.expiryDate}.`}
+                  ? t('warrantyActiveNotice', { days: warranty.daysRemaining, seller: seller?.name || t('sellerCardPrefix') })
+                  : t('warrantyExpiredNotice', { date: warranty.expiryDate })}
               </Text>
 
               {seller && (
@@ -337,9 +356,13 @@ export default function GameDetailsScreen() {
                   ]}
                 >
                   <Text style={styles.padlockDispatchText}>
-                    Dispatch Warranty Claim via Padlock Protocol
+                    {t('dispatchClaimBtn')}
                   </Text>
-                  <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  {isRTL ? (
+                    <ChevronLeft size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  ) : (
+                    <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  )}
                 </Pressable>
               )}
             </View>
@@ -347,7 +370,7 @@ export default function GameDetailsScreen() {
 
           {/* WARRANTY COVERAGE */}
           <View style={styles.warrantyCard}>
-            <Text style={styles.sectionHeader}>Warranty Coverage</Text>
+            <Text style={styles.sectionHeader}>{t('warrantyCoverageTitle')}</Text>
 
             <View style={styles.warrantyRow}>
               <Text
@@ -359,16 +382,16 @@ export default function GameDetailsScreen() {
                 ]}
               >
                 {warranty.isWarrantyActive
-                  ? `${warranty.daysRemaining} Days Left`
-                  : "Expired"}
+                  ? t('daysLeft', { days: warranty.daysRemaining })
+                  : t('warrantyExpired')}
               </Text>
               <Text style={styles.warrantyMonthsTotal}>
-                {game.warranty_months} Months Total
+                {t('monthsTotal', { months: game.warranty_months })}
               </Text>
             </View>
 
             <Text style={styles.warrantyExpiresText}>
-              Expires: {warranty.expiryDate}
+              {t('expiresOn', { date: warranty.expiryDate })}
             </Text>
           </View>
 
@@ -381,11 +404,11 @@ export default function GameDetailsScreen() {
           >
             <View style={styles.credentialsHeader}>
               <Text style={styles.credentialsTitle}>
-                PSN Account Credentials
+                {t('credentialSectionTitle')}
               </Text>
               {isUnlocked && (
                 <Pressable onPress={lock}>
-                  <Text style={styles.lockText}>Hide & Lock</Text>
+                  <Text style={styles.lockText}>{t('hideAndLock')}</Text>
                 </Pressable>
               )}
             </View>
@@ -399,23 +422,28 @@ export default function GameDetailsScreen() {
                   strokeWidth={2}
                   style={styles.lockIconMargin}
                 />
-                <Text style={styles.credentialsProtectedTitle}>
-                  Credentials Protected
+                <Text style={[styles.credentialsProtectedTitle, isRTL && styles.rtlText]}>
+                  {t('credentialsProtectedTitle')}
                 </Text>
-                <Text style={styles.credentialsProtectedSubtitle}>
-                  Biometric authentication required to view PSN email, password,
-                  and 2FA codes.
+                <Text style={[styles.credentialsProtectedSubtitle, isRTL && styles.rtlText]}>
+                  {t('credentialsProtectedSubtitle')}
                 </Text>
 
                 <Pressable
-                  onPress={requestUnlock}
+                  onPress={() =>
+                    requestUnlock({
+                      promptMessage: t('biometricPromptMessage'),
+                      fallbackLabel: t('biometricFallbackLabel'),
+                      cancelLabel: t('biometricCancelLabel'),
+                    })
+                  }
                   style={({ pressed }) => [
                     styles.unlockBtn,
                     pressed && styles.unlockBtnPressed,
                   ]}
                 >
                   <Text style={styles.unlockBtnText}>
-                    Unlock with Face ID / Passcode
+                    {t('unlockBiometricBtn')}
                   </Text>
                 </Pressable>
               </View>
@@ -424,7 +452,7 @@ export default function GameDetailsScreen() {
               <View style={styles.unlockedBox}>
                 {/* PSN Email */}
                 <View style={styles.fieldSection}>
-                  <Text style={styles.fieldLabel}>PSN EMAIL</Text>
+                  <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldPsnEmail')}</Text>
                   <View style={styles.credentialRow}>
                     <Text style={styles.credentialValue}>{game.psn_email}</Text>
                     <Pressable
@@ -450,7 +478,7 @@ export default function GameDetailsScreen() {
                           copiedField === "email" && styles.copyTextSuccess,
                         ]}
                       >
-                        {copiedField === "email" ? "Copied" : "Copy"}
+                        {copiedField === "email" ? t('btnCopied') : t('btnCopy')}
                       </Text>
                     </Pressable>
                   </View>
@@ -458,7 +486,7 @@ export default function GameDetailsScreen() {
 
                 {/* PSN Password */}
                 <View style={styles.fieldSection}>
-                  <Text style={styles.fieldLabel}>PSN PASSWORD</Text>
+                  <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldPsnPassword')}</Text>
                   <View style={styles.credentialRow}>
                     <Text style={styles.credentialValue}>
                       {game.psn_password || '—'}
@@ -489,7 +517,7 @@ export default function GameDetailsScreen() {
                             copiedField === "password" && styles.copyTextSuccess,
                           ]}
                         >
-                          {copiedField === "password" ? "Copied" : "Copy"}
+                          {copiedField === "password" ? t('btnCopied') : t('btnCopy')}
                         </Text>
                       </Pressable>
                     ) : null}
@@ -499,7 +527,7 @@ export default function GameDetailsScreen() {
                 {/* 2FA Backup Codes */}
                 {game.backup_codes && game.backup_codes.length > 0 && (
                   <View style={styles.fieldSection}>
-                    <Text style={styles.fieldLabel}>2FA BACKUP CODES</Text>
+                    <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldBackupCodes')}</Text>
                     <View style={styles.codesBox}>
                       {game.backup_codes.map((code, index) => (
                         <View
@@ -538,8 +566,8 @@ export default function GameDetailsScreen() {
                               ]}
                             >
                               {copiedField === `code-${index}`
-                                ? "Copied"
-                                : "Copy"}
+                                ? t('btnCopied')
+                                : t('btnCopy')}
                             </Text>
                           </Pressable>
                         </View>
@@ -562,7 +590,7 @@ export default function GameDetailsScreen() {
                     strokeWidth={2.2}
                   />
                   <Text style={styles.replaceCredentialsText}>
-                    Replace Credentials (Archive Old to History)
+                    {t('replaceCredentialsBtn')}
                   </Text>
                 </Pressable>
               </View>
@@ -571,7 +599,7 @@ export default function GameDetailsScreen() {
 
           {/* STATUS ACTIONS */}
           <View style={styles.statusActionsSection}>
-            <Text style={styles.sectionHeader}>Account Status Actions</Text>
+            <Text style={styles.sectionHeader}>{t('changeStatusPrompt')}</Text>
 
             {!isLocked ? (
               <Pressable
@@ -583,7 +611,7 @@ export default function GameDetailsScreen() {
               >
                 <Lock size={15} color="#FFFFFF" strokeWidth={2.4} />
                 <Text style={styles.statusActionText}>
-                  Mark as Locked (Padlock Protocol)
+                  {t('markAsLocked')}
                 </Text>
               </Pressable>
             ) : (
@@ -596,7 +624,7 @@ export default function GameDetailsScreen() {
               >
                 <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
                 <Text style={styles.statusActionText}>
-                  Mark as Active / Restored
+                  {t('markAsActive')}
                 </Text>
               </Pressable>
             )}
@@ -1137,5 +1165,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: "#FFFFFF",
       fontWeight: "800",
       fontSize: 14,
+    },
+    rtlText: {
+      textAlign: 'right',
     },
   });

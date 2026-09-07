@@ -2,12 +2,18 @@ import { useState, useCallback, useRef } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
 
+export interface BiometricPromptOptions {
+  promptMessage?: string;
+  fallbackLabel?: string;
+  cancelLabel?: string;
+}
+
 export function useBiometricGuard(autoLockSeconds: number = 60) {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const requestUnlock = useCallback(async (): Promise<boolean> => {
+  const requestUnlock = useCallback(async (options?: BiometricPromptOptions): Promise<boolean> => {
     try {
       setIsAuthenticating(true);
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -20,9 +26,9 @@ export function useBiometricGuard(autoLockSeconds: number = 60) {
       }
 
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock PSN account credentials',
-        fallbackLabel: 'Use Device Passcode',
-        cancelLabel: 'Cancel',
+        promptMessage: options?.promptMessage || 'Unlock PSN account credentials',
+        fallbackLabel: options?.fallbackLabel || 'Use Device Passcode',
+        cancelLabel: options?.cancelLabel || 'Cancel',
         disableDeviceFallback: false,
       });
 

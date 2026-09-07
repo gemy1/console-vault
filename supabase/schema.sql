@@ -52,7 +52,7 @@ create table if not exists public.games (
     warranty_months integer not null default 6 check (warranty_months >= 0),
     -- Sensitive PSN Credential Fields (Guarded behind UI biometrics)
     psn_email text not null,
-    psn_password text not null,
+    psn_password text,
     backup_codes text[] default '{}'::text[],
     notes text,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -65,7 +65,7 @@ create table if not exists public.credential_history (
     game_id uuid not null references public.games(id) on delete cascade,
     user_id uuid not null references auth.users(id) on delete cascade,
     previous_email text not null,
-    previous_password text not null,
+    previous_password text,
     previous_backup_codes text[] default '{}'::text[],
     replaced_at timestamp with time zone default timezone('utc'::text, now()) not null,
     reason text default 'Seller warranty replacement'

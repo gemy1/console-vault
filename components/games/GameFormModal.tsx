@@ -35,6 +35,7 @@ import { PlatformIcon } from '../common/PlatformIcon';
 import { SellerFormModal } from '../sellers/SellerFormModal';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const WARRANTY_PRESETS = ['3', '6', '12', '24'];
 
@@ -64,6 +65,7 @@ export function GameFormModal({
   onSave,
 }: GameFormModalProps) {
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   const [title, setTitle] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
@@ -198,11 +200,11 @@ export function GameFormModal({
 
   const handleSubmit = () => {
     if (!title.trim()) {
-      Alert.alert('Required Field', 'Please enter a game title.');
+      Alert.alert(t('alertRequiredField'), t('alertEnterGameTitle'));
       return;
     }
     if (!psnEmail.trim()) {
-      Alert.alert('Required Field', 'Please enter the PSN account email.');
+      Alert.alert(t('alertRequiredField'), t('alertEnterPsnEmail'));
       return;
     }
     // PSN Password is now optional!
@@ -248,7 +250,7 @@ export function GameFormModal({
                   <Gamepad2 size={22} color={styles.accentIcon.color} strokeWidth={2.2} />
                 )}
                 <Text style={styles.headerTitle}>
-                  {initialGame ? 'Edit Game Details' : 'Register Digital Game'}
+                  {initialGame ? t('modalEditGameTitle') : t('modalAddGameTitle')}
                 </Text>
               </View>
               <Pressable onPress={onClose} style={styles.closeButton}>
@@ -256,33 +258,33 @@ export function GameFormModal({
               </Pressable>
             </View>
 
-            <Text style={styles.headerSubtitle}>
-              Store account credentials, set warranty duration, and link digital seller.
+            <Text style={[styles.headerSubtitle, isRTL && styles.rtlText]}>
+              {t('modalGameSubtitle')}
             </Text>
 
             {/* GAME TITLE */}
-            <Text style={styles.fieldLabel}>GAME TITLE *</Text>
+            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldGameTitle')}</Text>
             <TextInput
-              placeholder="e.g. Demon's Souls or Marvel's Spider-Man 2"
+              placeholder={t('fieldGameTitlePlaceholder')}
               placeholderTextColor={styles.placeholder.color}
               value={title}
               onChangeText={setTitle}
-              style={styles.textInput}
+              style={[styles.textInput, isRTL && styles.rtlText]}
             />
 
             {/* COVER ART IMAGE URL */}
-            <Text style={styles.fieldLabel}>COVER ART IMAGE URL (OPTIONAL)</Text>
+            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldCoverUrl')}</Text>
             <TextInput
-              placeholder="https://image.api.playstation.com/..."
+              placeholder={t('fieldCoverUrlPlaceholder')}
               placeholderTextColor={styles.placeholder.color}
               value={coverUrl}
               onChangeText={setCoverUrl}
               autoCapitalize="none"
-              style={styles.textInput}
+              style={[styles.textInput, isRTL && styles.rtlText]}
             />
 
             {/* ACCOUNT ACTIVATION TYPE */}
-            <Text style={styles.fieldLabel}>ACCOUNT ACTIVATION TYPE</Text>
+            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldAccountType')}</Text>
             <View style={styles.accountTypeRow}>
               {(['Primary', 'Secondary'] as AccountType[]).map((type) => {
                 const isSelected = accountType === type;
@@ -306,7 +308,7 @@ export function GameFormModal({
                         isSelected ? styles.accountTypeTextActive : styles.accountTypeTextInactive,
                       ]}
                     >
-                      {type} Account
+                      {type === 'Primary' ? t('accountTypePrimary') : t('accountTypeSecondary')}
                     </Text>
                   </Pressable>
                 );
@@ -316,7 +318,7 @@ export function GameFormModal({
             {/* WARRANTY DURATION */}
             <View style={styles.fieldHeaderWithIcon}>
               <Clock size={12} color={styles.fieldLabelIcon.color} strokeWidth={2.2} />
-              <Text style={styles.fieldLabelInline}>WARRANTY DURATION (MONTHS)</Text>
+              <Text style={styles.fieldLabelInline}>{t('fieldWarrantyDuration')}</Text>
             </View>
             <View style={styles.presetsRow}>
               {WARRANTY_PRESETS.map((preset) => {
@@ -341,7 +343,7 @@ export function GameFormModal({
                         isSelected ? styles.presetTextSelected : styles.presetTextUnselected,
                       ]}
                     >
-                      {preset} Mos
+                      {preset} {t('warrantyMonthsUnit')}
                     </Text>
                   </Pressable>
                 );
@@ -350,19 +352,19 @@ export function GameFormModal({
 
             {/* CUSTOM WARRANTY MONTHS INPUT */}
             <TextInput
-              placeholder="Custom duration in months (e.g. 18)"
+              placeholder={t('warrantyCustomPlaceholder')}
               placeholderTextColor={styles.placeholder.color}
               value={warrantyMonths}
               onChangeText={setWarrantyMonths}
               keyboardType="numeric"
-              style={styles.textInput}
+              style={[styles.textInput, isRTL && styles.rtlText]}
             />
 
             {/* SELLER ASSIGNMENT SECTION (3 OPTIONS: DIRECT, SELECT SELLER, QUICK ADD SELLER) */}
             <View style={styles.sellerSectionContainer}>
               <View style={styles.fieldHeaderWithIcon}>
                 <ShieldCheck size={12} color={styles.fieldLabelIcon.color} strokeWidth={2.2} />
-                <Text style={styles.fieldLabelInline}>SELLER ASSIGNMENT</Text>
+                <Text style={styles.fieldLabelInline}>{t('fieldSellerAssignment')}</Text>
               </View>
 
               {/* SELLER MODE SWITCHER (DIRECT vs REGISTERED SELLER) */}
@@ -381,7 +383,7 @@ export function GameFormModal({
                       sellerMode === 'direct' ? styles.sellerModeTextActive : styles.sellerModeTextInactive,
                     ]}
                   >
-                    Direct Purchase
+                    {t('sellerModeDirect')}
                   </Text>
                 </Pressable>
 
@@ -399,7 +401,7 @@ export function GameFormModal({
                       sellerMode === 'seller' ? styles.sellerModeTextActive : styles.sellerModeTextInactive,
                     ]}
                   >
-                    Registered Seller ({sellers.length})
+                    {t('sellerModeRegistered')} ({sellers.length})
                   </Text>
                 </Pressable>
               </View>
@@ -407,8 +409,8 @@ export function GameFormModal({
               {/* DIRECT PURCHASE NOTICE */}
               {sellerMode === 'direct' ? (
                 <View style={styles.directNoticeBox}>
-                  <Text style={styles.directNoticeText}>
-                    Direct / Personal Purchase: No external seller warranty needed. Claims and credentials managed directly.
+                  <Text style={[styles.directNoticeText, isRTL && styles.rtlText]}>
+                    {t('sellerDirectNotice')}
                   </Text>
                 </View>
               ) : (
@@ -446,7 +448,7 @@ export function GameFormModal({
                     ) : (
                       <View style={styles.dropdownPlaceholderRow}>
                         <Store size={15} color={styles.placeholder.color} strokeWidth={2} />
-                        <Text style={styles.dropdownPlaceholderText}>Select a seller from your library...</Text>
+                        <Text style={styles.dropdownPlaceholderText}>{t('sellerDropdownPlaceholder')}</Text>
                       </View>
                     )}
 
@@ -478,18 +480,18 @@ export function GameFormModal({
                         <View style={styles.quickAddPlusCircle}>
                           <Plus size={13} color="#FFFFFF" strokeWidth={2.8} />
                         </View>
-                        <Text style={styles.quickAddSellerText}>+ Register New Seller</Text>
+                        <Text style={styles.quickAddSellerText}>{t('sellerQuickRegister')}</Text>
                       </Pressable>
 
                       {/* SEARCH INPUT */}
                       <View style={styles.dropdownSearchBox}>
                         <Search size={14} color={styles.placeholder.color} strokeWidth={2.2} />
                         <TextInput
-                          placeholder="Search sellers by name or platform..."
+                          placeholder={t('sellerSearchPlaceholder')}
                           placeholderTextColor={styles.placeholder.color}
                           value={sellerSearchQuery}
                           onChangeText={setSellerSearchQuery}
-                          style={styles.dropdownSearchInput}
+                          style={[styles.dropdownSearchInput, isRTL && styles.rtlText]}
                         />
                         {sellerSearchQuery.length > 0 && (
                           <Pressable onPress={() => setSellerSearchQuery('')}>
@@ -506,14 +508,14 @@ export function GameFormModal({
                       >
                         {filteredSellers.length === 0 ? (
                           <View style={styles.emptySearchBox}>
-                            <Text style={styles.emptySearchText}>
-                              No sellers match "{sellerSearchQuery}".
+                            <Text style={[styles.emptySearchText, isRTL && styles.rtlText]}>
+                              {t('sellerNoMatch', { query: sellerSearchQuery })}
                             </Text>
                             <Pressable
                               onPress={() => setQuickAddSellerVisible(true)}
                               style={styles.emptyRegisterBtn}
                             >
-                              <Text style={styles.emptyRegisterBtnText}>+ Register this Seller Now</Text>
+                              <Text style={styles.emptyRegisterBtnText}>{t('sellerRegisterNow')}</Text>
                             </Pressable>
                           </View>
                         ) : (
@@ -545,7 +547,7 @@ export function GameFormModal({
                                       <Text style={styles.dropdownItemMetaText}>
                                         {s.reputation_score.toFixed(1)} • {s.contact_platform}
                                         {s.contact_methods && s.contact_methods.length > 1
-                                          ? ` (${s.contact_methods.length} methods)`
+                                          ? ` ${t('sellerMethodsCount', { count: s.contact_methods.length })}`
                                           : ''}
                                       </Text>
                                     </View>
@@ -572,39 +574,39 @@ export function GameFormModal({
             <View style={styles.sensitiveBox}>
               <View style={styles.sensitiveTitleRow}>
                 <Lock size={15} color={styles.accentIcon.color} strokeWidth={2.2} />
-                <Text style={styles.sensitiveTitle}>SENSITIVE PSN CREDENTIALS</Text>
+                <Text style={styles.sensitiveTitle}>{t('sensitiveHeader')}</Text>
               </View>
 
-              <Text style={styles.inputSubLabel}>PSN EMAIL *</Text>
+              <Text style={[styles.inputSubLabel, isRTL && styles.rtlText]}>{t('fieldPsnEmail')}</Text>
               <TextInput
-                placeholder="psn.account@gmail.com"
+                placeholder={t('fieldPsnEmailPlaceholder')}
                 placeholderTextColor={styles.placeholder.color}
                 value={psnEmail}
                 onChangeText={setPsnEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                style={styles.compactInput}
+                style={[styles.compactInput, isRTL && styles.rtlText]}
               />
 
               {/* PSN PASSWORD IS NOW OPTIONAL */}
-              <Text style={styles.inputSubLabel}>PSN PASSWORD (OPTIONAL)</Text>
+              <Text style={[styles.inputSubLabel, isRTL && styles.rtlText]}>{t('fieldPsnPassword')}</Text>
               <TextInput
-                placeholder="AccountPassword#123 (or leave blank)"
+                placeholder={t('fieldPsnPasswordPlaceholder')}
                 placeholderTextColor={styles.placeholder.color}
                 value={psnPassword}
                 onChangeText={setPsnPassword}
                 autoCapitalize="none"
-                style={styles.compactInput}
+                style={[styles.compactInput, isRTL && styles.rtlText]}
               />
 
-              <Text style={styles.inputSubLabel}>2FA BACKUP CODES (COMMA SEPARATED, OPTIONAL)</Text>
+              <Text style={[styles.inputSubLabel, isRTL && styles.rtlText]}>{t('fieldBackupCodes')}</Text>
               <TextInput
-                placeholder="12345678, 87654321, 11223344"
+                placeholder={t('fieldBackupCodesPlaceholder')}
                 placeholderTextColor={styles.placeholder.color}
                 value={backupCodesStr}
                 onChangeText={setBackupCodesStr}
                 autoCapitalize="none"
-                style={styles.compactInput}
+                style={[styles.compactInput, isRTL && styles.rtlText]}
               />
             </View>
 
@@ -613,24 +615,24 @@ export function GameFormModal({
               <View style={styles.notesHeaderRow}>
                 <FileText size={13} color={styles.closeIcon.color} strokeWidth={2.2} />
                 <Text style={styles.fieldLabelInline}>
-                  GAME NOTES & ACTIVATION REMARKS (OPTIONAL)
+                  {t('fieldGameNotes')}
                 </Text>
               </View>
               <TextInput
-                placeholder="e.g. Primary activated on living room PS5, secondary used on bedroom console, order #..."
+                placeholder={t('fieldGameNotesPlaceholder')}
                 placeholderTextColor={styles.placeholder.color}
                 value={notes}
                 onChangeText={setNotes}
                 multiline
                 numberOfLines={3}
-                style={styles.notesInput}
+                style={[styles.notesInput, isRTL && styles.rtlText]}
               />
             </View>
 
             {/* BUTTONS */}
             <View style={styles.buttonRow}>
               <Pressable onPress={onClose} style={styles.cancelBtn}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('btnCancel')}</Text>
               </Pressable>
 
               <Pressable
@@ -638,7 +640,7 @@ export function GameFormModal({
                 style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
               >
                 <Text style={styles.submitBtnText}>
-                  {initialGame ? 'Save Changes' : 'Add Game to Vault'}
+                  {initialGame ? t('btnSubmitSaveChanges') : t('btnSubmitAddGame')}
                 </Text>
               </Pressable>
             </View>
@@ -658,6 +660,9 @@ export function GameFormModal({
 
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
+    rtlText: {
+      textAlign: 'right',
+    },
     keyboardContainer: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.65)',

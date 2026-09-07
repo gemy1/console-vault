@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface PulsingPadlockBadgeProps {
   size?: 'sm' | 'md' | 'lg';
@@ -17,6 +18,7 @@ interface PulsingPadlockBadgeProps {
 
 export function PulsingPadlockBadge({ size = 'md', showLabel = true }: PulsingPadlockBadgeProps) {
   const styles = useThemedStyles(createStyles);
+  const { t } = useLanguage();
   const pulseAnim = useSharedValue(1);
   const opacityAnim = useSharedValue(0.7);
 
@@ -79,7 +81,7 @@ export function PulsingPadlockBadge({ size = 'md', showLabel = true }: PulsingPa
             size === 'sm' ? styles.labelSmall : styles.labelRegular,
           ]}
         >
-          LOCKED / REVOKED
+          {t('lockedRevokedBadge')}
         </Text>
       )}
     </View>

@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
-import { Gamepad2, ChevronRight } from 'lucide-react-native';
+import { Gamepad2, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { Game } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface GameCardProps {
   game: Game;
@@ -15,6 +16,7 @@ interface GameCardProps {
 
 export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardProps) {
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
   const isLocked = game.status === 'Locked';
 
@@ -38,7 +40,7 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
 
       {/* DETAILS */}
       <View style={styles.details}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, isRTL && styles.rtlText]} numberOfLines={1}>
           {game.title}
         </Text>
 
@@ -56,7 +58,7 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
                 game.account_type === 'Primary' ? styles.primaryText : styles.secondaryText,
               ]}
             >
-              {game.account_type}
+              {game.account_type === 'Primary' ? t('accountTypePrimary') : t('accountTypeSecondary')}
             </Text>
           </View>
 
@@ -80,28 +82,28 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
                   : styles.statusWarningText,
               ]}
             >
-              {game.status}
+              {game.status === 'Active' ? t('statusActive') : game.status === 'Locked' ? t('statusLocked') : game.status}
             </Text>
           </View>
         </View>
 
         {/* WARRANTY & SELLER LINK */}
         <View style={styles.warrantyContainer}>
-          <Text style={styles.warrantyText}>
+          <Text style={[styles.warrantyText, isRTL && styles.rtlText]}>
             {warranty.isWarrantyActive ? (
               <>
-                Warranty:{' '}
+                {t('warrantyLabel')}{' '}
                 <Text
                   style={[
                     styles.warrantyHighlight,
                     warranty.isExpiringSoon ? styles.warrantyExpiring : styles.warrantyGood,
                   ]}
                 >
-                  {warranty.daysRemaining} days left
+                  {t('warrantyExpiringGood', { days: warranty.daysRemaining })}
                 </Text>
               </>
             ) : (
-              <Text style={styles.warrantyExpired}>Warranty Expired</Text>
+              <Text style={styles.warrantyExpired}>{t('warrantyExpiredText')}</Text>
             )}
           </Text>
 
@@ -115,8 +117,12 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
               }}
               style={styles.sellerLink}
             >
-              <Text style={styles.sellerName}>Seller: {sellerName}</Text>
-              <ChevronRight size={11} color={styles.sellerChevron.color} strokeWidth={2.4} />
+              <Text style={styles.sellerName}>{t('sellerLabelPrefix')} {sellerName}</Text>
+              {isRTL ? (
+                <ChevronLeft size={11} color={styles.sellerChevron.color} strokeWidth={2.4} />
+              ) : (
+                <ChevronRight size={11} color={styles.sellerChevron.color} strokeWidth={2.4} />
+              )}
             </Pressable>
           )}
         </View>
@@ -124,7 +130,11 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
 
       {/* CIRCULAR ARROW ACTION */}
       <View style={styles.arrowCircle}>
-        <ChevronRight size={16} color={styles.arrowIcon.color} strokeWidth={2.4} />
+        {isRTL ? (
+          <ChevronLeft size={16} color={styles.arrowIcon.color} strokeWidth={2.4} />
+        ) : (
+          <ChevronRight size={16} color={styles.arrowIcon.color} strokeWidth={2.4} />
+        )}
       </View>
     </Pressable>
   );
@@ -132,6 +142,9 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
 
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
+    rtlText: {
+      textAlign: 'right',
+    },
     card: {
       backgroundColor: colors.surface,
       borderRadius: 20,

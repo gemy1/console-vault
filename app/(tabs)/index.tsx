@@ -27,10 +27,12 @@ import {
 } from "lucide-react-native";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
+import { useLanguage } from "../../context/LanguageContext";
 
 export default function DashboardScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   const [games, setGames] = useState<Game[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -104,9 +106,9 @@ export default function DashboardScreen() {
   });
 
   const categories = [
-    { key: "All", label: "All Games" },
-    { key: "Active", label: "Active" },
-    { key: "Locked", label: "Locked / Revoked" },
+    { key: "All", label: t("filterAll") },
+    { key: "Active", label: t("filterActive") },
+    { key: "Locked", label: t("filterLocked") },
   ];
 
   const displayedGames = games.filter((g) => {
@@ -119,8 +121,8 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
       <ModernHeader
-        title="Console Vault"
-        subtitle="PS5 Digital Library"
+        title={t("headerDashboardTitle")}
+        subtitle={t("headerDashboardSubtitle")}
       />
 
       <ScrollView
@@ -137,17 +139,17 @@ export default function DashboardScreen() {
         {/* QUICK SHORTCUTS TOP WIDGET */}
         <View style={styles.topWidgetWrapper}>
           <QuickAddWidget
-            tag="Quick Shortcuts"
+            tag={t("quickShortcutsTag")}
             actions={[
               {
-                label: "Add Game",
-                sublabel: "Store account",
+                label: t("quickAddGame"),
+                sublabel: t("quickAddGameSub"),
                 icon: "game",
                 onPress: () => setGameModalVisible(true),
               },
               {
-                label: "Add Seller",
-                sublabel: "Register contact",
+                label: t("quickAddSeller"),
+                sublabel: t("quickAddSellerSub"),
                 icon: "seller",
                 onPress: () => setSellerModalVisible(true),
               },
@@ -160,7 +162,7 @@ export default function DashboardScreen() {
           {/* Total Games */}
           <View style={styles.metricCard}>
             <View style={styles.metricCardHeader}>
-              <Text style={styles.metricLabel}>Vault Total</Text>
+              <Text style={styles.metricLabel}>{t("metricVaultTotal")}</Text>
               <Gamepad2
                 size={15}
                 color={styles.accentColor.color}
@@ -168,14 +170,14 @@ export default function DashboardScreen() {
               />
             </View>
             <Text style={styles.metricValue}>{totalGames}</Text>
-            <Text style={styles.metricSubtext}>Games Stored</Text>
+            <Text style={styles.metricSubtext}>{t("metricGamesStored")}</Text>
           </View>
 
           {/* Active Warranties */}
           <View style={styles.metricCard}>
             <View style={styles.metricCardHeader}>
               <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>
-                Protected
+                {t("metricProtected")}
               </Text>
               <ShieldCheck
                 size={15}
@@ -184,7 +186,7 @@ export default function DashboardScreen() {
               />
             </View>
             <Text style={styles.metricValue}>{activeWarranties.length}</Text>
-            <Text style={styles.metricSubtext}>Under Warranty</Text>
+            <Text style={styles.metricSubtext}>{t("metricUnderWarranty")}</Text>
           </View>
 
           {/* Locked / Issues */}
@@ -201,7 +203,7 @@ export default function DashboardScreen() {
                   lockedGames.length > 0 && styles.metricLabelDanger,
                 ]}
               >
-                Locked
+                {t("metricLocked")}
               </Text>
               <Lock
                 size={15}
@@ -220,7 +222,7 @@ export default function DashboardScreen() {
                 lockedGames.length > 0 && styles.metricSubtextDanger,
               ]}
             >
-              {lockedGames.length > 0 ? "Padlock Alert" : "All Clear"}
+              {lockedGames.length > 0 ? t("metricPadlockAlert") : t("metricAllClear")}
             </Text>
           </View>
         </View>
@@ -233,19 +235,18 @@ export default function DashboardScreen() {
                 <View style={styles.padlockTitleGroup}>
                   <PulsingPadlockBadge size="md" showLabel={false} />
                   <Text style={styles.padlockBannerTitle}>
-                    PADLOCK PROTOCOL ACTIVE
+                    {t("padlockProtocolActive")}
                   </Text>
                 </View>
                 <View style={styles.padlockBadge}>
                   <Text style={styles.padlockBadgeText}>
-                    {lockedGames.length} Revoked
+                    {lockedGames.length} {t("padlockRevokedCount")}
                   </Text>
                 </View>
               </View>
 
               <Text style={styles.padlockInstruction}>
-                Sony has revoked access for the account(s) below. Tap to
-                generate warranty replacement claim text.
+                {t("padlockInstruction")}
               </Text>
 
               {lockedGames.map((game) => {
@@ -285,7 +286,7 @@ export default function DashboardScreen() {
                           style={styles.lockedSellerRow}
                         >
                           <Text style={styles.lockedSellerText}>
-                            Seller: {seller.name}
+                            {t("padlockSeller")}: {seller.name}
                           </Text>
                           <ChevronRight
                             size={11}
@@ -304,8 +305,8 @@ export default function DashboardScreen() {
                         ]}
                       >
                         {warranty.isWarrantyActive
-                          ? `Warranty: ${warranty.daysRemaining} days left`
-                          : "Warranty Expired"}
+                          ? t("padlockWarrantyActive", { days: warranty.daysRemaining })
+                          : t("padlockWarrantyExpired")}
                       </Text>
                     </View>
 
@@ -328,7 +329,7 @@ export default function DashboardScreen() {
                         pressed && styles.claimBtnPressed,
                       ]}
                     >
-                      <Text style={styles.claimBtnText}>Claim</Text>
+                      <Text style={styles.claimBtnText}>{t("padlockClaimBtn")}</Text>
                     </Pressable>
                   </View>
                 );
@@ -339,7 +340,7 @@ export default function DashboardScreen() {
 
         {/* CATEGORY PILLS */}
         <View style={styles.categorySection}>
-          <Text style={styles.categoryHeading}>Vault Collection</Text>
+          <Text style={styles.categoryHeading}>{t("categoryVaultCollection")}</Text>
 
           <View style={styles.categoryPillsRow}>
             {categories.map((cat) => {

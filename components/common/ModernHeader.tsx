@@ -11,9 +11,11 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { ChevronLeft, Gamepad2 } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react-native";
 import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { ThemeToggleButton } from "./ThemeToggleButton";
+import { LanguageToggleButton } from "./LanguageToggleButton";
+import { useLanguage } from "../../context/LanguageContext";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 
 interface ModernHeaderProps {
@@ -37,6 +39,7 @@ export function ModernHeader({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, theme } = useVaultTheme();
+  const { isRTL } = useLanguage();
   const styles = useThemedStyles(createStyles);
 
   // Safe area clearance
@@ -108,7 +111,11 @@ export function ModernHeader({
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}
           >
-            <ChevronLeft size={24} color={styles.iconColor.color} strokeWidth={2.4} />
+            {isRTL ? (
+              <ChevronRight size={24} color={styles.iconColor.color} strokeWidth={2.4} />
+            ) : (
+              <ChevronLeft size={24} color={styles.iconColor.color} strokeWidth={2.4} />
+            )}
           </Pressable>
         ) : (
           <View style={styles.pill}>
@@ -141,6 +148,7 @@ export function ModernHeader({
 
         {/* RIGHT: Actions */}
         <View style={styles.actions}>
+          <LanguageToggleButton size={46} />
           <ThemeToggleButton size={46} />
           {rightAction}
         </View>

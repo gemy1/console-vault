@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Modal, TextInput, Pressable, Alert, StyleSheet } from 'react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ReplaceCredentialsModalProps {
   visible: boolean;
@@ -15,12 +16,13 @@ export function ReplaceCredentialsModal({
   onSave,
 }: ReplaceCredentialsModalProps) {
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   const handleSave = () => {
     if (!newEmail.trim() || !newPassword.trim()) {
-      Alert.alert('Missing Fields', 'Please provide both the new PSN email and password.');
+      Alert.alert(t('alertMissingFields'), t('alertProvideBothCredentials'));
       return;
     }
     onSave(newEmail.trim(), newPassword.trim());
@@ -33,12 +35,12 @@ export function ReplaceCredentialsModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>Replace PSN Credentials</Text>
-          <Text style={styles.sheetSubtitle}>
-            The existing email and password will be archived into your credential history log.
+          <Text style={[styles.sheetTitle, isRTL && styles.rtlText]}>{t('replaceCredentialsModalTitle')}</Text>
+          <Text style={[styles.sheetSubtitle, isRTL && styles.rtlText]}>
+            {t('replaceCredentialsModalSubtitle')}
           </Text>
 
-          <Text style={styles.fieldLabel}>NEW PSN EMAIL</Text>
+          <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldNewPsnEmail')}</Text>
           <TextInput
             placeholder="new.psn.account@gmail.com"
             placeholderTextColor={styles.placeholder.color}
@@ -46,10 +48,10 @@ export function ReplaceCredentialsModal({
             onChangeText={setNewEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            style={styles.textInput}
+            style={[styles.textInput, isRTL && styles.rtlText]}
           />
 
-          <Text style={styles.fieldLabel}>NEW PSN PASSWORD</Text>
+          <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldNewPsnPassword')}</Text>
           <TextInput
             placeholder="NewPassword#2024"
             placeholderTextColor={styles.placeholder.color}
@@ -57,16 +59,16 @@ export function ReplaceCredentialsModal({
             onChangeText={setNewPassword}
             autoCapitalize="none"
             secureTextEntry
-            style={[styles.textInput, styles.passwordInput]}
+            style={[styles.textInput, styles.passwordInput, isRTL && styles.rtlText]}
           />
 
           <View style={styles.buttonRow}>
             <Pressable onPress={onClose} style={styles.cancelButton}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('btnCancel')}</Text>
             </Pressable>
 
             <Pressable onPress={handleSave} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save & Archive</Text>
+              <Text style={styles.saveButtonText}>{t('btnSaveAndArchive')}</Text>
             </Pressable>
           </View>
         </View>
@@ -77,6 +79,9 @@ export function ReplaceCredentialsModal({
 
 const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
   StyleSheet.create({
+    rtlText: {
+      textAlign: 'right',
+    },
     backdrop: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.6)',

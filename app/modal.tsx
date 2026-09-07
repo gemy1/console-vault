@@ -6,17 +6,19 @@ import { isSupabaseConfigured } from '../services/supabase';
 import { Gamepad2, ShieldAlert, KeyRound, RefreshCw } from 'lucide-react-native';
 import { useThemedStyles } from '../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function AboutModal() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Console Vault Architecture</Text>
+        <Text style={styles.headerTitle}>{t('architectureTitle')}</Text>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.doneText}>Done</Text>
+          <Text style={styles.doneText}>{t('btnDone')}</Text>
         </Pressable>
       </View>
 
@@ -25,63 +27,63 @@ export default function AboutModal() {
         <View style={styles.badgeCard}>
           <Gamepad2 size={40} color={styles.accentIcon.color} strokeWidth={1.8} style={styles.badgeIconMargin} />
           <Text style={styles.appName}>Console Vault</Text>
-          <Text style={styles.appTagline}>PS5 Account & Warranty Management</Text>
-          <Text style={styles.appVersion}>Version 1.0.0 (Production Build)</Text>
+          <Text style={[styles.appTagline, isRTL && styles.rtlText]}>{t('appTagline')}</Text>
+          <Text style={styles.appVersion}>{t('appVersion')}</Text>
         </View>
 
         {/* SECURITY STATUS */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>SECURITY & CLOUD STATUS</Text>
+          <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>{t('securityCloudStatus')}</Text>
 
           <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Biometric Guard</Text>
-            <Text style={styles.statusValueSuccess}>Active (FaceID / TouchID)</Text>
+            <Text style={styles.statusLabel}>{t('biometricGuardLabel')}</Text>
+            <Text style={styles.statusValueSuccess}>{t('biometricStatusActive')}</Text>
           </View>
 
           <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Offline Storage</Text>
-            <Text style={styles.statusValueSuccess}>Encrypted Cache Ready</Text>
+            <Text style={styles.statusLabel}>{t('offlineStorageLabel')}</Text>
+            <Text style={styles.statusValueSuccess}>{t('offlineStatusReady')}</Text>
           </View>
 
           <View style={styles.statusRowLast}>
-            <Text style={styles.statusLabel}>Supabase Cloud</Text>
+            <Text style={styles.statusLabel}>{t('supabaseCloudLabel')}</Text>
             <Text style={isSupabaseConfigured ? styles.statusValueSuccess : styles.statusValueWarning}>
-              {isSupabaseConfigured ? 'Connected' : 'Offline / Local Demo'}
+              {isSupabaseConfigured ? t('cloudConnected') : t('cloudOfflineLocal')}
             </Text>
           </View>
         </View>
 
         {/* CORE WORKFLOWS SUMMARY */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>INTEGRATED PROTOCOLS</Text>
+          <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>{t('integratedProtocols')}</Text>
 
           <View style={styles.protocolItem}>
             <View style={styles.protocolTitleRow}>
               <ShieldAlert size={14} color={styles.dangerColor.color} strokeWidth={2.2} />
-              <Text style={styles.protocolTitle}>The Padlock Protocol</Text>
+              <Text style={styles.protocolTitle}>{t('protocolPadlockTitle')}</Text>
             </View>
-            <Text style={styles.protocolDescription}>
-              Instant license revocation claim dispatch via WhatsApp and Telegram with live warranty calculations.
+            <Text style={[styles.protocolDescription, isRTL && styles.rtlText]}>
+              {t('protocolPadlockDesc')}
             </Text>
           </View>
 
           <View style={styles.protocolItem}>
             <View style={styles.protocolTitleRow}>
               <KeyRound size={14} color={styles.warningColor.color} strokeWidth={2.2} />
-              <Text style={styles.protocolTitle}>Tap-to-Reveal Credentials</Text>
+              <Text style={styles.protocolTitle}>{t('protocolMultiChannelTitle')}</Text>
             </View>
-            <Text style={styles.protocolDescription}>
-              Protected PSN emails, passwords, and 2FA backup codes behind on-device biometric security.
+            <Text style={[styles.protocolDescription, isRTL && styles.rtlText]}>
+              {t('protocolMultiChannelDesc')}
             </Text>
           </View>
 
           <View>
             <View style={styles.protocolTitleRow}>
               <RefreshCw size={14} color={styles.accentIcon.color} strokeWidth={2.2} />
-              <Text style={styles.protocolTitle}>Automatic Credential Archival</Text>
+              <Text style={styles.protocolTitle}>{t('protocolRevisionTitle')}</Text>
             </View>
-            <Text style={styles.protocolDescription}>
-              Whenever credentials are replaced by a seller, the old credentials are saved to your audit log.
+            <Text style={[styles.protocolDescription, isRTL && styles.rtlText]}>
+              {t('protocolRevisionDesc')}
             </Text>
           </View>
         </View>
@@ -92,6 +94,9 @@ export default function AboutModal() {
 
 const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
   StyleSheet.create({
+    rtlText: {
+      textAlign: 'right',
+    },
     container: {
       flex: 1,
       backgroundColor: colors.bg,

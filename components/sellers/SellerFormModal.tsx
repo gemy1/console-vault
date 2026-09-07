@@ -17,6 +17,7 @@ import { Seller, ContactPlatform, SellerContactMethod } from '../../types/vault'
 import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const PLATFORM_LIST: ContactPlatform[] = [
   'WhatsApp',
@@ -49,6 +50,7 @@ export function SellerFormModal({
   onSave,
 }: SellerFormModalProps) {
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   const [name, setName] = useState('');
   const [reputationScore, setReputationScore] = useState('5.0');
@@ -94,7 +96,7 @@ export function SellerFormModal({
 
   const handleAddMethod = () => {
     if (!currentValue.trim()) {
-      Alert.alert('Required Field', `Please enter the ${currentPlatform} handle, number, or link.`);
+      Alert.alert(t('alertRequiredField'), t('fieldMethodValueLabel', { platform: currentPlatform }));
       return;
     }
 
@@ -124,7 +126,7 @@ export function SellerFormModal({
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert('Required Field', 'Please enter a seller / store name.');
+      Alert.alert(t('alertRequiredField'), t('alertEnterSellerName'));
       return;
     }
 
@@ -134,14 +136,14 @@ export function SellerFormModal({
         id: `cm-${Date.now()}`,
         platform: currentPlatform,
         value: currentValue.trim(),
-        label: currentLabel.trim() || 'Primary',
+        label: currentLabel.trim() || t('badgePrimaryMethod'),
       });
     }
 
     if (finalMethods.length === 0) {
       Alert.alert(
-        'Connection Method Required',
-        'Please add at least one connection method (e.g. WhatsApp, Facebook, or Telegram).'
+        t('alertRequiredField'),
+        t('alertConnectionMethodRequired')
       );
       return;
     }
@@ -180,7 +182,7 @@ export function SellerFormModal({
                   <ShieldCheck size={22} color={styles.accentIcon.color} strokeWidth={2.2} />
                 )}
                 <Text style={styles.headerTitle}>
-                  {initialSeller ? 'Edit Seller Profile' : 'Register Digital Seller'}
+                  {initialSeller ? t('modalEditSellerTitle') : t('modalAddSellerTitle')}
                 </Text>
               </View>
               <Pressable onPress={onClose} style={styles.closeButton}>
@@ -188,30 +190,30 @@ export function SellerFormModal({
               </Pressable>
             </View>
 
-            <Text style={styles.headerSubtitle}>
-              Add multiple connection channels (WhatsApp, Facebook, Telegram) and free-text notes.
+            <Text style={[styles.headerSubtitle, isRTL && styles.rtlText]}>
+              {t('modalSellerSubtitle')}
             </Text>
 
             {/* SELLER NAME */}
-            <Text style={styles.fieldLabel}>SELLER / STORE NAME *</Text>
+            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldSellerName')}</Text>
             <TextInput
-              placeholder="e.g. PlayStation Elite Keys"
+              placeholder={t('fieldSellerNamePlaceholder')}
               placeholderTextColor={styles.placeholder.color}
               value={name}
               onChangeText={setName}
-              style={styles.textInput}
+              style={[styles.textInput, isRTL && styles.rtlText]}
             />
 
             {/* CONNECTION METHODS LIST */}
             <View style={styles.sectionMargin}>
-              <Text style={styles.fieldLabel}>
-                CONFIGURED CONNECTION METHODS ({contactMethods.length})
+              <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>
+                {t('fieldConfiguredMethods')} ({contactMethods.length})
               </Text>
 
               {contactMethods.length === 0 ? (
                 <View style={styles.emptyMethodsBox}>
-                  <Text style={styles.emptyMethodsText}>
-                    No methods added yet. Use the form below to add WhatsApp, Facebook, etc.
+                  <Text style={[styles.emptyMethodsText, isRTL && styles.rtlText]}>
+                    {t('noMethodsConfigured')}
                   </Text>
                 </View>
               ) : (
@@ -229,7 +231,7 @@ export function SellerFormModal({
                               <Text style={styles.methodPlatformText}>{method.platform}</Text>
                               {idx === 0 && (
                                 <View style={styles.primaryBadge}>
-                                  <Text style={styles.primaryBadgeText}>Primary</Text>
+                                  <Text style={styles.primaryBadgeText}>{t('badgePrimaryMethod')}</Text>
                                 </View>
                               )}
                             </View>
@@ -255,7 +257,7 @@ export function SellerFormModal({
 
             {/* ADD CONNECTION METHOD SECTION */}
             <View style={styles.addMethodBox}>
-              <Text style={styles.addMethodTitle}>+ ADD CONNECTION METHOD</Text>
+              <Text style={[styles.addMethodTitle, isRTL && styles.rtlText]}>{t('fieldAddMethodSection')}</Text>
 
               {/* PLATFORMS ROW */}
               <ScrollView
@@ -298,8 +300,8 @@ export function SellerFormModal({
               </ScrollView>
 
               {/* VALUE INPUT */}
-              <Text style={styles.inputSubLabel}>
-                {currentPlatform.toUpperCase()} HANDLE, NUMBER OR LINK *
+              <Text style={[styles.inputSubLabel, isRTL && styles.rtlText]}>
+                {t('fieldMethodValueLabel', { platform: currentPlatform.toUpperCase() })}
               </Text>
               <TextInput
                 placeholder={
@@ -317,16 +319,16 @@ export function SellerFormModal({
                 value={currentValue}
                 onChangeText={setCurrentValue}
                 autoCapitalize="none"
-                style={styles.compactInput}
+                style={[styles.compactInput, isRTL && styles.rtlText]}
               />
 
               {/* LABEL INPUT */}
               <TextInput
-                placeholder="Label (optional, e.g. Support, Messenger Page)"
+                placeholder={t('fieldMethodCustomLabel')}
                 placeholderTextColor={styles.placeholder.color}
                 value={currentLabel}
                 onChangeText={setCurrentLabel}
-                style={styles.labelInput}
+                style={[styles.labelInput, isRTL && styles.rtlText]}
               />
 
               <Pressable
@@ -338,13 +340,13 @@ export function SellerFormModal({
               >
                 <Plus size={14} color="#FFFFFF" strokeWidth={2.4} />
                 <Text style={styles.addMethodSubmitText}>
-                  Add {currentPlatform}
+                  {t('btnAddMethod', { platform: currentPlatform })}
                 </Text>
               </Pressable>
             </View>
 
             {/* REPUTATION RATING */}
-            <Text style={styles.fieldLabel}>REPUTATION RATING</Text>
+            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldReputationRating')}</Text>
             <View style={styles.presetsRow}>
               {RATING_PRESETS.map((preset) => {
                 const isSelected = reputationScore === preset;
@@ -380,24 +382,24 @@ export function SellerFormModal({
               <View style={styles.notesHeaderRow}>
                 <FileText size={13} color={styles.closeIcon.color} strokeWidth={2.2} />
                 <Text style={styles.fieldLabelInline}>
-                  SELLER NOTES & GUARANTEE POLICIES (FREE TEXT)
+                  {t('fieldSellerNotes')}
                 </Text>
               </View>
               <TextInput
-                placeholder="Enter free text notes, warranty rules, response times, accepted payment methods, refund conditions..."
+                placeholder={t('fieldSellerNotesPlaceholder')}
                 placeholderTextColor={styles.placeholder.color}
                 value={notes}
                 onChangeText={setNotes}
                 multiline
                 numberOfLines={4}
-                style={styles.notesInput}
+                style={[styles.notesInput, isRTL && styles.rtlText]}
               />
             </View>
 
             {/* BUTTONS */}
             <View style={styles.buttonRow}>
               <Pressable onPress={onClose} style={styles.cancelBtn}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>{t('btnCancel')}</Text>
               </Pressable>
 
               <Pressable
@@ -405,7 +407,7 @@ export function SellerFormModal({
                 style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
               >
                 <Text style={styles.submitBtnText}>
-                  {initialSeller ? 'Save Changes' : 'Register Seller'}
+                  {initialSeller ? t('btnSubmitSaveSeller') : t('btnSubmitRegisterSeller')}
                 </Text>
               </Pressable>
             </View>
@@ -418,6 +420,9 @@ export function SellerFormModal({
 
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
+    rtlText: {
+      textAlign: 'right',
+    },
     keyboardContainer: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.65)',

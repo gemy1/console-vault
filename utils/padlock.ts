@@ -20,8 +20,31 @@ export function calculateWarranty(purchaseDateStr: string, warrantyMonths: numbe
   };
 }
 
-export function generateWarrantyClaimMessage(game: Game, seller?: Seller): string {
+export function generateWarrantyClaimMessage(game: Game, seller?: Seller, lang: 'en' | 'ar' = 'en'): string {
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
+
+  if (lang === 'ar') {
+    const warrantyStatusStr = warranty.isWarrantyActive
+      ? `✅ ساري (متبقي ${warranty.daysRemaining} يوم، ينتهي في ${warranty.expiryDate})`
+      : `❌ منتهي في ${warranty.expiryDate}`;
+
+    return [
+      `🚨 *كونسول فولت — مطالبة استبدال ترخيص PS5 مقفل* 🚨`,
+      ``,
+      `مرحباً ${seller?.name || 'المتجر'}،`,
+      `تم قفل ترخيص لعبة PS5 الرقمية الخاصة بي (ظهور علامة القفل Padlock).`,
+      ``,
+      `📋 *بيانات الطلب:*`,
+      `• *اسم اللعبة*: ${game.title}`,
+      `• *نوع الحساب*: ${game.account_type}`,
+      `• *تاريخ الشراء*: ${game.purchase_date}`,
+      `• *حالة الضمان*: ${warrantyStatusStr}`,
+      `• *حساب PSN*: ${game.psn_email}`,
+      ``,
+      `يرجى تزويدي بحساب بديل أو استعادة الوصول بموجب الضمان. شكراً لك!`,
+    ].join('\n');
+  }
+
   const warrantyStatusStr = warranty.isWarrantyActive
     ? `✅ ACTIVE (${warranty.daysRemaining} days remaining, expires ${warranty.expiryDate})`
     : `❌ EXPIRED on ${warranty.expiryDate}`;
@@ -43,10 +66,10 @@ export function generateWarrantyClaimMessage(game: Game, seller?: Seller): strin
   ].join('\n');
 }
 
-export function generateSellerDeepLink(game: Game, seller?: Seller): string | null {
+export function generateSellerDeepLink(game: Game, seller?: Seller, lang: 'en' | 'ar' = 'en'): string | null {
   if (!seller || !seller.contact_link) return null;
 
-  const message = generateWarrantyClaimMessage(game, seller);
+  const message = generateWarrantyClaimMessage(game, seller, lang);
   const encodedMsg = encodeURIComponent(message);
   const cleanContact = seller.contact_link.trim();
 

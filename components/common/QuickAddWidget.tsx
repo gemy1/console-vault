@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Gamepad2, ShieldCheck, Plus, Sparkles } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export interface QuickActionItem {
   id?: string;
@@ -21,6 +22,7 @@ export interface QuickAddWidgetProps {
 
 export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   const handlePress = (action: QuickActionItem) => {
     try {
@@ -68,11 +70,17 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
                   </View>
 
                   <View style={styles.horizontalTextCol}>
-                    <Text style={styles.horizontalActionLabel} numberOfLines={1}>
+                    <Text
+                      style={[styles.horizontalActionLabel, isRTL && styles.rtlText]}
+                      numberOfLines={1}
+                    >
                       {item.label}
                     </Text>
                     {item.sublabel && (
-                      <Text style={styles.horizontalActionSublabel} numberOfLines={1}>
+                      <Text
+                        style={[styles.horizontalActionSublabel, isRTL && styles.rtlText]}
+                        numberOfLines={1}
+                      >
                         {item.sublabel}
                       </Text>
                     )}
@@ -106,7 +114,9 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
         onPress={() => handlePress(single)}
         style={({ pressed }) => [
           styles.singleCard,
-          isGame ? styles.singleCardGame : styles.singleCardSeller,
+          isGame
+            ? (isRTL ? styles.singleCardRTLGame : styles.singleCardGame)
+            : (isRTL ? styles.singleCardRTLSeller : styles.singleCardSeller),
           pressed && styles.cardPressed,
         ]}
       >
@@ -126,7 +136,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
 
           <View style={styles.singleTextCol}>
             <View style={styles.singleTitleRow}>
-              <Text style={styles.singleLabel}>{single.label}</Text>
+              <Text style={[styles.singleLabel, isRTL && styles.rtlText]}>{single.label}</Text>
               {tag && (
                 <View style={styles.microBadge}>
                   <Text style={styles.microBadgeText}>{tag}</Text>
@@ -134,7 +144,10 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
               )}
             </View>
             {single.sublabel && (
-              <Text style={styles.singleSublabel} numberOfLines={1}>
+              <Text
+                style={[styles.singleSublabel, isRTL && styles.rtlText]}
+                numberOfLines={1}
+              >
                 {single.sublabel}
               </Text>
             )}
@@ -148,7 +161,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
           ]}
         >
           <Plus size={14} color="#FFFFFF" strokeWidth={2.5} />
-          <Text style={styles.actionPillText}>Add</Text>
+          <Text style={styles.actionPillText}>{t('quickAddBtn')}</Text>
         </View>
       </Pressable>
     </View>
@@ -270,9 +283,20 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderLeftWidth: 3,
       borderLeftColor: '#00D2FF',
     },
+    singleCardRTLGame: {
+      borderRightWidth: 3,
+      borderRightColor: '#00D2FF',
+    },
     singleCardSeller: {
       borderLeftWidth: 3,
       borderLeftColor: '#0070D1',
+    },
+    singleCardRTLSeller: {
+      borderRightWidth: 3,
+      borderRightColor: '#0070D1',
+    },
+    rtlText: {
+      textAlign: 'right',
     },
     singleLeft: {
       flexDirection: 'row',

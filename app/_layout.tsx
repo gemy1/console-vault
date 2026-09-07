@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
+import { LanguageProvider } from "../context/LanguageContext";
 import { VaultThemeProvider, useVaultTheme } from "../context/ThemeContext";
 
 export { ErrorBoundary } from "expo-router";
@@ -107,9 +108,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <VaultThemeProvider>
-        <RootNavigator />
-      </VaultThemeProvider>
+      <LanguageProvider>
+        <VaultThemeProvider>
+          <RootNavigator />
+        </VaultThemeProvider>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

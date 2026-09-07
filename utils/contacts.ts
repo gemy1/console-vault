@@ -38,10 +38,18 @@ export function formatPlatformHandle(platform: ContactPlatform, value: string): 
   }
 }
 
+export interface ContactAlertMessages {
+  discordTitle?: string;
+  discordDesc?: string;
+  contactTitle?: string;
+  contactDesc?: string;
+}
+
 export async function openSellerContact(
   platform: ContactPlatform,
   value: string,
-  prefilledText?: string
+  prefilledText?: string,
+  alertMessages?: ContactAlertMessages
 ): Promise<void> {
   try {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -93,8 +101,8 @@ export async function openSellerContact(
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {}
         Alert.alert(
-          'Discord Handle Copied',
-          `"${clean}" has been copied to your clipboard. Open Discord to search and message them.`
+          alertMessages?.discordTitle || 'Discord Handle Copied',
+          alertMessages?.discordDesc || `"${clean}" has been copied to your clipboard. Open Discord to search and message them.`
         );
       }
       break;
@@ -110,8 +118,8 @@ export async function openSellerContact(
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {}
         Alert.alert(
-          'Contact Info Copied',
-          `"${clean}" has been copied to your clipboard.`
+          alertMessages?.contactTitle || 'Contact Info Copied',
+          alertMessages?.contactDesc || `"${clean}" has been copied to your clipboard.`
         );
       }
       break;

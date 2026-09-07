@@ -19,15 +19,17 @@ import {
 } from '../../utils/padlock';
 import { PlatformIcon } from '../../components/common';
 import { PulsingPadlockBadge } from '../../components/games';
-import { Copy, Check, ChevronRight } from 'lucide-react-native';
+import { Copy, Check, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { getSellerContactList, openSellerContact } from '../../utils/contacts';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function PadlockProtocolModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL, language } = useLanguage();
 
   const [game, setGame] = useState<Game | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -50,13 +52,13 @@ export default function PadlockProtocolModal() {
   if (!game) {
     return (
       <SafeAreaView style={styles.notFoundContainer}>
-        <Text style={styles.notFoundText}>No game selected.</Text>
+        <Text style={styles.notFoundText}>{t('noGameSelected')}</Text>
       </SafeAreaView>
     );
   }
 
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
-  const claimMessage = generateWarrantyClaimMessage(game, seller || undefined);
+  const claimMessage = generateWarrantyClaimMessage(game, seller || undefined, language);
   const contacts = seller ? getSellerContactList(seller) : [];
 
   const handleCopy = async () => {
@@ -70,7 +72,7 @@ export default function PadlockProtocolModal() {
 
   const handleMarkInResolution = () => {
     OfflineVault.updateGame(game.id, { status: 'In Resolution' });
-    Alert.alert('Status Updated', 'Game marked as In Resolution.');
+    Alert.alert(t('alertStatusUpdatedTitle'), t('alertGameInResolution'));
     router.back();
   };
 
@@ -79,9 +81,9 @@ export default function PadlockProtocolModal() {
       {/* HEADER */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.closeText}>Close</Text>
+          <Text style={styles.closeText}>{t('btnClose')}</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>PADLOCK PROTOCOL</Text>
+        <Text style={styles.headerTitle}>{t('padlockProtocolTitle')}</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
@@ -89,15 +91,15 @@ export default function PadlockProtocolModal() {
         {/* ALERT HEADER */}
         <View style={styles.alertCard}>
           <PulsingPadlockBadge size="lg" showLabel={false} />
-          <Text style={styles.alertTitle}>License Revocation Protocol</Text>
-          <Text style={styles.alertSubtitle}>
-            Generate and dispatch your automated warranty replacement claim.
+          <Text style={styles.alertTitle}>{t('licenseRevocationProtocol')}</Text>
+          <Text style={[styles.alertSubtitle, isRTL && styles.rtlText]}>
+            {t('generateClaimSubtitle')}
           </Text>
         </View>
 
         {/* STATUS CARD */}
         <View style={styles.card}>
-          <Text style={styles.sectionHeader}>WARRANTY VERIFICATION</Text>
+          <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('warrantyVerificationTitle')}</Text>
           <View style={styles.warrantyRow}>
             <Text style={styles.gameTitle}>{game.title}</Text>
             <Text
@@ -106,19 +108,19 @@ export default function PadlockProtocolModal() {
                 warranty.isWarrantyActive ? styles.warrantyActive : styles.warrantyExpired,
               ]}
             >
-              {warranty.isWarrantyActive ? `ACTIVE (${warranty.daysRemaining}d left)` : 'EXPIRED'}
+              {warranty.isWarrantyActive ? t('activeDaysLeftBadge', { days: warranty.daysRemaining }) : t('expiredBadge')}
             </Text>
           </View>
-          <Text style={styles.sellerInfo}>
-            Seller: {seller?.name || 'Unknown'} • Available Channels:{' '}
-            {contacts.length > 0 ? contacts.map((c) => c.platform).join(', ') : 'None'}
+          <Text style={[styles.sellerInfo, isRTL && styles.rtlText]}>
+            {t('sellerLabelPrefix')} {seller?.name || t('unknownSeller')} • {t('availableChannelsLabel')}{' '}
+            {contacts.length > 0 ? contacts.map((c) => c.platform).join(', ') : t('noneChannelsLabel')}
           </Text>
         </View>
 
         {/* GENERATED CLAIM STRING */}
         <View style={styles.card}>
           <View style={styles.claimHeaderRow}>
-            <Text style={styles.sectionHeader}>PRE-FILLED CLAIM MESSAGE</Text>
+            <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('preFilledClaimMessageTitle')}</Text>
             <Pressable onPress={handleCopy} style={styles.copyBtn}>
               {copied ? (
                 <Check size={13} color={styles.successColor.color} strokeWidth={2.5} />
@@ -126,7 +128,7 @@ export default function PadlockProtocolModal() {
                 <Copy size={13} color={styles.accentColor.color} strokeWidth={2.2} />
               )}
               <Text style={[styles.copyBtnText, copied && styles.copyBtnTextSuccess]}>
-                {copied ? 'Copied' : 'Copy Text'}
+                {copied ? t('btnCopied') : t('btnCopyText')}
               </Text>
             </Pressable>
           </View>
@@ -152,11 +154,15 @@ export default function PadlockProtocolModal() {
                   <View style={styles.dispatchContent}>
                     <PlatformIcon platform={contact.platform} size={18} color="#FFFFFF" />
                     <Text style={styles.dispatchText}>
-                      Dispatch via {contact.platform}
+                      {t('dispatchViaChannel', { platform: contact.platform })}
                       {contact.label ? ` (${contact.label})` : ''}
                     </Text>
                   </View>
-                  <ChevronRight size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  {isRTL ? (
+                    <ChevronLeft size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  ) : (
+                    <ChevronRight size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  )}
                 </Pressable>
               ))}
             </View>
@@ -166,7 +172,7 @@ export default function PadlockProtocolModal() {
             onPress={handleMarkInResolution}
             style={({ pressed }) => [styles.resolutionBtn, pressed && styles.resolutionBtnPressed]}
           >
-            <Text style={styles.resolutionText}>Mark as "In Resolution"</Text>
+            <Text style={styles.resolutionText}>{t('markInResolutionBtn')}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -176,6 +182,9 @@ export default function PadlockProtocolModal() {
 
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
+    rtlText: {
+      textAlign: 'right',
+    },
     container: {
       flex: 1,
       backgroundColor: colors.bg,

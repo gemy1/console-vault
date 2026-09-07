@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { ShieldCheck, Star, ChevronRight, Pencil, FileText } from 'lucide-react-native';
+import { ShieldCheck, Star, ChevronRight, ChevronLeft, Pencil, FileText } from 'lucide-react-native';
 import { Seller } from '../../types/vault';
 import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
 import { openSellerContact, getSellerContactList, formatPlatformHandle } from '../../utils/contacts';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface SellerCardProps {
   seller: Seller;
@@ -16,6 +17,7 @@ interface SellerCardProps {
 
 export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardProps) {
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
   const contacts = getSellerContactList(seller);
   const primaryContact = contacts[0] || { platform: seller.contact_platform, value: seller.contact_link };
 
@@ -32,20 +34,20 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
           </View>
 
           <View style={styles.nameBlock}>
-            <Text style={styles.sellerName} numberOfLines={1}>
+            <Text style={[styles.sellerName, isRTL && styles.rtlText]} numberOfLines={1}>
               {seller.name}
             </Text>
 
             <View style={styles.badgeRow}>
               <View style={styles.countBadge}>
                 <Text style={styles.countBadgeText}>
-                  {gamesCount} {gamesCount === 1 ? 'Game' : 'Games'}
+                  {gamesCount} {gamesCount === 1 ? t('gameCountSingular') : t('gameCountPlural')}
                 </Text>
               </View>
 
               <View style={styles.channelBadge}>
                 <Text style={styles.channelBadgeText}>
-                  {contacts.length} {contacts.length === 1 ? 'Channel' : 'Channels'}
+                  {contacts.length} {contacts.length === 1 ? t('channelCountSingularBadge') : t('channelCountPluralBadge')}
                 </Text>
               </View>
             </View>
@@ -76,7 +78,7 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
 
       {/* CONNECTION METHODS PILLS */}
       <View style={styles.connectionSection}>
-        <Text style={styles.sectionHeader}>Connection Methods:</Text>
+        <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('connectionMethodsLabel')}</Text>
         <View style={styles.methodsWrap}>
           {contacts.map((method, idx) => {
             const cfg = PLATFORM_CONFIG[method.platform] || PLATFORM_CONFIG.Other;
@@ -109,7 +111,7 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
       {seller.notes && (
         <View style={styles.notesBox}>
           <FileText size={13} color={styles.notesIcon.color} strokeWidth={2} style={styles.notesIconStyle} />
-          <Text style={styles.notesText} numberOfLines={2}>
+          <Text style={[styles.notesText, isRTL && styles.rtlText]} numberOfLines={2}>
             {seller.notes}
           </Text>
         </View>
@@ -119,9 +121,13 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
       <View style={styles.bottomBar}>
         <View style={styles.viewGamesRow}>
           <Text style={styles.viewGamesText}>
-            View {gamesCount} Games & Info
+            {t('viewGamesAndInfo', { count: gamesCount })}
           </Text>
-          <ChevronRight size={13} color={styles.accentColor.color} strokeWidth={2.4} />
+          {isRTL ? (
+            <ChevronLeft size={13} color={styles.accentColor.color} strokeWidth={2.4} />
+          ) : (
+            <ChevronRight size={13} color={styles.accentColor.color} strokeWidth={2.4} />
+          )}
         </View>
 
         <Pressable
@@ -134,7 +140,7 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
           style={({ pressed }) => [styles.quickChatBtn, pressed && styles.quickChatBtnPressed]}
         >
           <PlatformIcon platform={primaryContact.platform} size={13} color={styles.quickChatText.color} />
-          <Text style={styles.quickChatText}>Quick Chat</Text>
+          <Text style={styles.quickChatText}>{t('quickChatBtn')}</Text>
         </Pressable>
       </View>
     </Pressable>
@@ -143,6 +149,9 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
 
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
+    rtlText: {
+      textAlign: 'right',
+    },
     card: {
       backgroundColor: colors.surface,
       borderRadius: 20,

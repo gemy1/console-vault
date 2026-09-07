@@ -22,6 +22,7 @@ import {
   ThemeColors,
   ThemeMode,
 } from "../../context/ThemeContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 
 export interface BottomTabBarProps {
@@ -93,8 +94,16 @@ export function CurvedBottomTabBar({
   insets: navInsets,
 }: BottomTabBarProps) {
   const { colors } = useVaultTheme();
+  const { t } = useLanguage();
   const hookInsets = useSafeAreaInsets();
   const insets = navInsets || hookInsets;
+
+  const getTabLabel = (name: string, fallback: string) => {
+    if (name === "index") return t("tabDashboard");
+    if (name === "vault") return t("tabVault");
+    if (name === "sellers") return t("tabSellers");
+    return fallback;
+  };
   const [layoutWidth, setLayoutWidth] = useState<number>(
     () => Dimensions.get("window").width,
   );
@@ -214,13 +223,15 @@ export function CurvedBottomTabBar({
             }
           };
 
+          const tabLabel = getTabLabel(route.name, config.label);
+
           return (
             <Pressable
               key={route.key}
               onPress={handlePress}
               accessibilityRole="tab"
               accessibilityState={{ selected: isFocused }}
-              accessibilityLabel={config.label}
+              accessibilityLabel={tabLabel}
               style={styles.tabButton}
             >
               {({ hovered }: { hovered?: boolean }) =>
@@ -242,7 +253,7 @@ export function CurvedBottomTabBar({
                       </View>
                     </View>
                     <Text numberOfLines={1} style={styles.activeTabLabel}>
-                      {config.label}
+                      {tabLabel}
                     </Text>
                   </View>
                 ) : (
@@ -261,7 +272,7 @@ export function CurvedBottomTabBar({
                       />
                     </View>
                     <Text numberOfLines={1} style={styles.inactiveTabLabel}>
-                      {config.label}
+                      {tabLabel}
                     </Text>
                   </View>
                 )

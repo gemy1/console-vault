@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,24 +6,29 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-} from "react-native";
-import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
-import { ShieldCheck } from "lucide-react-native";
-import { OfflineVault } from "../../services/storage";
-import { Seller, Game } from "../../types/vault";
-import { ModernHeader, QuickAddWidget } from "../../components/common";
-import { SellerCard, SellerFormModal } from "../../components/sellers";
-import { useThemedStyles } from "../../hooks/useThemedStyles";
-import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { ShieldCheck } from 'lucide-react-native';
+import { OfflineVault } from '../../services/storage';
+import { Seller, Game } from '../../types/vault';
+import { ModernHeader, QuickAddWidget } from '../../components/common';
+import { SellerCard, SellerFormModal } from '../../components/sellers';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function SellersScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
+  const { t } = useLanguage();
 
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isSticky, setIsSticky] = useState(false);
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -64,6 +69,15 @@ export default function SellersScreen() {
     setModalVisible(true);
   };
 
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollY = event.nativeEvent.contentOffset.y;
+    if (scrollY > 12 && !isSticky) {
+      setIsSticky(true);
+    } else if (scrollY <= 12 && isSticky) {
+      setIsSticky(false);
+    }
+  };
+
   const handleSaveSeller = (sellerData: {
     name: string;
     contact_platform: any;
@@ -77,7 +91,7 @@ export default function SellersScreen() {
     } else {
       const newSeller: Seller = {
         id: `seller-${Date.now()}`,
-        user_id: "user-demo",
+        user_id: 'user-demo',
         ...sellerData,
         created_at: new Date().toISOString(),
       };
@@ -95,13 +109,17 @@ export default function SellersScreen() {
   return (
     <View style={styles.container}>
       <ModernHeader
-        title="Digital Sellers"
-        subtitle="Reputation & Multi-Contacts"
+        title={t('headerSellersTitle')}
+        subtitle={t('headerSellersSubtitle')}
       />
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        stickyHeaderIndices={[0]}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -110,44 +128,47 @@ export default function SellersScreen() {
           />
         }
       >
-        {/* QUICK REGISTER SELLER TOP WIDGET */}
-        <QuickAddWidget
-          actions={[
-            {
-              label: "Register New Seller",
-              sublabel: "Add WhatsApp, Telegram & custom notes",
-              icon: "seller",
-              onPress: handleOpenAdd,
-            },
-          ]}
-        />
+        {/* STICKY QUICK REGISTER SELLER TOP WIDGET */}
+        <View style={[styles.stickyContainer, isSticky && styles.stickyContainerActive]}>
+          <QuickAddWidget
+            actions={[
+              {
+                label: t('quickRegisterNewSeller'),
+                sublabel: t('quickRegisterNewSellerSub'),
+                icon: 'seller',
+                onPress: handleOpenAdd,
+              },
+            ]}
+          />
+        </View>
 
         {/* SELLERS LIST */}
-        {sellers.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <ShieldCheck
-              size={48}
-              color={styles.emptyIcon.color}
-              strokeWidth={1.5}
-              style={styles.emptyIconStyle}
-            />
-            <Text style={styles.emptyTitle}>No Digital Sellers Found</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap above to register your first seller with multiple contact
-              methods and notes.
-            </Text>
-          </View>
-        ) : (
-          sellers.map((seller) => (
-            <SellerCard
-              key={seller.id}
-              seller={seller}
-              gamesCount={getSellerGamesCount(seller.id)}
-              onPress={() => router.push(`/seller/${seller.id}`)}
-              onEdit={() => handleOpenEdit(seller)}
-            />
-          ))
-        )}
+        <View style={styles.listContainer}>
+          {sellers.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <ShieldCheck
+                size={48}
+                color={styles.emptyIcon.color}
+                strokeWidth={1.5}
+                style={styles.emptyIconStyle}
+              />
+              <Text style={styles.emptyTitle}>{t('noSellersFound')}</Text>
+              <Text style={styles.emptySubtitle}>
+                {t('noSellersFoundSub')}
+              </Text>
+            </View>
+          ) : (
+            sellers.map((seller) => (
+              <SellerCard
+                key={seller.id}
+                seller={seller}
+                gamesCount={getSellerGamesCount(seller.id)}
+                onPress={() => router.push(`/seller/${seller.id}`)}
+                onEdit={() => handleOpenEdit(seller)}
+              />
+            ))
+          )}
+        </View>
       </ScrollView>
 
       {/* REUSABLE SELLER FORM MODAL */}
@@ -161,7 +182,7 @@ export default function SellersScreen() {
   );
 }
 
-const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
+const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -169,17 +190,32 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
     },
     scroll: {
       flex: 1,
-      paddingHorizontal: 20,
     },
     scrollContent: {
-      paddingTop: 16,
       paddingBottom: 96,
+    },
+    stickyContainer: {
+      backgroundColor: colors.bg,
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      paddingBottom: 2,
+      zIndex: 10,
+    },
+    stickyContainerActive: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      boxShadow: theme === 'dark' ? '0px 4px 12px rgba(0, 0, 0, 0.4)' : '0px 4px 12px rgba(0, 0, 0, 0.06)',
+      elevation: 4,
+    },
+    listContainer: {
+      paddingHorizontal: 20,
+      paddingTop: 8,
     },
     accentIcon: {
       color: colors.accent,
     },
     emptyContainer: {
-      alignItems: "center",
+      alignItems: 'center',
       marginTop: 40,
     },
     emptyIcon: {
@@ -191,12 +227,12 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
     emptyTitle: {
       color: colors.text,
       fontSize: 16,
-      fontWeight: "800",
+      fontWeight: '800',
     },
     emptySubtitle: {
       color: colors.textSecondary,
       fontSize: 13,
       marginTop: 4,
-      textAlign: "center",
+      textAlign: 'center',
     },
   });

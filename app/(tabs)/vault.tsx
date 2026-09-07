@@ -17,12 +17,14 @@ import { Game, Seller } from '../../types/vault';
 import { Search, X, Gamepad2 } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary';
 
 export default function VaultScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   const [games, setGames] = useState<Game[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -78,14 +80,20 @@ export default function VaultScreen() {
     return true;
   });
 
-  const filterButtons: FilterType[] = ['All', 'Active', 'Locked', 'Primary', 'Secondary'];
+  const filterButtons: { key: FilterType; label: string }[] = [
+    { key: 'All', label: t('filterAll') },
+    { key: 'Active', label: t('filterActive') },
+    { key: 'Locked', label: t('filterLocked') },
+    { key: 'Primary', label: t('filterPrimary') },
+    { key: 'Secondary', label: t('filterSecondary') },
+  ];
 
   return (
     <View style={styles.container}>
       {/* MODERN HEADER WITH CIRCULAR BUTTONS BELOW NOTIFICATION BAR */}
       <ModernHeader
-        title="Game Vault"
-        subtitle="Inventory & Licenses"
+        title={t('headerVaultTitle')}
+        subtitle={t('headerVaultSubtitle')}
       />
 
       <View style={styles.controlsHeader}>
@@ -93,8 +101,8 @@ export default function VaultScreen() {
         <QuickAddWidget
           actions={[
             {
-              label: 'Add New Game',
-              sublabel: 'Store credentials & set warranty',
+              label: t('quickAddNewGame'),
+              sublabel: t('quickAddNewGameSub'),
               icon: 'game',
               onPress: () => setGameModalVisible(true),
             },
@@ -105,11 +113,11 @@ export default function VaultScreen() {
         <View style={styles.searchBar}>
           <Search size={16} color={styles.searchIcon.color} strokeWidth={2.2} style={styles.searchIconMargin} />
           <TextInput
-            placeholder="Search by game title or PSN email..."
+            placeholder={t('searchPlaceholder')}
             placeholderTextColor={styles.searchIcon.color}
             value={search}
             onChangeText={setSearch}
-            style={styles.searchInput}
+            style={[styles.searchInput, { textAlign: isRTL ? 'right' : 'left' }]}
           />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch('')}>
@@ -126,13 +134,13 @@ export default function VaultScreen() {
           contentContainerStyle={styles.filterScrollContent}
         >
           {filterButtons.map((item) => {
-            const isSelected = filter === item;
+            const isSelected = filter === item.key;
             return (
               <Pressable
-                key={item}
+                key={item.key}
                 onPress={() => {
                   try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-                  setFilter(item);
+                  setFilter(item.key);
                 }}
                 style={[
                   styles.filterChip,
@@ -145,7 +153,7 @@ export default function VaultScreen() {
                     isSelected ? styles.filterChipTextActive : styles.filterChipTextInactive,
                   ]}
                 >
-                  {item}
+                  {item.label}
                 </Text>
               </Pressable>
             );
@@ -168,9 +176,9 @@ export default function VaultScreen() {
         {filteredGames.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Gamepad2 size={48} color={styles.searchIcon.color} strokeWidth={1.5} style={styles.emptyIconMargin} />
-            <Text style={styles.emptyTitle}>No Games Found</Text>
+            <Text style={styles.emptyTitle}>{t('noGamesFound')}</Text>
             <Text style={styles.emptySubtitle}>
-              {search ? 'Try adjusting your search query or filter.' : 'Your vault is currently empty.'}
+              {search ? t('noGamesFoundSub') : t('vaultEmptySub')}
             </Text>
           </View>
         ) : (

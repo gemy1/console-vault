@@ -13,6 +13,7 @@ import { GameCard } from '../../components/games';
 import { SellerFormModal } from '../../components/sellers';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   ShieldCheck,
   Star,
@@ -28,6 +29,7 @@ export default function SellerDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
+  const { t, isRTL } = useLanguage();
 
   const [seller, setSeller] = useState<Seller | null>(null);
   const [games, setGames] = useState<Game[]>([]);
@@ -53,9 +55,9 @@ export default function SellerDetailsScreen() {
   if (!seller) {
     return (
       <SafeAreaView style={styles.notFoundContainer}>
-        <Text style={styles.notFoundText}>Seller not found.</Text>
+        <Text style={styles.notFoundText}>{t('sellerNotFound')}</Text>
         <Pressable onPress={() => router.back()} style={styles.goBackBtn}>
-          <Text style={styles.goBackText}>← Go Back</Text>
+          <Text style={styles.goBackText}>{t('btnGoBack')}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -100,7 +102,7 @@ export default function SellerDetailsScreen() {
     <View style={styles.container}>
       {/* MODERN HEADER WITH BACK AND EDIT BUTTON */}
       <ModernHeader
-        title="Seller Profile"
+        title={t('sellerProfileTitle')}
         subtitle={seller.name}
         showBackButton={true}
         rightAction={
@@ -131,7 +133,7 @@ export default function SellerDetailsScreen() {
           <View style={styles.heroBadgesRow}>
             <View style={styles.channelCountBadge}>
               <Text style={styles.channelCountText}>
-                {contacts.length} {contacts.length === 1 ? 'Connection Channel' : 'Connection Channels'}
+                {contacts.length} {contacts.length === 1 ? t('channelCountSingular') : t('channelCountPlural')}
               </Text>
             </View>
 
@@ -148,11 +150,11 @@ export default function SellerDetailsScreen() {
         <View style={styles.sectionCard}>
           <View style={styles.sectionCardHeader}>
             <Text style={styles.sectionTitle}>
-              CONNECT WITH THIS SELLER ({contacts.length})
+              {t('connectWithSeller')} ({contacts.length})
             </Text>
             <Pressable onPress={() => setEditModalVisible(true)} style={styles.addMethodBtn}>
               <Plus size={13} color={styles.accentIcon.color} strokeWidth={2.4} />
-              <Text style={styles.addMethodText}>Add Method</Text>
+              <Text style={styles.addMethodText}>{t('btnAddSellerMethod')}</Text>
             </Pressable>
           </View>
 
@@ -196,7 +198,7 @@ export default function SellerDetailsScreen() {
                         <Copy size={11} color={styles.mutedText.color} strokeWidth={2.2} />
                       )}
                       <Text style={[styles.copyBtnText, isCopied && styles.copyBtnTextSuccess]}>
-                        {isCopied ? 'Copied' : 'Copy'}
+                        {isCopied ? t('btnCopied') : t('btnCopy')}
                       </Text>
                     </Pressable>
                   </View>
@@ -210,7 +212,7 @@ export default function SellerDetailsScreen() {
                   >
                     <PlatformIcon platform={contact.platform} size={14} color="#FFFFFF" />
                     <Text style={styles.openChatText}>
-                      Open {contact.platform} Chat
+                      {t('openChatWithPlatform', { platform: contact.platform })}
                     </Text>
                     <ExternalLink size={12} color="#FFFFFF" strokeWidth={2.2} />
                   </Pressable>
@@ -226,24 +228,24 @@ export default function SellerDetailsScreen() {
             <View style={styles.notesTitleGroup}>
               <FileText size={15} color={styles.accentIcon.color} strokeWidth={2.2} />
               <Text style={styles.sectionTitle}>
-                SELLER NOTES & POLICIES (FREE TEXT)
+                {t('sellerGuaranteeNotes')}
               </Text>
             </View>
 
             <Pressable onPress={() => setEditModalVisible(true)} style={styles.editNotesBtn}>
               <Pencil size={12} color={styles.accentIcon.color} strokeWidth={2.2} />
-              <Text style={styles.editNotesText}>Edit</Text>
+              <Text style={styles.editNotesText}>{t('btnEdit')}</Text>
             </Pressable>
           </View>
 
           {seller.notes ? (
             <View style={styles.notesTextBox}>
-              <Text style={styles.notesContent}>{seller.notes}</Text>
+              <Text style={[styles.notesContent, isRTL && styles.rtlText]}>{seller.notes}</Text>
             </View>
           ) : (
             <Pressable onPress={() => setEditModalVisible(true)} style={styles.emptyNotesBox}>
-              <Text style={styles.emptyNotesText}>
-                No free-text notes saved for this seller. Tap here to add warranty policies, response times, or custom notes.
+              <Text style={[styles.emptyNotesText, isRTL && styles.rtlText]}>
+                {t('sellerNotesEmptyHint')}
               </Text>
             </Pressable>
           )}
@@ -252,12 +254,12 @@ export default function SellerDetailsScreen() {
         {/* METRICS ROW */}
         <View style={styles.metricsRow}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Games Supplied</Text>
+            <Text style={styles.metricLabel}>{t('metricVaultTotal')}</Text>
             <Text style={styles.metricValue}>{games.length}</Text>
           </View>
 
           <View style={styles.metricCard}>
-            <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>Active Warranty</Text>
+            <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>{t('activeWarranties')}</Text>
             <Text style={styles.metricValue}>{activeWarrantiesCount}</Text>
           </View>
 
@@ -273,7 +275,7 @@ export default function SellerDetailsScreen() {
                 lockedGamesCount > 0 && styles.metricLabelDanger,
               ]}
             >
-              Locked
+              {t('lockedClaims')}
             </Text>
             <Text style={styles.metricValue}>{lockedGamesCount}</Text>
           </View>
@@ -281,18 +283,18 @@ export default function SellerDetailsScreen() {
 
         {/* SECTION HEADER */}
         <View style={styles.gamesSectionHeader}>
-          <Text style={styles.gamesSectionTitle}>
-            Games from this Seller ({games.length})
+          <Text style={[styles.gamesSectionTitle, isRTL && styles.rtlText]}>
+            {t('sellerGamesTitle')} ({games.length})
           </Text>
-          <Text style={styles.gamesSectionSubtitle}>
-            Tap any game to inspect credentials, status, or warranty
+          <Text style={[styles.gamesSectionSubtitle, isRTL && styles.rtlText]}>
+            {t('sellerGamesSubtitle')}
           </Text>
         </View>
 
         {/* GAMES LIST (USING REUSABLE GameCard) */}
         {games.length === 0 ? (
           <View style={styles.emptyGamesBox}>
-            <Text style={styles.emptyGamesText}>No games associated with this seller yet.</Text>
+            <Text style={styles.emptyGamesText}>{t('noGamesFromSeller')}</Text>
           </View>
         ) : (
           games.map((game) => (
@@ -662,5 +664,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     emptyGamesText: {
       color: colors.textSecondary,
       fontSize: 14,
+    },
+    rtlText: {
+      textAlign: 'right',
     },
   });
