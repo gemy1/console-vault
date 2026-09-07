@@ -7,11 +7,10 @@ import * as Haptics from 'expo-haptics';
 import { OfflineVault } from '../../services/storage';
 import { Seller, Game } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
-import { ModernHeader } from '../../components/ModernHeader';
-import { PlatformIcon, PLATFORM_CONFIG } from '../../components/PlatformIcon';
+import { ModernHeader, PlatformIcon, PLATFORM_CONFIG } from '../../components/common';
 import { openSellerContact, getSellerContactList } from '../../utils/contacts';
-import { GameCard } from '../../components/GameCard';
-import { SellerFormModal } from '../../components/SellerFormModal';
+import { GameCard } from '../../components/games';
+import { SellerFormModal } from '../../components/sellers';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import {
@@ -101,7 +100,7 @@ export default function SellerDetailsScreen() {
     <View style={styles.container}>
       {/* MODERN HEADER WITH BACK AND EDIT BUTTON */}
       <ModernHeader
-        title="Vendor Profile"
+        title="Seller Profile"
         subtitle={seller.name}
         showBackButton={true}
         rightAction={
@@ -126,7 +125,7 @@ export default function SellerDetailsScreen() {
             <ShieldCheck size={38} color={styles.accentIcon.color} strokeWidth={2} />
           </View>
 
-          <Text style={styles.vendorName}>{seller.name}</Text>
+          <Text style={styles.sellerName}>{seller.name}</Text>
 
           {/* BADGES ROW */}
           <View style={styles.heroBadgesRow}>
@@ -244,7 +243,7 @@ export default function SellerDetailsScreen() {
           ) : (
             <Pressable onPress={() => setEditModalVisible(true)} style={styles.emptyNotesBox}>
               <Text style={styles.emptyNotesText}>
-                No free-text notes saved for this vendor. Tap here to add warranty policies, response times, or custom notes.
+                No free-text notes saved for this seller. Tap here to add warranty policies, response times, or custom notes.
               </Text>
             </Pressable>
           )}
@@ -400,7 +399,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderColor: colors.accent,
       marginBottom: 12,
     },
-    vendorName: {
+    sellerName: {
       color: colors.text,
       fontSize: 20,
       fontWeight: '800',

@@ -17,9 +17,9 @@ import {
   calculateWarranty,
   generateWarrantyClaimMessage,
 } from '../../utils/padlock';
-import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
+import { PlatformIcon } from '../../components/common';
+import { PulsingPadlockBadge } from '../../components/games';
 import { Copy, Check, ChevronRight } from 'lucide-react-native';
-import { PlatformIcon } from '../../components/PlatformIcon';
 import { getSellerContactList, openSellerContact } from '../../utils/contacts';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';

@@ -1,49 +1,44 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useVaultTheme } from '../../context/ThemeContext';
-
+import { useVaultTheme, ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { LayoutDashboard, Gamepad2, ShieldCheck } from 'lucide-react-native';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
-function TabIcon({ label, focused, icon: Icon, activeColor, inactiveColor }: {
+function TabIcon({
+  label,
+  focused,
+  icon: Icon,
+  activeColor,
+  inactiveColor,
+  styles,
+}: {
   label: string;
   focused: boolean;
   icon: React.ComponentType<{ size: number; color: string; strokeWidth?: number }>;
   activeColor: string;
   inactiveColor: string;
+  styles: ReturnType<typeof createStyles>;
 }) {
   const iconColor = focused ? activeColor : inactiveColor;
   return (
-    <View
-      style={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 4,
-        minWidth: 70,
-      }}
-    >
+    <View style={styles.tabIconContainer}>
       <View
-        style={{
-          width: 38,
-          height: 28,
-          borderRadius: 10,
-          backgroundColor: focused ? 'rgba(0, 112, 209, 0.14)' : 'transparent',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        style={[
+          styles.tabIconPill,
+          focused && styles.tabIconPillFocused,
+        ]}
       >
         <Icon size={19} color={iconColor} strokeWidth={focused ? 2.4 : 1.8} />
       </View>
       <Text
         numberOfLines={1}
-        style={{
-          fontSize: 10,
-          fontWeight: focused ? '800' : '600',
-          color: focused ? activeColor : inactiveColor,
-          marginTop: 3,
-          letterSpacing: 0.1,
-        }}
+        style={[
+          styles.tabLabel,
+          { color: focused ? activeColor : inactiveColor },
+          focused && styles.tabLabelFocused,
+        ]}
       >
         {label}
       </Text>
@@ -51,9 +46,9 @@ function TabIcon({ label, focused, icon: Icon, activeColor, inactiveColor }: {
   );
 }
 
-
 export default function TabLayout() {
   const { colors } = useVaultTheme();
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
 
   // Flush to screen bottom with zero gap and zero radius
@@ -64,21 +59,10 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.tabBarBg,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          borderWidth: 0,
-          borderRadius: 0, // Zero radius as requested
-          height: barHeight,
-          paddingBottom: bottomPadding,
-          paddingTop: 6,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 4,
-        },
+        tabBarStyle: [
+          styles.tabBar,
+          { height: barHeight, paddingBottom: bottomPadding },
+        ],
         tabBarShowLabel: false,
       }}
     >
@@ -93,6 +77,7 @@ export default function TabLayout() {
               icon={LayoutDashboard}
               activeColor={colors.accent}
               inactiveColor={colors.textMuted}
+              styles={styles}
             />
           ),
         }}
@@ -108,6 +93,7 @@ export default function TabLayout() {
               icon={Gamepad2}
               activeColor={colors.accent}
               inactiveColor={colors.textMuted}
+              styles={styles}
             />
           ),
         }}
@@ -115,14 +101,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="sellers"
         options={{
-          title: 'Vendors',
+          title: 'Sellers',
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              label="Vendors"
+              label="Sellers"
               focused={focused}
               icon={ShieldCheck}
               activeColor={colors.accent}
               inactiveColor={colors.textMuted}
+              styles={styles}
             />
           ),
         }}
@@ -130,3 +117,46 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
+  StyleSheet.create({
+    tabBar: {
+      backgroundColor: colors.tabBarBg,
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      borderWidth: 0,
+      borderRadius: 0,
+      paddingTop: 6,
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+    },
+    tabIconContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 4,
+      minWidth: 70,
+    },
+    tabIconPill: {
+      width: 38,
+      height: 28,
+      borderRadius: 10,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabIconPillFocused: {
+      backgroundColor: 'rgba(0, 112, 209, 0.14)',
+    },
+    tabLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      marginTop: 3,
+      letterSpacing: 0.1,
+    },
+    tabLabelFocused: {
+      fontWeight: '800',
+    },
+  });

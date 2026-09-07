@@ -5,9 +5,8 @@ import * as Haptics from 'expo-haptics';
 import { ShieldCheck, Plus, ChevronRight } from 'lucide-react-native';
 import { OfflineVault } from '../../services/storage';
 import { Seller, Game } from '../../types/vault';
-import { ModernHeader } from '../../components/ModernHeader';
-import { SellerCard } from '../../components/SellerCard';
-import { SellerFormModal } from '../../components/SellerFormModal';
+import { ModernHeader } from '../../components/common';
+import { SellerCard, SellerFormModal } from '../../components/sellers';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 
@@ -89,7 +88,7 @@ export default function SellersScreen() {
   return (
     <View style={styles.container}>
       <ModernHeader
-        title="Digital Vendors"
+        title="Digital Sellers"
         subtitle="Reputation & Multi-Contacts"
         showAddButton={true}
         onAddPress={handleOpenAdd}
@@ -106,7 +105,7 @@ export default function SellersScreen() {
           />
         }
       >
-        {/* ADD VENDOR QUICK BANNER */}
+        {/* ADD SELLER QUICK BANNER */}
         <Pressable
           onPress={handleOpenAdd}
           style={({ pressed }) => [styles.addBanner, pressed && styles.addBannerPressed]}
@@ -116,7 +115,7 @@ export default function SellersScreen() {
               <Plus size={20} color={styles.accentIcon.color} strokeWidth={2.4} />
             </View>
             <View>
-              <Text style={styles.bannerTitle}>Register New Digital Vendor</Text>
+              <Text style={styles.bannerTitle}>Register New Digital Seller</Text>
               <Text style={styles.bannerSubtitle}>
                 Add WhatsApp, Facebook, Telegram & custom notes
               </Text>
@@ -125,11 +124,11 @@ export default function SellersScreen() {
           <ChevronRight size={18} color={styles.accentIcon.color} strokeWidth={2.2} />
         </Pressable>
 
-        {/* VENDORS LIST */}
+        {/* SELLERS LIST */}
         {sellers.length === 0 ? (
           <View style={styles.emptyContainer}>
             <ShieldCheck size={48} color={styles.emptyIcon.color} strokeWidth={1.5} style={styles.emptyIconStyle} />
-            <Text style={styles.emptyTitle}>No Digital Vendors Found</Text>
+            <Text style={styles.emptyTitle}>No Digital Sellers Found</Text>
             <Text style={styles.emptySubtitle}>
               Tap above to register your first seller with multiple contact methods and notes.
             </Text>

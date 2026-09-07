@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import { Gamepad2, ChevronRight } from 'lucide-react-native';
-import { Game } from '../types/vault';
-import { calculateWarranty } from '../utils/padlock';
-import { useThemedStyles } from '../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../context/ThemeContext';
+import { Game } from '../../types/vault';
+import { calculateWarranty } from '../../utils/padlock';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 
 interface GameCardProps {
   game: Game;

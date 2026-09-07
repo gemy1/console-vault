@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TextInput, Pressable, Alert, StyleSheet } from 'react-native';
-import { useThemedStyles } from '../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../context/ThemeContext';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 
 interface ReplaceCredentialsModalProps {
   visible: boolean;

@@ -7,8 +7,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { useThemedStyles } from '../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../context/ThemeContext';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 
 interface PulsingPadlockBadgeProps {
   size?: 'sm' | 'md' | 'lg';

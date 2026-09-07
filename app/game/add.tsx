@@ -11,9 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { OfflineVault } from '../../services/storage';
 import { Game, Seller, AccountType } from '../../types/vault';
-import { ModernHeader } from '../../components/ModernHeader';
+import { ModernHeader, PlatformIcon } from '../../components/common';
 import { Check, Lock } from 'lucide-react-native';
-import { PlatformIcon } from '../../components/PlatformIcon';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 

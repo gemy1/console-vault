@@ -8,15 +8,15 @@ import {
   RefreshControl,
   Linking,
   StyleSheet,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { OfflineVault } from "../../services/storage";
 import { Game, Seller } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
-import { PulsingPadlockBadge } from "../../components/PulsingPadlockBadge";
-import { ModernHeader } from "../../components/ModernHeader";
-import { GameCard } from "../../components/GameCard";
+import { ModernHeader } from "../../components/common";
+import { GameCard, PulsingPadlockBadge } from "../../components/games";
 import {
   Gamepad2,
   ShieldCheck,
@@ -76,6 +76,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" />
       <ModernHeader
         title="Console Vault"
         subtitle="PS5 Digital Library"
@@ -100,7 +101,11 @@ export default function DashboardScreen() {
           <View style={styles.metricCard}>
             <View style={styles.metricCardHeader}>
               <Text style={styles.metricLabel}>Vault Total</Text>
-              <Gamepad2 size={15} color={styles.accentColor.color} strokeWidth={2.2} />
+              <Gamepad2
+                size={15}
+                color={styles.accentColor.color}
+                strokeWidth={2.2}
+              />
             </View>
             <Text style={styles.metricValue}>{totalGames}</Text>
             <Text style={styles.metricSubtext}>Games Stored</Text>
@@ -109,8 +114,14 @@ export default function DashboardScreen() {
           {/* Active Warranties */}
           <View style={styles.metricCard}>
             <View style={styles.metricCardHeader}>
-              <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>Protected</Text>
-              <ShieldCheck size={15} color={styles.successColor.color} strokeWidth={2.2} />
+              <Text style={[styles.metricLabel, styles.metricLabelSuccess]}>
+                Protected
+              </Text>
+              <ShieldCheck
+                size={15}
+                color={styles.successColor.color}
+                strokeWidth={2.2}
+              />
             </View>
             <Text style={styles.metricValue}>{activeWarranties.length}</Text>
             <Text style={styles.metricSubtext}>Under Warranty</Text>
@@ -134,7 +145,11 @@ export default function DashboardScreen() {
               </Text>
               <Lock
                 size={15}
-                color={lockedGames.length > 0 ? styles.dangerColor.color : styles.mutedColor.color}
+                color={
+                  lockedGames.length > 0
+                    ? styles.dangerColor.color
+                    : styles.mutedColor.color
+                }
                 strokeWidth={2.2}
               />
             </View>
@@ -169,20 +184,33 @@ export default function DashboardScreen() {
               </View>
 
               <Text style={styles.padlockInstruction}>
-                Sony has revoked access for the account(s) below. Tap to generate warranty replacement claim text.
+                Sony has revoked access for the account(s) below. Tap to
+                generate warranty replacement claim text.
               </Text>
 
               {lockedGames.map((game) => {
-                const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
-                const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
+                const seller = game.seller_id
+                  ? sellerMap.get(game.seller_id)
+                  : undefined;
+                const warranty = calculateWarranty(
+                  game.purchase_date,
+                  game.warranty_months,
+                );
 
                 return (
                   <View key={game.id} style={styles.lockedGameItem}>
                     {game.cover_image_url ? (
-                      <Image source={{ uri: game.cover_image_url }} style={styles.lockedCoverImage} />
+                      <Image
+                        source={{ uri: game.cover_image_url }}
+                        style={styles.lockedCoverImage}
+                      />
                     ) : (
                       <View style={styles.lockedCoverPlaceholder}>
-                        <Gamepad2 size={20} color={styles.mutedColor.color} strokeWidth={1.8} />
+                        <Gamepad2
+                          size={20}
+                          color={styles.mutedColor.color}
+                          strokeWidth={1.8}
+                        />
                       </View>
                     )}
 
@@ -196,15 +224,23 @@ export default function DashboardScreen() {
                           onPress={() => router.push(`/seller/${seller.id}`)}
                           style={styles.lockedSellerRow}
                         >
-                          <Text style={styles.lockedSellerText}>Seller: {seller.name}</Text>
-                          <ChevronRight size={11} color={styles.accentColor.color} strokeWidth={2.4} />
+                          <Text style={styles.lockedSellerText}>
+                            Seller: {seller.name}
+                          </Text>
+                          <ChevronRight
+                            size={11}
+                            color={styles.accentColor.color}
+                            strokeWidth={2.4}
+                          />
                         </Pressable>
                       )}
 
                       <Text
                         style={[
                           styles.lockedWarrantyText,
-                          warranty.isWarrantyActive ? styles.warrantyActiveText : styles.warrantyExpiredText,
+                          warranty.isWarrantyActive
+                            ? styles.warrantyActiveText
+                            : styles.warrantyExpiredText,
                         ]}
                       >
                         {warranty.isWarrantyActive
@@ -216,7 +252,9 @@ export default function DashboardScreen() {
                     <Pressable
                       onPress={() => {
                         try {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Medium,
+                          );
                         } catch {}
                         const deepLink = generateSellerDeepLink(game, seller);
                         if (deepLink) {
@@ -225,7 +263,10 @@ export default function DashboardScreen() {
                           router.push(`/game/${game.id}`);
                         }
                       }}
-                      style={({ pressed }) => [styles.claimBtn, pressed && styles.claimBtnPressed]}
+                      style={({ pressed }) => [
+                        styles.claimBtn,
+                        pressed && styles.claimBtnPressed,
+                      ]}
                     >
                       <Text style={styles.claimBtnText}>Claim</Text>
                     </Pressable>
@@ -254,13 +295,17 @@ export default function DashboardScreen() {
                   }}
                   style={[
                     styles.categoryPill,
-                    isSelected ? styles.categoryPillActive : styles.categoryPillInactive,
+                    isSelected
+                      ? styles.categoryPillActive
+                      : styles.categoryPillInactive,
                   ]}
                 >
                   <Text
                     style={[
                       styles.categoryPillText,
-                      isSelected ? styles.categoryPillTextActive : styles.categoryPillTextInactive,
+                      isSelected
+                        ? styles.categoryPillTextActive
+                        : styles.categoryPillTextInactive,
                     ]}
                   >
                     {cat.label}
@@ -274,7 +319,9 @@ export default function DashboardScreen() {
         {/* MODERN GAME CARDS LIST */}
         <View style={styles.gamesListSection}>
           {displayedGames.map((game) => {
-            const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
+            const seller = game.seller_id
+              ? sellerMap.get(game.seller_id)
+              : undefined;
             return (
               <GameCard
                 key={game.id}
@@ -408,7 +455,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       letterSpacing: 0.5,
     },
     padlockBadge: {
-      backgroundColor: theme === "dark" ? "rgba(255, 59, 48, 0.2)" : "rgba(239, 68, 68, 0.1)",
+      backgroundColor:
+        theme === "dark" ? "rgba(255, 59, 48, 0.2)" : "rgba(239, 68, 68, 0.1)",
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 10,

@@ -18,9 +18,8 @@ import { OfflineVault } from '../../services/storage';
 import { Game, Seller, GameStatus } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
 import { useBiometricGuard } from '../../hooks/useBiometricGuard';
-import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
-import { ThemeToggleButton } from '../../components/ThemeToggleButton';
-import { ReplaceCredentialsModal } from '../../components/ReplaceCredentialsModal';
+import { ThemeToggleButton } from '../../components/common';
+import { PulsingPadlockBadge, ReplaceCredentialsModal } from '../../components/games';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import {
@@ -256,7 +255,7 @@ export default function GameDetailsScreen() {
                   </Text>
                   <View style={styles.sellerSubtextRow}>
                     <Text style={styles.sellerSubtext}>
-                      Tap to view vendor profile & all games
+                      Tap to view seller profile & all games
                     </Text>
                     <ChevronRight size={12} color={styles.accentIcon.color} strokeWidth={2.4} />
                   </View>

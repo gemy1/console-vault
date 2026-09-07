@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ShieldCheck, Star, ChevronRight, Pencil, FileText } from 'lucide-react-native';
-import { Seller } from '../types/vault';
-import { PlatformIcon, PLATFORM_CONFIG } from './PlatformIcon';
-import { openSellerContact, getSellerContactList, formatPlatformHandle } from '../utils/contacts';
-import { useThemedStyles } from '../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../context/ThemeContext';
+import { Seller } from '../../types/vault';
+import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
+import { openSellerContact, getSellerContactList, formatPlatformHandle } from '../../utils/contacts';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 
 interface SellerCardProps {
   seller: Seller;
@@ -26,13 +26,13 @@ export function SellerCard({ seller, gamesCount, onPress, onEdit }: SellerCardPr
     >
       {/* TOP ROW: ICON, NAME, EDIT, RATING */}
       <View style={styles.topRow}>
-        <View style={styles.vendorInfoRow}>
+        <View style={styles.sellerInfoRow}>
           <View style={styles.iconCircle}>
             <ShieldCheck size={22} color={styles.accentColor.color} strokeWidth={2} />
           </View>
 
           <View style={styles.nameBlock}>
-            <Text style={styles.vendorName} numberOfLines={1}>
+            <Text style={styles.sellerName} numberOfLines={1}>
               {seller.name}
             </Text>
 
@@ -163,7 +163,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    vendorInfoRow: {
+    sellerInfoRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
@@ -185,7 +185,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     nameBlock: {
       flex: 1,
     },
-    vendorName: {
+    sellerName: {
       color: colors.text,
       fontSize: 16,
       fontWeight: '800',

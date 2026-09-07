@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ShieldCheck, Star, Plus, X, Trash2, FileText, Pencil } from 'lucide-react-native';
-import { Seller, ContactPlatform, SellerContactMethod } from '../types/vault';
-import { PlatformIcon, PLATFORM_CONFIG } from './PlatformIcon';
-import { useThemedStyles } from '../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../context/ThemeContext';
+import { Seller, ContactPlatform, SellerContactMethod } from '../../types/vault';
+import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
+import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 
 const PLATFORM_LIST: ContactPlatform[] = [
   'WhatsApp',
@@ -124,7 +124,7 @@ export function SellerFormModal({
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert('Required Field', 'Please enter a vendor / store name.');
+      Alert.alert('Required Field', 'Please enter a seller / store name.');
       return;
     }
 
@@ -180,7 +180,7 @@ export function SellerFormModal({
                   <ShieldCheck size={22} color={styles.accentIcon.color} strokeWidth={2.2} />
                 )}
                 <Text style={styles.headerTitle}>
-                  {initialSeller ? 'Edit Vendor Profile' : 'Register Digital Vendor'}
+                  {initialSeller ? 'Edit Seller Profile' : 'Register Digital Seller'}
                 </Text>
               </View>
               <Pressable onPress={onClose} style={styles.closeButton}>
@@ -192,8 +192,8 @@ export function SellerFormModal({
               Add multiple connection channels (WhatsApp, Facebook, Telegram) and free-text notes.
             </Text>
 
-            {/* VENDOR NAME */}
-            <Text style={styles.fieldLabel}>VENDOR / STORE NAME *</Text>
+            {/* SELLER NAME */}
+            <Text style={styles.fieldLabel}>SELLER / STORE NAME *</Text>
             <TextInput
               placeholder="e.g. PlayStation Elite Keys"
               placeholderTextColor={styles.placeholder.color}
@@ -405,7 +405,7 @@ export function SellerFormModal({
                 style={({ pressed }) => [styles.submitBtn, pressed && styles.submitBtnPressed]}
               >
                 <Text style={styles.submitBtnText}>
-                  {initialSeller ? 'Save Changes' : 'Register Vendor'}
+                  {initialSeller ? 'Save Changes' : 'Register Seller'}
                 </Text>
               </Pressable>
             </View>

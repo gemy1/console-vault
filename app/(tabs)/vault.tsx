@@ -11,8 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { OfflineVault } from '../../services/storage';
-import { ModernHeader } from '../../components/ModernHeader';
-import { GameCard } from '../../components/GameCard';
+import { ModernHeader } from '../../components/common';
+import { GameCard } from '../../components/games';
 import { Game, Seller } from '../../types/vault';
 import { Search, X, Gamepad2 } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
