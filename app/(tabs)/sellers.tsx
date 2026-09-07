@@ -7,16 +7,21 @@ import {
   Linking,
   RefreshControl,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { OfflineVault } from '../../services/storage';
-import { Seller } from '../../types/vault';
+import { Seller, Game } from '../../types/vault';
 
 export default function SellersScreen() {
+  const router = useRouter();
   const [sellers, setSellers] = useState<Seller[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = () => {
     setSellers(OfflineVault.getSellers());
+    setGames(OfflineVault.getGames());
   };
 
   useEffect(() => {
@@ -29,7 +34,23 @@ export default function SellersScreen() {
     setTimeout(() => setRefreshing(false), 300);
   };
 
-  const openSellerChat = (seller: Seller) => {
+  const getSellerGamesCount = (sellerId: string) => {
+    return games.filter((g) => g.seller_id === sellerId).length;
+  };
+
+  const openSellerProfile = (sellerId: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    router.push(`/seller/${sellerId}`);
+  };
+
+  const openQuickChat = (seller: Seller, e: any) => {
+    e.stopPropagation(); // Don't trigger card navigation
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
+
     if (seller.contact_platform === 'WhatsApp') {
       const cleanPhone = seller.contact_link.replace(/[^0-9]/g, '');
       Linking.openURL(`https://wa.me/${cleanPhone}`);
@@ -42,11 +63,17 @@ export default function SellersScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#080B14' }}>
-      <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14 }}>
-        <Text style={{ fontSize: 24, fontWeight: '800', color: '#F8FAFC' }}>Seller Directory</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#080C16' }}>
+      {/* HEADER */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 16 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#00D2FF', letterSpacing: 2 }}>
+          VENDOR NETWORK
+        </Text>
+        <Text style={{ fontSize: 26, fontWeight: '800', color: '#F8FAFC', marginTop: 2 }}>
+          Digital Sellers
+        </Text>
         <Text style={{ color: '#64748B', fontSize: 13, marginTop: 4 }}>
-          Trusted third-party digital vendors and warranty contacts.
+          Tap a vendor to view all supplied games, credentials, and warranty status.
         </Text>
       </View>
 
@@ -56,85 +83,144 @@ export default function SellersScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D2FF" />}
       >
         {sellers.map((seller) => {
+          const sellerGamesCount = getSellerGamesCount(seller.id);
           const isWhatsApp = seller.contact_platform === 'WhatsApp';
           const isTelegram = seller.contact_platform === 'Telegram';
 
           return (
-            <View
+            <Pressable
               key={seller.id}
-              style={{
-                backgroundColor: '#111726',
-                borderRadius: 14,
+              onPress={() => openSellerProfile(seller.id)}
+              style={({ pressed }) => ({
+                backgroundColor: pressed ? '#141E33' : '#0F172A',
+                borderRadius: 18,
                 padding: 16,
                 marginBottom: 12,
                 borderWidth: 1,
                 borderColor: '#1E293B',
-              }}
+              })}
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>{seller.name}</Text>
-                  
-                  {/* Platform & Rating */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                    <View
-                      style={{
-                        backgroundColor: isWhatsApp ? '#0E2E1A' : isTelegram ? '#002B4D' : '#1E293B',
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <Text
+              {/* TOP ROW: ICON, NAME, RATING */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View
+                    style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 23,
+                      backgroundColor: '#1E293B',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: '#334155',
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>🛡️</Text>
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: '800' }} numberOfLines={1}>
+                      {seller.name}
+                    </Text>
+
+                    {/* PLATFORM & GAMES COUNT ROW */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                      <View
                         style={{
-                          color: isWhatsApp ? '#25D366' : isTelegram ? '#0088CC' : '#94A3B8',
-                          fontSize: 11,
-                          fontWeight: '700',
+                          backgroundColor: isWhatsApp ? 'rgba(37, 211, 102, 0.15)' : 'rgba(0, 136, 204, 0.15)',
+                          paddingHorizontal: 7,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          borderWidth: 0.5,
+                          borderColor: isWhatsApp ? '#25D366' : '#0088CC',
                         }}
                       >
-                        {seller.contact_platform}
-                      </Text>
-                    </View>
+                        <Text
+                          style={{
+                            color: isWhatsApp ? '#25D366' : '#0088CC',
+                            fontSize: 10,
+                            fontWeight: '700',
+                          }}
+                        >
+                          {seller.contact_platform}
+                        </Text>
+                      </View>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ color: '#FFD700', fontSize: 13 }}>★</Text>
-                      <Text style={{ color: '#F8FAFC', fontSize: 12, fontWeight: '700', marginLeft: 3 }}>
-                        {seller.reputation_score.toFixed(1)}
-                      </Text>
+                      <View
+                        style={{
+                          backgroundColor: '#1E293B',
+                          paddingHorizontal: 7,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: '#94A3B8', fontSize: 10, fontWeight: '600' }}>
+                          {sellerGamesCount} {sellerGamesCount === 1 ? 'Game' : 'Games'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
 
-                {/* Direct Action Button */}
-                <Pressable
-                  onPress={() => openSellerChat(seller)}
-                  style={({ pressed }) => ({
-                    backgroundColor: pressed ? '#005bb5' : '#0070D1',
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 8,
+                {/* STAR RATING */}
+                <View
+                  style={{
+                    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+                    paddingHorizontal: 9,
+                    paddingVertical: 4,
+                    borderRadius: 12,
                     flexDirection: 'row',
                     alignItems: 'center',
-                  })}
+                    gap: 3,
+                    borderWidth: 0.5,
+                    borderColor: '#FFD700',
+                  }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Chat Now</Text>
-                </Pressable>
+                  <Text style={{ color: '#FFD700', fontSize: 12 }}>★</Text>
+                  <Text style={{ color: '#F8FAFC', fontSize: 12, fontWeight: '800' }}>
+                    {seller.reputation_score.toFixed(1)}
+                  </Text>
+                </View>
               </View>
 
-              {/* Notes */}
+              {/* NOTES / BIO */}
               {seller.notes && (
                 <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 10, lineHeight: 16 }}>
                   {seller.notes}
                 </Text>
               )}
 
-              {/* Contact Link preview */}
-              <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#1E293B' }}>
-                <Text style={{ color: '#64748B', fontSize: 11 }}>
-                  Direct Handle: <Text style={{ color: '#94A3B8' }}>{seller.contact_link}</Text>
+              {/* BOTTOM ACTION BAR */}
+              <View
+                style={{
+                  marginTop: 12,
+                  paddingTop: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: '#1E293B',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#00D2FF', fontSize: 12, fontWeight: '700' }}>
+                  View {sellerGamesCount} Games →
                 </Text>
+
+                <Pressable
+                  onPress={(e) => openQuickChat(seller, e)}
+                  style={({ pressed }) => ({
+                    backgroundColor: pressed ? '#005bb5' : '#0070D1',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                  })}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                    Chat Now
+                  </Text>
+                </Pressable>
               </View>
-            </View>
+            </Pressable>
           );
         })}
       </ScrollView>

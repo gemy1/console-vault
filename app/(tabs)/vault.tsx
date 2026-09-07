@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { OfflineVault } from '../../services/storage';
-import { Game, GameStatus, AccountType } from '../../types/vault';
+import { Game, Seller } from '../../types/vault';
 import { calculateWarranty } from '../../utils/padlock';
 
 type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary';
@@ -19,12 +20,14 @@ type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary';
 export default function VaultScreen() {
   const router = useRouter();
   const [games, setGames] = useState<Game[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterType>('All');
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = () => {
     setGames(OfflineVault.getGames());
+    setSellers(OfflineVault.getSellers());
   };
 
   useEffect(() => {
@@ -37,49 +40,59 @@ export default function VaultScreen() {
     setTimeout(() => setRefreshing(false), 300);
   };
 
-  // Filtering
+  const sellerMap = new Map(sellers.map((s) => [s.id, s]));
+
   const filteredGames = games.filter((g) => {
     const matchesSearch =
       g.title.toLowerCase().includes(search.toLowerCase()) ||
       g.psn_email.toLowerCase().includes(search.toLowerCase());
 
     if (!matchesSearch) return false;
-
     if (filter === 'All') return true;
     if (filter === 'Active') return g.status === 'Active';
     if (filter === 'Locked') return g.status === 'Locked';
     if (filter === 'Primary') return g.account_type === 'Primary';
     if (filter === 'Secondary') return g.account_type === 'Secondary';
-
     return true;
   });
 
   const filterButtons: FilterType[] = ['All', 'Active', 'Locked', 'Primary', 'Secondary'];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#080B14' }}>
-      <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 10 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#080C16' }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontSize: 24, fontWeight: '800', color: '#F8FAFC' }}>Game Vault</Text>
+          <View>
+            <Text style={{ fontSize: 11, fontWeight: '800', color: '#00D2FF', letterSpacing: 2 }}>
+              VAULT INVENTORY
+            </Text>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: '#F8FAFC', marginTop: 2 }}>
+              Games Library
+            </Text>
+          </View>
+
           <Pressable
-            onPress={() => router.push('/game/add')}
+            onPress={() => {
+              try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+              router.push('/game/add');
+            }}
             style={({ pressed }) => ({
               backgroundColor: pressed ? '#005bb5' : '#0070D1',
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderRadius: 8,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 10,
             })}
           >
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 12 }}>+ New Game</Text>
+            <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>+ New Game</Text>
           </Pressable>
         </View>
 
-        {/* SEARCH INPUT */}
+        {/* SEARCH BAR */}
         <View
           style={{
-            backgroundColor: '#111726',
-            borderRadius: 10,
-            paddingHorizontal: 12,
+            backgroundColor: '#0F172A',
+            borderRadius: 14,
+            paddingHorizontal: 14,
             paddingVertical: 10,
             marginTop: 14,
             borderWidth: 1,
@@ -88,9 +101,9 @@ export default function VaultScreen() {
             alignItems: 'center',
           }}
         >
-          <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+          <Text style={{ fontSize: 15, marginRight: 8 }}>🔍</Text>
           <TextInput
-            placeholder="Search by title or PSN email..."
+            placeholder="Search by game title or PSN email..."
             placeholderTextColor="#64748B"
             value={search}
             onChangeText={setSearch}
@@ -98,7 +111,7 @@ export default function VaultScreen() {
           />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch('')}>
-              <Text style={{ color: '#94A3B8', fontSize: 14 }}>✕</Text>
+              <Text style={{ color: '#94A3B8', fontSize: 14, paddingHorizontal: 4 }}>✕</Text>
             </Pressable>
           )}
         </View>
@@ -115,11 +128,14 @@ export default function VaultScreen() {
             return (
               <Pressable
                 key={item}
-                onPress={() => setFilter(item)}
+                onPress={() => {
+                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                  setFilter(item);
+                }}
                 style={{
-                  backgroundColor: isSelected ? '#0070D1' : '#111726',
+                  backgroundColor: isSelected ? '#0070D1' : '#0F172A',
                   paddingHorizontal: 14,
-                  paddingVertical: 6,
+                  paddingVertical: 7,
                   borderRadius: 20,
                   borderWidth: 1,
                   borderColor: isSelected ? '#0070D1' : '#1E293B',
@@ -129,7 +145,7 @@ export default function VaultScreen() {
                   style={{
                     color: isSelected ? '#FFFFFF' : '#94A3B8',
                     fontSize: 12,
-                    fontWeight: isSelected ? '700' : '500',
+                    fontWeight: isSelected ? '800' : '600',
                   }}
                 >
                   {item}
@@ -143,32 +159,37 @@ export default function VaultScreen() {
       {/* GAMES LIST */}
       <ScrollView
         style={{ flex: 1, paddingHorizontal: 20 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 50 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D2FF" />}
       >
         {filteredGames.length === 0 ? (
           <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 60 }}>
-            <Text style={{ fontSize: 40, marginBottom: 12 }}>🎮</Text>
-            <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: '700' }}>No Games Found</Text>
+            <Text style={{ fontSize: 44, marginBottom: 12 }}>🎮</Text>
+            <Text style={{ color: '#F8FAFC', fontSize: 17, fontWeight: '800' }}>No Games Found</Text>
             <Text style={{ color: '#64748B', fontSize: 13, marginTop: 4, textAlign: 'center' }}>
-              {search ? 'Try adjusting your search or filter criteria.' : 'Your vault is currently empty.'}
+              {search ? 'Try adjusting your search query or filter.' : 'Your vault is currently empty.'}
             </Text>
           </View>
         ) : (
           filteredGames.map((game) => {
+            const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
             const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
+            const isLocked = game.status === 'Locked';
 
             return (
               <Pressable
                 key={game.id}
-                onPress={() => router.push(`/game/${game.id}`)}
+                onPress={() => {
+                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                  router.push(`/game/${game.id}`);
+                }}
                 style={({ pressed }) => ({
-                  backgroundColor: pressed ? '#172033' : '#111726',
-                  borderRadius: 14,
+                  backgroundColor: pressed ? '#141E33' : '#0F172A',
+                  borderRadius: 18,
                   padding: 14,
-                  marginBottom: 10,
+                  marginBottom: 12,
                   borderWidth: 1,
-                  borderColor: game.status === 'Locked' ? '#FF3B30' : '#1E293B',
+                  borderColor: isLocked ? '#FF3B30' : '#1E293B',
                   flexDirection: 'row',
                   alignItems: 'center',
                 })}
@@ -176,14 +197,14 @@ export default function VaultScreen() {
                 {game.cover_image_url ? (
                   <Image
                     source={{ uri: game.cover_image_url }}
-                    style={{ width: 52, height: 68, borderRadius: 8, backgroundColor: '#080B14' }}
+                    style={{ width: 56, height: 74, borderRadius: 10, backgroundColor: '#080C16' }}
                   />
                 ) : (
                   <View
                     style={{
-                      width: 52,
-                      height: 68,
-                      borderRadius: 8,
+                      width: 56,
+                      height: 74,
+                      borderRadius: 10,
                       backgroundColor: '#1E293B',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -194,17 +215,19 @@ export default function VaultScreen() {
                 )}
 
                 <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 15 }} numberOfLines={1}>
+                  <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }} numberOfLines={1}>
                     {game.title}
                   </Text>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <View
                       style={{
-                        backgroundColor: game.account_type === 'Primary' ? '#003A70' : '#4C1D95',
+                        backgroundColor: game.account_type === 'Primary' ? 'rgba(0, 112, 209, 0.2)' : 'rgba(147, 51, 234, 0.2)',
                         paddingHorizontal: 6,
                         paddingVertical: 2,
                         borderRadius: 4,
+                        borderWidth: 0.5,
+                        borderColor: game.account_type === 'Primary' ? '#0070D1' : '#9333EA',
                       }}
                     >
                       <Text
@@ -221,20 +244,27 @@ export default function VaultScreen() {
                     <View
                       style={{
                         backgroundColor:
-                          game.status === 'Locked'
-                            ? '#3A1418'
+                          isLocked
+                            ? 'rgba(255, 59, 48, 0.2)'
                             : game.status === 'Active'
-                            ? '#0E2E1A'
-                            : '#2A1F0C',
+                            ? 'rgba(48, 209, 88, 0.2)'
+                            : 'rgba(255, 159, 10, 0.2)',
                         paddingHorizontal: 6,
                         paddingVertical: 2,
                         borderRadius: 4,
+                        borderWidth: 0.5,
+                        borderColor:
+                          isLocked
+                            ? '#FF3B30'
+                            : game.status === 'Active'
+                            ? '#30D158'
+                            : '#FF9F0A',
                       }}
                     >
                       <Text
                         style={{
                           color:
-                            game.status === 'Locked'
+                            isLocked
                               ? '#FF453A'
                               : game.status === 'Active'
                               ? '#30D158'
@@ -248,12 +278,22 @@ export default function VaultScreen() {
                     </View>
                   </View>
 
-                  <Text style={{ color: '#64748B', fontSize: 11, marginTop: 6 }}>
-                    Purchase: {game.purchase_date} • {warranty.daysRemaining}d warranty
+                  <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 6 }}>
+                    {warranty.isWarrantyActive ? (
+                      <>
+                        Warranty:{' '}
+                        <Text style={{ color: warranty.isExpiringSoon ? '#FF9F0A' : '#30D158', fontWeight: '700' }}>
+                          {warranty.daysRemaining} days left
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={{ color: '#94A3B8' }}>Warranty Expired</Text>
+                    )}
+                    {seller && ` • ${seller.name}`}
                   </Text>
                 </View>
 
-                <Text style={{ color: '#475569', fontSize: 18, marginLeft: 8 }}>›</Text>
+                <Text style={{ color: '#475569', fontSize: 20, marginLeft: 10 }}>›</Text>
               </Pressable>
             );
           })

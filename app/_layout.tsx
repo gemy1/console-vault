@@ -12,7 +12,6 @@ export const unstable_settings = {
   initialRouteName: "(tabs)",
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -40,16 +39,35 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#080B14" },
-          animation: "fade",
+          contentStyle: { backgroundColor: "#080C16" },
+          animation: "slide_from_right",
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true, // Enables full-screen swipe to go back
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
+          }}
+        />
         <Stack.Screen
           name="game/[id]"
           options={{
             headerShown: false,
             animation: "slide_from_right",
+            gestureEnabled: true,
+            fullScreenGestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="seller/[id]"
+          options={{
+            headerShown: false,
+            animation: "slide_from_right",
+            gestureEnabled: true,
+            fullScreenGestureEnabled: true,
           }}
         />
         <Stack.Screen
@@ -58,10 +76,20 @@ export default function RootLayout() {
             headerShown: false,
             presentation: "modal",
             animation: "slide_from_bottom",
+            gestureEnabled: true,
           }}
         />
         <Stack.Screen
           name="game/padlock"
+          options={{
+            headerShown: false,
+            presentation: "modal",
+            animation: "slide_from_bottom",
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="modal"
           options={{
             headerShown: false,
             presentation: "modal",
