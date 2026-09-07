@@ -1,18 +1,34 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text, Platform } from 'react-native';
+import { useVaultTheme } from '../../context/ThemeContext';
 
-// Custom Tab Bar Icon Helper
-function TabIcon({ label, focused, symbol }: { label: string; focused: boolean; symbol: string }) {
-  const color = focused ? '#00D2FF' : '#64748B';
+function TabIcon({ label, focused, symbol, activeColor, inactiveColor }: {
+  label: string;
+  focused: boolean;
+  symbol: string;
+  activeColor: string;
+  inactiveColor: string;
+}) {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 6 }}>
-      <Text style={{ fontSize: 20, color }}>{symbol}</Text>
+      <View
+        style={{
+          width: 38,
+          height: 28,
+          borderRadius: 14,
+          backgroundColor: focused ? 'rgba(0, 112, 209, 0.16)' : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ fontSize: 18 }}>{symbol}</Text>
+      </View>
       <Text
         style={{
           fontSize: 10,
-          fontWeight: focused ? '700' : '500',
-          color,
+          fontWeight: focused ? '800' : '600',
+          color: focused ? activeColor : inactiveColor,
           marginTop: 2,
           letterSpacing: 0.2,
         }}
@@ -24,16 +40,29 @@ function TabIcon({ label, focused, symbol }: { label: string; focused: boolean; 
 }
 
 export default function TabLayout() {
+  const { colors, theme } = useVaultTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#0A0E1A',
-          borderTopColor: '#1E293B',
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+          position: 'absolute',
+          bottom: Platform.OS === 'ios' ? 24 : 16,
+          left: 20,
+          right: 20,
+          backgroundColor: colors.tabBarBg,
+          borderColor: colors.tabBarBorder,
+          borderWidth: 1,
+          borderRadius: 36,
+          height: 66,
+          paddingBottom: 8,
+          paddingTop: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: theme === 'dark' ? 0.45 : 0.12,
+          shadowRadius: 16,
+          elevation: 10,
         },
         tabBarShowLabel: false,
       }}
@@ -43,7 +72,13 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Dashboard" focused={focused} symbol="⚡" />
+            <TabIcon
+              label="Hub"
+              focused={focused}
+              symbol="⚡"
+              activeColor={colors.neon}
+              inactiveColor={colors.textMuted}
+            />
           ),
         }}
       />
@@ -52,7 +87,13 @@ export default function TabLayout() {
         options={{
           title: 'Game Vault',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Library" focused={focused} symbol="🎮" />
+            <TabIcon
+              label="Vault"
+              focused={focused}
+              symbol="🎮"
+              activeColor={colors.neon}
+              inactiveColor={colors.textMuted}
+            />
           ),
         }}
       />
@@ -61,7 +102,13 @@ export default function TabLayout() {
         options={{
           title: 'Sellers',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Sellers" focused={focused} symbol="🛡️" />
+            <TabIcon
+              label="Vendors"
+              focused={focused}
+              symbol="🛡️"
+              activeColor={colors.neon}
+              inactiveColor={colors.textMuted}
+            />
           ),
         }}
       />

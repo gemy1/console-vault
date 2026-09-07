@@ -1,10 +1,11 @@
 import { useFonts } from "expo-font";
-import { DarkTheme, Stack, ThemeProvider } from "expo-router";
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import "../global.css";
+import { VaultThemeProvider, useVaultTheme } from "../context/ThemeContext";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -14,35 +15,19 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-  });
-
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
+function RootNavigator() {
+  const { theme, colors } = useVaultTheme();
 
   return (
-    <ThemeProvider value={DarkTheme}>
-      <StatusBar style="light" />
+    <ThemeProvider value={theme === "dark" ? DarkTheme : DefaultTheme}>
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#080C16" },
+          contentStyle: { backgroundColor: colors.bg },
           animation: "slide_from_right",
           gestureEnabled: true,
-          fullScreenGestureEnabled: true, // Enables full-screen swipe to go back
+          fullScreenGestureEnabled: true,
         }}
       >
         <Stack.Screen
@@ -98,5 +83,31 @@ export default function RootLayout() {
         />
       </Stack>
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  });
+
+  useEffect(() => {
+    if (error) throw error;
+  }, [error]);
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  if (!loaded) {
+    return null;
+  }
+
+  return (
+    <VaultThemeProvider>
+      <RootNavigator />
+    </VaultThemeProvider>
   );
 }

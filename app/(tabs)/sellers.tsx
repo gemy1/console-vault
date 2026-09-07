@@ -10,11 +10,14 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Seller, Game } from '../../types/vault';
 
 export default function SellersScreen() {
   const router = useRouter();
+  const { colors, theme } = useVaultTheme();
+
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,7 +49,7 @@ export default function SellersScreen() {
   };
 
   const openQuickChat = (seller: Seller, e: any) => {
-    e.stopPropagation(); // Don't trigger card navigation
+    e.stopPropagation();
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
@@ -63,41 +66,44 @@ export default function SellersScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#080C16' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* HEADER */}
       <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 16 }}>
-        <Text style={{ fontSize: 11, fontWeight: '800', color: '#00D2FF', letterSpacing: 2 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: colors.textSecondary, letterSpacing: 2 }}>
           VENDOR NETWORK
         </Text>
-        <Text style={{ fontSize: 26, fontWeight: '800', color: '#F8FAFC', marginTop: 2 }}>
+        <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text, marginTop: 2 }}>
           Digital Sellers
         </Text>
-        <Text style={{ color: '#64748B', fontSize: 13, marginTop: 4 }}>
-          Tap a vendor to view all supplied games, credentials, and warranty status.
+        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
+          Tap a vendor to inspect all supplied games, credentials, and warranty status.
         </Text>
       </View>
 
       <ScrollView
         style={{ flex: 1, paddingHorizontal: 20 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D2FF" />}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.neon} />}
       >
         {sellers.map((seller) => {
           const sellerGamesCount = getSellerGamesCount(seller.id);
           const isWhatsApp = seller.contact_platform === 'WhatsApp';
-          const isTelegram = seller.contact_platform === 'Telegram';
 
           return (
             <Pressable
               key={seller.id}
               onPress={() => openSellerProfile(seller.id)}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? '#141E33' : '#0F172A',
-                borderRadius: 18,
+                backgroundColor: pressed ? colors.surfaceElevated : colors.surface,
+                borderRadius: 22,
                 padding: 16,
                 marginBottom: 12,
                 borderWidth: 1,
-                borderColor: '#1E293B',
+                borderColor: colors.border,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: theme === 'dark' ? 0.25 : 0.05,
+                shadowRadius: 6,
               })}
             >
               {/* TOP ROW: ICON, NAME, RATING */}
@@ -105,41 +111,39 @@ export default function SellersScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                   <View
                     style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 23,
-                      backgroundColor: '#1E293B',
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      backgroundColor: colors.surfaceSubtle,
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderWidth: 1,
-                      borderColor: '#334155',
+                      borderColor: colors.border,
                     }}
                   >
                     <Text style={{ fontSize: 22 }}>🛡️</Text>
                   </View>
 
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: '800' }} numberOfLines={1}>
+                    <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }} numberOfLines={1}>
                       {seller.name}
                     </Text>
 
                     {/* PLATFORM & GAMES COUNT ROW */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                       <View
                         style={{
                           backgroundColor: isWhatsApp ? 'rgba(37, 211, 102, 0.15)' : 'rgba(0, 136, 204, 0.15)',
-                          paddingHorizontal: 7,
+                          paddingHorizontal: 8,
                           paddingVertical: 2,
                           borderRadius: 6,
-                          borderWidth: 0.5,
-                          borderColor: isWhatsApp ? '#25D366' : '#0088CC',
                         }}
                       >
                         <Text
                           style={{
                             color: isWhatsApp ? '#25D366' : '#0088CC',
                             fontSize: 10,
-                            fontWeight: '700',
+                            fontWeight: '800',
                           }}
                         >
                           {seller.contact_platform}
@@ -148,13 +152,13 @@ export default function SellersScreen() {
 
                       <View
                         style={{
-                          backgroundColor: '#1E293B',
-                          paddingHorizontal: 7,
+                          backgroundColor: colors.surfaceSubtle,
+                          paddingHorizontal: 8,
                           paddingVertical: 2,
                           borderRadius: 6,
                         }}
                       >
-                        <Text style={{ color: '#94A3B8', fontSize: 10, fontWeight: '600' }}>
+                        <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '700' }}>
                           {sellerGamesCount} {sellerGamesCount === 1 ? 'Game' : 'Games'}
                         </Text>
                       </View>
@@ -177,15 +181,15 @@ export default function SellersScreen() {
                   }}
                 >
                   <Text style={{ color: '#FFD700', fontSize: 12 }}>★</Text>
-                  <Text style={{ color: '#F8FAFC', fontSize: 12, fontWeight: '800' }}>
+                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '800' }}>
                     {seller.reputation_score.toFixed(1)}
                   </Text>
                 </View>
               </View>
 
-              {/* NOTES / BIO */}
+              {/* NOTES */}
               {seller.notes && (
-                <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 10, lineHeight: 16 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 10, lineHeight: 16 }}>
                   {seller.notes}
                 </Text>
               )}
@@ -196,13 +200,13 @@ export default function SellersScreen() {
                   marginTop: 12,
                   paddingTop: 12,
                   borderTopWidth: 1,
-                  borderTopColor: '#1E293B',
+                  borderTopColor: colors.border,
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#00D2FF', fontSize: 12, fontWeight: '700' }}>
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>
                   View {sellerGamesCount} Games →
                 </Text>
 
@@ -210,12 +214,12 @@ export default function SellersScreen() {
                   onPress={(e) => openQuickChat(seller, e)}
                   style={({ pressed }) => ({
                     backgroundColor: pressed ? '#005bb5' : '#0070D1',
-                    paddingHorizontal: 12,
+                    paddingHorizontal: 14,
                     paddingVertical: 6,
                     borderRadius: 8,
                   })}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
                     Chat Now
                   </Text>
                 </Pressable>

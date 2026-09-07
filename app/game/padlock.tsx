@@ -11,6 +11,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Game, Seller } from '../../types/vault';
 import {
@@ -23,6 +24,7 @@ import { PulsingPadlockBadge } from '../../components/PulsingPadlockBadge';
 export default function PadlockProtocolModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors, theme } = useVaultTheme();
 
   const [game, setGame] = useState<Game | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -44,8 +46,8 @@ export default function PadlockProtocolModal() {
 
   if (!game) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#080B14', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: '#F8FAFC' }}>No game selected.</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: colors.text }}>No game selected.</Text>
       </SafeAreaView>
     );
   }
@@ -78,7 +80,7 @@ export default function PadlockProtocolModal() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#080B14' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* HEADER */}
       <View
         style={{
@@ -88,13 +90,13 @@ export default function PadlockProtocolModal() {
           paddingHorizontal: 20,
           paddingVertical: 14,
           borderBottomWidth: 1,
-          borderBottomColor: '#1E293B',
+          borderBottomColor: colors.border,
         }}
       >
         <Pressable onPress={() => router.back()}>
-          <Text style={{ color: '#94A3B8', fontSize: 15, fontWeight: '700' }}>Close</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 15, fontWeight: '700' }}>Close</Text>
         </Pressable>
-        <Text style={{ color: '#FF453A', fontSize: 16, fontWeight: '800' }}>
+        <Text style={{ color: colors.danger, fontSize: 16, fontWeight: '800' }}>
           PADLOCK PROTOCOL
         </Text>
         <View style={{ width: 40 }} />
@@ -104,19 +106,19 @@ export default function PadlockProtocolModal() {
         {/* ALERT HEADER */}
         <View
           style={{
-            backgroundColor: '#261014',
-            borderRadius: 16,
-            padding: 16,
+            backgroundColor: theme === 'dark' ? '#261014' : '#FEF2F2',
+            borderRadius: 22,
+            padding: 18,
             borderWidth: 1.5,
-            borderColor: '#FF3B30',
+            borderColor: colors.danger,
             alignItems: 'center',
           }}
         >
           <PulsingPadlockBadge size="lg" showLabel={false} />
-          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginTop: 10 }}>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 10 }}>
             License Revocation Protocol
           </Text>
-          <Text style={{ color: '#FDA4AF', fontSize: 13, textAlign: 'center', marginTop: 4 }}>
+          <Text style={{ color: colors.danger, fontSize: 13, textAlign: 'center', marginTop: 4, fontWeight: '600' }}>
             Generate and dispatch your automated warranty replacement claim.
           </Text>
         </View>
@@ -124,22 +126,26 @@ export default function PadlockProtocolModal() {
         {/* STATUS CARD */}
         <View
           style={{
-            backgroundColor: '#111726',
-            borderRadius: 14,
+            backgroundColor: colors.surface,
+            borderRadius: 18,
             padding: 16,
             marginTop: 16,
             borderWidth: 1,
-            borderColor: '#1E293B',
+            borderColor: colors.border,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: theme === 'dark' ? 0.2 : 0.04,
+            shadowRadius: 4,
           }}
         >
-          <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
             WARRANTY VERIFICATION
           </Text>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>{game.title}</Text>
+            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>{game.title}</Text>
             <Text
               style={{
-                color: warranty.isWarrantyActive ? '#30D158' : '#FF453A',
+                color: warranty.isWarrantyActive ? colors.success : colors.danger,
                 fontWeight: '800',
                 fontSize: 13,
               }}
@@ -147,7 +153,7 @@ export default function PadlockProtocolModal() {
               {warranty.isWarrantyActive ? `ACTIVE (${warranty.daysRemaining}d left)` : 'EXPIRED'}
             </Text>
           </View>
-          <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
             Seller: {seller?.name || 'Unknown'} • Platform: {seller?.contact_platform || 'N/A'}
           </Text>
         </View>
@@ -155,35 +161,35 @@ export default function PadlockProtocolModal() {
         {/* GENERATED CLAIM STRING */}
         <View
           style={{
-            backgroundColor: '#111726',
-            borderRadius: 14,
+            backgroundColor: colors.surface,
+            borderRadius: 18,
             padding: 16,
             marginTop: 16,
             borderWidth: 1,
-            borderColor: '#1E293B',
+            borderColor: colors.border,
           }}
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
               PRE-FILLED CLAIM MESSAGE
             </Text>
             <Pressable onPress={handleCopy}>
-              <Text style={{ color: copied ? '#30D158' : '#00D2FF', fontSize: 12, fontWeight: '700' }}>
-                {copied ? 'Copied!' : 'Copy Text'}
+              <Text style={{ color: copied ? colors.success : colors.accent, fontSize: 12, fontWeight: '800' }}>
+                {copied ? '✓ Copied!' : 'Copy Text'}
               </Text>
             </Pressable>
           </View>
 
           <View
             style={{
-              backgroundColor: '#080B14',
-              borderRadius: 10,
-              padding: 12,
+              backgroundColor: colors.surfaceSubtle,
+              borderRadius: 12,
+              padding: 14,
               borderWidth: 1,
-              borderColor: '#1E293B',
+              borderColor: colors.border,
             }}
           >
-            <Text style={{ color: '#E2E8F0', fontSize: 12, fontFamily: 'monospace', lineHeight: 18 }}>
+            <Text style={{ color: colors.text, fontSize: 12, fontFamily: 'monospace', lineHeight: 18 }}>
               {claimMessage}
             </Text>
           </View>
@@ -195,9 +201,9 @@ export default function PadlockProtocolModal() {
             <Pressable
               onPress={handleLaunchDeepLink}
               style={({ pressed }) => ({
-                backgroundColor: pressed ? '#DC2626' : '#EF4444',
-                paddingVertical: 14,
-                borderRadius: 12,
+                backgroundColor: pressed ? '#DC2626' : colors.danger,
+                paddingVertical: 15,
+                borderRadius: 14,
                 alignItems: 'center',
               })}
             >
@@ -210,15 +216,15 @@ export default function PadlockProtocolModal() {
           <Pressable
             onPress={handleMarkInResolution}
             style={({ pressed }) => ({
-              backgroundColor: pressed ? '#1E293B' : '#141D2E',
-              paddingVertical: 14,
-              borderRadius: 12,
+              backgroundColor: colors.surfaceSubtle,
+              paddingVertical: 15,
+              borderRadius: 14,
               alignItems: 'center',
               borderWidth: 1,
-              borderColor: '#2D3D5A',
+              borderColor: colors.border,
             })}
           >
-            <Text style={{ color: '#60A5FA', fontWeight: '700', fontSize: 14 }}>
+            <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 14 }}>
               Mark as "In Resolution"
             </Text>
           </Pressable>

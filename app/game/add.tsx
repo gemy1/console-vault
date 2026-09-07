@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useVaultTheme } from '../../context/ThemeContext';
 import { OfflineVault } from '../../services/storage';
 import { Game, Seller, AccountType } from '../../types/vault';
 
 export default function AddGameScreen() {
   const router = useRouter();
+  const { colors } = useVaultTheme();
 
   const [title, setTitle] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
@@ -65,7 +67,7 @@ export default function AddGameScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#080B14' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* HEADER */}
       <View
         style={{
@@ -73,64 +75,64 @@ export default function AddGameScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: 20,
-          paddingVertical: 12,
+          paddingVertical: 14,
           borderBottomWidth: 1,
-          borderBottomColor: '#1E293B',
+          borderBottomColor: colors.border,
         }}
       >
         <Pressable onPress={() => router.back()}>
-          <Text style={{ color: '#00D2FF', fontSize: 15, fontWeight: '700' }}>Cancel</Text>
+          <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>Cancel</Text>
         </Pressable>
-        <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: '800' }}>Add Digital Game</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }}>Add Digital Game</Text>
         <Pressable onPress={handleSave}>
-          <Text style={{ color: '#30D158', fontSize: 15, fontWeight: '800' }}>Save</Text>
+          <Text style={{ color: colors.success, fontSize: 15, fontWeight: '800' }}>Save</Text>
         </Pressable>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
         {/* GAME TITLE */}
-        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
           GAME TITLE *
         </Text>
         <TextInput
           placeholder="e.g. Demon's Souls"
-          placeholderTextColor="#64748B"
+          placeholderTextColor={colors.textMuted}
           value={title}
           onChangeText={setTitle}
           style={{
-            backgroundColor: '#111726',
-            color: '#FFFFFF',
-            borderRadius: 10,
-            padding: 12,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            borderRadius: 14,
+            padding: 14,
             borderWidth: 1,
-            borderColor: '#1E293B',
+            borderColor: colors.border,
             marginBottom: 16,
           }}
         />
 
         {/* COVER IMAGE URL */}
-        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
           COVER ART IMAGE URL
         </Text>
         <TextInput
           placeholder="https://image.api.playstation.com/..."
-          placeholderTextColor="#64748B"
+          placeholderTextColor={colors.textMuted}
           value={coverUrl}
           onChangeText={setCoverUrl}
           autoCapitalize="none"
           style={{
-            backgroundColor: '#111726',
-            color: '#FFFFFF',
-            borderRadius: 10,
-            padding: 12,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            borderRadius: 14,
+            padding: 14,
             borderWidth: 1,
-            borderColor: '#1E293B',
+            borderColor: colors.border,
             marginBottom: 16,
           }}
         />
 
         {/* ACCOUNT TYPE */}
-        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
           ACCOUNT ACTIVATION TYPE
         </Text>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
@@ -142,15 +144,15 @@ export default function AddGameScreen() {
                 onPress={() => setAccountType(type)}
                 style={{
                   flex: 1,
-                  backgroundColor: isSelected ? '#0070D1' : '#111726',
-                  paddingVertical: 12,
-                  borderRadius: 10,
+                  backgroundColor: isSelected ? colors.pillActiveBg : colors.surface,
+                  paddingVertical: 14,
+                  borderRadius: 14,
                   alignItems: 'center',
                   borderWidth: 1,
-                  borderColor: isSelected ? '#0070D1' : '#1E293B',
+                  borderColor: isSelected ? colors.pillActiveBg : colors.border,
                 }}
               >
-                <Text style={{ color: isSelected ? '#FFFFFF' : '#94A3B8', fontWeight: '700' }}>
+                <Text style={{ color: isSelected ? colors.pillActiveText : colors.textSecondary, fontWeight: '800' }}>
                   {type} Account
                 </Text>
               </Pressable>
@@ -159,28 +161,28 @@ export default function AddGameScreen() {
         </View>
 
         {/* WARRANTY MONTHS */}
-        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
           WARRANTY DURATION (MONTHS)
         </Text>
         <TextInput
           placeholder="6"
-          placeholderTextColor="#64748B"
+          placeholderTextColor={colors.textMuted}
           value={warrantyMonths}
           onChangeText={setWarrantyMonths}
           keyboardType="numeric"
           style={{
-            backgroundColor: '#111726',
-            color: '#FFFFFF',
-            borderRadius: 10,
-            padding: 12,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            borderRadius: 14,
+            padding: 14,
             borderWidth: 1,
-            borderColor: '#1E293B',
+            borderColor: colors.border,
             marginBottom: 16,
           }}
         />
 
         {/* SELLER SELECTOR */}
-        <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
           SELECT SELLER
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
@@ -192,15 +194,15 @@ export default function AddGameScreen() {
                   key={s.id}
                   onPress={() => setSellerId(s.id)}
                   style={{
-                    backgroundColor: isSelected ? '#00D2FF' : '#111726',
+                    backgroundColor: isSelected ? colors.pillActiveBg : colors.surface,
                     paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 8,
+                    paddingVertical: 10,
+                    borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: isSelected ? '#00D2FF' : '#1E293B',
+                    borderColor: isSelected ? colors.pillActiveBg : colors.border,
                   }}
                 >
-                  <Text style={{ color: isSelected ? '#080B14' : '#F8FAFC', fontWeight: '700', fontSize: 12 }}>
+                  <Text style={{ color: isSelected ? colors.pillActiveText : colors.text, fontWeight: '800', fontSize: 12 }}>
                     {s.name} ({s.contact_platform})
                   </Text>
                 </Pressable>
@@ -212,78 +214,78 @@ export default function AddGameScreen() {
         {/* SENSITIVE SECTION */}
         <View
           style={{
-            backgroundColor: '#0F1626',
-            borderRadius: 12,
+            backgroundColor: colors.surface,
+            borderRadius: 18,
             padding: 16,
             borderWidth: 1,
-            borderColor: '#0070D1',
+            borderColor: colors.border,
             marginTop: 8,
           }}
         >
-          <Text style={{ color: '#00D2FF', fontSize: 13, fontWeight: '800', marginBottom: 10 }}>
+          <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '800', marginBottom: 12 }}>
             🔒 SENSITIVE PSN CREDENTIALS
           </Text>
 
           {/* EMAIL */}
-          <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
             PSN EMAIL *
           </Text>
           <TextInput
             placeholder="psn.account@gmail.com"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.textMuted}
             value={psnEmail}
             onChangeText={setPsnEmail}
             autoCapitalize="none"
             keyboardType="email-address"
             style={{
-              backgroundColor: '#080B14',
-              color: '#FFFFFF',
-              borderRadius: 8,
-              padding: 10,
+              backgroundColor: colors.surfaceSubtle,
+              color: colors.text,
+              borderRadius: 12,
+              padding: 12,
               borderWidth: 1,
-              borderColor: '#1E293B',
+              borderColor: colors.border,
               marginBottom: 12,
             }}
           />
 
           {/* PASSWORD */}
-          <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
             PSN PASSWORD *
           </Text>
           <TextInput
             placeholder="AccountPassword#123"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.textMuted}
             value={psnPassword}
             onChangeText={setPsnPassword}
             autoCapitalize="none"
             style={{
-              backgroundColor: '#080B14',
-              color: '#FFFFFF',
-              borderRadius: 8,
-              padding: 10,
+              backgroundColor: colors.surfaceSubtle,
+              color: colors.text,
+              borderRadius: 12,
+              padding: 12,
               borderWidth: 1,
-              borderColor: '#1E293B',
+              borderColor: colors.border,
               marginBottom: 12,
             }}
           />
 
           {/* BACKUP CODES */}
-          <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
             2FA BACKUP CODES (COMMA SEPARATED)
           </Text>
           <TextInput
             placeholder="12345678, 87654321"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.textMuted}
             value={backupCodesStr}
             onChangeText={setBackupCodesStr}
             autoCapitalize="none"
             style={{
-              backgroundColor: '#080B14',
-              color: '#FFFFFF',
-              borderRadius: 8,
-              padding: 10,
+              backgroundColor: colors.surfaceSubtle,
+              color: colors.text,
+              borderRadius: 12,
+              padding: 12,
               borderWidth: 1,
-              borderColor: '#1E293B',
+              borderColor: colors.border,
             }}
           />
         </View>
@@ -292,14 +294,15 @@ export default function AddGameScreen() {
         <Pressable
           onPress={handleSave}
           style={({ pressed }) => ({
-            backgroundColor: pressed ? '#005bb5' : '#0070D1',
-            paddingVertical: 14,
-            borderRadius: 12,
+            backgroundColor: colors.text,
+            paddingVertical: 16,
+            borderRadius: 16,
             alignItems: 'center',
             marginTop: 24,
+            opacity: pressed ? 0.8 : 1,
           })}
         >
-          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }}>
+          <Text style={{ color: colors.bg, fontWeight: '800', fontSize: 15 }}>
             Add Game to Vault
           </Text>
         </Pressable>
