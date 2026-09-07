@@ -52,7 +52,7 @@ export function ModernHeader({
       toValue: 1,
       tension: 55,
       friction: 11,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, []);
 

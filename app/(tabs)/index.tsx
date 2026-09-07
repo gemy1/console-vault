@@ -406,7 +406,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     scrollContent: {
       paddingTop: 14,
-      paddingBottom: 40,
+      paddingBottom: 96,
     },
     topWidgetWrapper: {
       paddingHorizontal: 20,

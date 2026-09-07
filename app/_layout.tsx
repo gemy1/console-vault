@@ -4,7 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { VaultThemeProvider, useVaultTheme } from "../context/ThemeContext";
 
 export { ErrorBoundary } from "expo-router";
@@ -106,7 +106,7 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <VaultThemeProvider>
         <RootNavigator />
       </VaultThemeProvider>

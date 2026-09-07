@@ -256,7 +256,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       paddingHorizontal: 20,
     },
     scrollContent: {
-      paddingBottom: 40,
+      paddingBottom: 96,
     },
     accentTint: {
       color: colors.accent,

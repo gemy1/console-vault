@@ -160,7 +160,7 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
     },
     scrollContent: {
       paddingTop: 16,
-      paddingBottom: 60,
+      paddingBottom: 96,
     },
     accentIcon: {
       color: colors.accent,
