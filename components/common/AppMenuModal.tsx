@@ -9,7 +9,9 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Linking,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { VaultText as Text } from './VaultText';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,6 +108,13 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     setTimeout(() => {
       router.push('/modal');
     }, 120);
+  };
+
+  const handleOpenLinkedIn = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Linking.openURL('https://www.linkedin.com/in/gamal-haroun/');
+    } catch {}
   };
 
   if (!modalRendered && !visible) {
@@ -337,11 +346,32 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
             </View>
           </ScrollView>
 
-          {/* MINIMAL FOOTER */}
+          {/* FOOTER: APP NAME, VERSION & GAMAL HAROUN ATTRIBUTION */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Console Vault • v1.0.0
+            <Text style={styles.footerAppName}>
+              Console Vault <Text style={styles.footerVersion}>• v1.0.0</Text>
             </Text>
+
+            <Pressable
+              onPress={handleOpenLinkedIn}
+              style={({ pressed }) => [
+                styles.authorPill,
+                isNativeRTL && { flexDirection: 'row-reverse' },
+                pressed && styles.authorPillPressed,
+              ]}
+              accessibilityRole="link"
+              accessibilityLabel="Gamal Haroun LinkedIn profile"
+            >
+              <Text style={styles.authorText}>
+                {isRTL ? 'صُنع بكل ❤️ بواسطة ' : 'Made with ❤️ by '}
+                <Text style={styles.authorHighlight}>Gamal Haroun</Text>
+              </Text>
+              <View style={styles.linkedInCircle}>
+                <Svg width={11} height={11} viewBox="0 0 24 24" fill="#0A66C2">
+                  <Path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.45a1.64 1.64 0 1 0 0 3.28 1.64 1.64 0 0 0 0-3.28" />
+                </Svg>
+              </View>
+            </Pressable>
           </View>
         </Animated.View>
       </View>
@@ -559,15 +589,56 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     /* FOOTER */
     footer: {
       alignItems: 'center',
-      paddingTop: 10,
+      justifyContent: 'center',
+      paddingTop: 12,
+      paddingBottom: 4,
       borderTopWidth: 1,
       borderTopColor: colors.border,
+      gap: 6,
     },
-    footerText: {
+    footerAppName: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.4,
+    },
+    footerVersion: {
       color: colors.textMuted,
       fontSize: 10,
       fontWeight: '500',
-      letterSpacing: 0.5,
+    },
+    authorPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 14,
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    },
+    authorPillPressed: {
+      opacity: 0.7,
+      transform: [{ scale: 0.97 }],
+    },
+    authorText: {
+      color: colors.textSecondary,
+      fontSize: 10,
+      fontWeight: '500',
+    },
+    authorHighlight: {
+      color: colors.accent,
+      fontWeight: '700',
+    },
+    linkedInCircle: {
+      width: 16,
+      height: 16,
+      borderRadius: 3,
+      backgroundColor: theme === 'dark' ? 'rgba(10, 102, 194, 0.18)' : '#E8F3FC',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
 
     /* UTILITIES */
