@@ -23,7 +23,7 @@ export default function NotFoundScreen() {
   );
 }
 
-const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
+const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
   StyleSheet.create({
     container: {
       flex: 1,

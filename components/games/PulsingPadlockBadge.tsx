@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import Animated, {

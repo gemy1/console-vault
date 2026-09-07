@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Menu } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';

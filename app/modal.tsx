@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { VaultText as Text } from '../components/common/VaultText';
 import { useRouter } from 'expo-router';

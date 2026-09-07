@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   ScrollView,
-  Pressable,
   RefreshControl,
   StyleSheet,
   NativeSyntheticEvent,
@@ -12,8 +11,7 @@ import { VaultText as Text } from '../../components/common/VaultText';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ShieldCheck } from 'lucide-react-native';
-import { OfflineVault } from '../../services/storage';
-import { Seller, Game } from '../../types/vault';
+import { Seller } from '../../types/vault';
 import { ModernHeader, QuickAddWidget } from '../../components/common';
 import { SellerCard, SellerFormModal } from '../../components/sellers';
 import { useThemedStyles } from '../../hooks/useThemedStyles';

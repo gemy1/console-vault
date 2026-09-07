@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Modal, TextInput, Pressable, Alert, StyleSheet } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import { useThemedStyles } from '../../hooks/useThemedStyles';

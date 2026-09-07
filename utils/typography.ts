@@ -1,4 +1,4 @@
-import { Platform, TextStyle, StyleSheet } from 'react-native';
+import { Platform, TextStyle } from 'react-native';
 
 /**
  * Returns cross-platform Cairo font style for native iOS, Android, and Web.

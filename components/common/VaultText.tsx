@@ -1,10 +1,10 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Text as RNText, TextProps, StyleSheet, TextStyle } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import { getFontStyle } from '../../utils/typography';
 
 export interface VaultTextProps extends TextProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 export function VaultText({ style, children, ...props }: VaultTextProps) {

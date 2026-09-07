@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   ScrollView,
@@ -13,7 +13,6 @@ import {
 import { VaultText as Text } from "../../components/common/VaultText";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { OfflineVault } from "../../services/storage";
 import { Game, Seller, ContactPlatform, SellerContactMethod } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
 import { ModernHeader, QuickAddWidget } from "../../components/common";
@@ -25,7 +24,6 @@ import {
   Lock,
   ChevronRight,
   ChevronLeft,
-  Clock,
 } from "lucide-react-native";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";

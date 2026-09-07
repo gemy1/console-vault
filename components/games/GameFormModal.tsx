@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -96,7 +96,7 @@ export function GameFormModal({
 
   useEffect(() => {
     if (visible) {
-      const loadedSellers = loadSellers();
+      loadSellers();
       setSellerDropdownOpen(false);
       setSellerSearchQuery('');
 
@@ -187,7 +187,7 @@ export function GameFormModal({
     };
 
     OfflineVault.addSeller(newSeller);
-    const updatedSellers = loadSellers();
+    loadSellers();
     setSellerMode('seller');
     setSellerId(newSeller.id);
     setQuickAddSellerVisible(false);

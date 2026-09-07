@@ -1,4 +1,4 @@
-import React from 'react';
+import { Fragment } from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { VaultText as Text } from './VaultText';
 import * as Haptics from 'expo-haptics';
@@ -48,7 +48,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
           {actions.map((item, index) => {
             const isGame = item.icon === 'game';
             return (
-              <React.Fragment key={item.id || index}>
+              <Fragment key={item.id || index}>
                 {index > 0 && <View style={styles.horizontalDivider} />}
 
                 <Pressable
@@ -98,7 +98,7 @@ export function QuickAddWidget({ actions, tag }: QuickAddWidgetProps) {
                     <Plus size={11} color="#FFFFFF" strokeWidth={2.8} />
                   </View>
                 </Pressable>
-              </React.Fragment>
+              </Fragment>
             );
           })}
         </View>

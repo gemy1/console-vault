@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Sun, Moon } from 'lucide-react-native';
 import { useVaultTheme, ThemeColors, ThemeMode } from '../../context/ThemeContext';

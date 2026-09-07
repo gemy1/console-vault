@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import {
   View,
   Pressable,
@@ -41,7 +41,7 @@ export interface BottomTabBarProps {
         title?: string;
         tabBarLabel?:
           | string
-          | ((props: { focused: boolean; color: string }) => React.ReactNode);
+          | ((props: { focused: boolean; color: string }) => ReactNode);
       };
     }
   >;

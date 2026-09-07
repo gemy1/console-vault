@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { VaultStorage } from '../services/storage';

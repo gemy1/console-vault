@@ -1,4 +1,3 @@
-import React from 'react';
 import Svg, { Path } from 'react-native-svg';
 import { MessageCircle, Send, Gamepad2, Globe } from 'lucide-react-native';
 import { ContactPlatform } from '../../types/vault';

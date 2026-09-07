@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import { ShieldCheck, Star, ChevronRight, ChevronLeft, Pencil, FileText } from 'lucide-react-native';

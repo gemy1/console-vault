@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   Pressable,
   Animated,
   Easing,
-  Platform,
 } from 'react-native';
-import { ShieldCheck, Fingerprint, Lock, Delete, KeyRound } from 'lucide-react-native';
+import { ShieldCheck, Fingerprint, Delete, KeyRound } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { VaultText as Text } from '../common/VaultText';
 import { useSecurity } from '../../context/SecurityContext';
@@ -16,7 +15,7 @@ import { useLanguage } from '../../context/LanguageContext';
 
 export function BiometricLockScreen() {
   const { colors, theme } = useVaultTheme();
-  const { t, isRTL } = useLanguage();
+  const { isRTL } = useLanguage();
   const {
     isVaultUnlocked,
     isBiometricsAvailable,

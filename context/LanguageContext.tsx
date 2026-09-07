@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { Platform, I18nManager } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { VaultStorage } from '../services/storage';
@@ -52,7 +52,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   } catch {}
 }
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(getStoredLanguage);
 
   // Load persisted language (ensures native AsyncStorage hydration is caught)

@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, Pressable, Image, StyleSheet, Platform } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import { Gamepad2, ChevronRight, ChevronLeft } from 'lucide-react-native';

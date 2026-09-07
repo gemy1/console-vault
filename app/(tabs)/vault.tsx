@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   TextInput,
@@ -11,10 +11,9 @@ import {
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { OfflineVault } from '../../services/storage';
 import { ModernHeader, QuickAddWidget } from '../../components/common';
 import { GameCard, GameFormModal } from '../../components/games';
-import { Game, Seller } from '../../types/vault';
+import { Game } from '../../types/vault';
 import { Search, X, Gamepad2 } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';

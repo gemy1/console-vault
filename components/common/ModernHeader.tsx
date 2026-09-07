@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import { useRef, useEffect, type ReactNode } from "react";
 import {
   View,
   Pressable,
@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react-native";
-import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
+import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { MenuToggleButton } from "./MenuToggleButton";
 import { useLanguage } from "../../context/LanguageContext";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
@@ -21,7 +21,7 @@ interface ModernHeaderProps {
   title?: string;
   subtitle?: string;
   showBackButton?: boolean;
-  rightAction?: React.ReactNode;
+  rightAction?: ReactNode;
   showMenuButton?: boolean;
   transparent?: boolean;
   /** Pass an Animated.Value driven by ScrollView onScroll to enable scroll-fade glass effect */
@@ -39,7 +39,6 @@ export function ModernHeader({
 }: ModernHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, theme } = useVaultTheme();
   const { isRTL } = useLanguage();
   const styles = useThemedStyles(createStyles);
 

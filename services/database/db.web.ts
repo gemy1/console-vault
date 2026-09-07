@@ -112,7 +112,7 @@ class WebDatabaseEngine {
   async runAsync(sql: string, ...params: any[]): Promise<SQLiteRunResult> {
     const bindParams = params.length === 1 && Array.isArray(params[0]) ? params[0] : params;
     if (sql.startsWith('INSERT INTO games')) {
-      if (params) {
+      if (bindParams) {
         const [
           id,
           user_id,
@@ -129,7 +129,7 @@ class WebDatabaseEngine {
           notes,
           created_at,
           updated_at,
-        ] = params;
+        ] = bindParams;
         this.games.set(id, {
           id,
           user_id,
@@ -152,7 +152,7 @@ class WebDatabaseEngine {
       }
     }
     if (sql.startsWith('INSERT INTO sellers')) {
-      if (params) {
+      if (bindParams) {
         const [
           id,
           user_id,
@@ -164,7 +164,7 @@ class WebDatabaseEngine {
           notes,
           created_at,
           updated_at,
-        ] = params;
+        ] = bindParams;
         this.sellers.set(id, {
           id,
           user_id,
@@ -182,40 +182,40 @@ class WebDatabaseEngine {
       }
     }
     if (sql.startsWith('INSERT INTO sync_queue')) {
-      if (params) {
-        const [id, entity, action, payload, timestamp] = params;
+      if (bindParams) {
+        const [id, entity, action, payload, timestamp] = bindParams;
         this.syncQueue.set(id, { id, entity, action, payload, timestamp });
         this.persist('sync_queue');
         return { changes: 1, lastInsertRowId: 1 };
       }
     }
     if (sql.startsWith('DELETE FROM games WHERE id = ?')) {
-      if (params && params[0]) {
-        const deleted = this.games.delete(params[0]);
+      if (bindParams && bindParams[0]) {
+        const deleted = this.games.delete(bindParams[0]);
         this.persist('games');
         return { changes: deleted ? 1 : 0, lastInsertRowId: 0 };
       }
     }
     if (sql.startsWith('DELETE FROM sellers WHERE id = ?')) {
-      if (params && params[0]) {
-        const deleted = this.sellers.delete(params[0]);
+      if (bindParams && bindParams[0]) {
+        const deleted = this.sellers.delete(bindParams[0]);
         this.persist('sellers');
         return { changes: deleted ? 1 : 0, lastInsertRowId: 0 };
       }
     }
     if (sql.startsWith('DELETE FROM sync_queue WHERE id = ?')) {
-      if (params && params[0]) {
-        const deleted = this.syncQueue.delete(params[0]);
+      if (bindParams && bindParams[0]) {
+        const deleted = this.syncQueue.delete(bindParams[0]);
         this.persist('sync_queue');
         return { changes: deleted ? 1 : 0, lastInsertRowId: 0 };
       }
     }
     if (sql.includes('DELETE FROM sync_queue WHERE entity = ?')) {
-      if (params && params[0] && params[1]) {
+      if (bindParams && bindParams[0] && bindParams[1]) {
         for (const [k, v] of this.syncQueue.entries()) {
           try {
             const p = JSON.parse(v.payload);
-            if (v.entity === params[0] && p.id === params[1]) {
+            if (v.entity === bindParams[0] && p.id === bindParams[1]) {
               this.syncQueue.delete(k);
             }
           } catch {}

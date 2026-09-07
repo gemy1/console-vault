@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 import { VaultText as Text } from './VaultText';
 import { Globe } from 'lucide-react-native';
