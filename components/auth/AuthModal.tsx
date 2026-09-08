@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Shield, Mail, Lock, Eye, EyeOff, X, ArrowRight, ArrowLeft, CircleCheck } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { VaultText as Text } from '../common/VaultText';
 import { useAuth } from '../../context/AuthContext';
 import { useVaultTheme, ThemeColors, ThemeMode } from '../../context/ThemeContext';

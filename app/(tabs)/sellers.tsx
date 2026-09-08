@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { ShieldCheck } from 'lucide-react-native';
 import { Seller } from '../../types/vault';
 import { ModernHeader, QuickAddWidget } from '../../components/common';
@@ -19,6 +19,7 @@ import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 import { useVaultSync } from '../../context/VaultSyncContext';
+import { generateUUID } from '../../utils/uuid';
 
 export default function SellersScreen() {
   const router = useRouter();
@@ -80,7 +81,7 @@ export default function SellersScreen() {
       updateSeller(editingSeller.id, sellerData);
     } else {
       const newSeller: Seller = {
-        id: `seller-${Date.now()}`,
+        id: generateUUID(),
         user_id: 'user-demo',
         ...sellerData,
         created_at: new Date().toISOString(),

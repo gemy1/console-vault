@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 
 export interface BiometricPromptOptions {
   promptMessage?: string;

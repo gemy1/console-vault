@@ -101,10 +101,21 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     return result.success;
   }, [userId, pullFromCloud]);
 
+  // When user logs in with a valid userId, automatically flush pending items and pull latest
+  useEffect(() => {
+    if (isSupabaseConfigured && userId) {
+      syncNow();
+    }
+  }, [userId, syncNow]);
+
   // OPTIMISTIC CRUD OPERATIONS: Write local in 0ms, enqueue sync in background
   const addGame = useCallback(
     (game: Game): Game => {
-      const saved = OfflineVault.addGame(game);
+      const gameWithUser: Game = {
+        ...game,
+        user_id: userId || game.user_id || 'user-demo',
+      };
+      const saved = OfflineVault.addGame(gameWithUser);
       setGames([...OfflineVault.getGames()]);
       SyncQueue.enqueue({
         entity: 'game',
@@ -154,7 +165,11 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
 
   const addSeller = useCallback(
     (seller: Seller): Seller => {
-      const saved = OfflineVault.addSeller(seller);
+      const sellerWithUser: Seller = {
+        ...seller,
+        user_id: userId || seller.user_id || 'user-demo',
+      };
+      const saved = OfflineVault.addSeller(sellerWithUser);
       setSellers([...OfflineVault.getSellers()]);
       SyncQueue.enqueue({
         entity: 'seller',

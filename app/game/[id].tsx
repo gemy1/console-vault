@@ -13,7 +13,7 @@ import { VaultText as Text } from "../../components/common/VaultText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
+import * as Haptics from '@/utils/haptics';
 import { OfflineVault } from "../../services/storage";
 import { Game, Seller, GameStatus } from "../../types/vault";
 import { calculateWarranty } from "../../utils/padlock";

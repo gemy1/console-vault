@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { VaultText as Text } from "../common/VaultText";
 import Svg, { Path, Defs, LinearGradient, Stop } from "react-native-svg";
-import * as Haptics from "expo-haptics";
+import * as Haptics from '@/utils/haptics';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   LayoutDashboard,

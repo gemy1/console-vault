@@ -7,7 +7,7 @@ import {
   Easing,
 } from 'react-native';
 import { ShieldCheck, Fingerprint, Delete, KeyRound } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { VaultText as Text } from '../common/VaultText';
 import { useSecurity } from '../../context/SecurityContext';
 import { useVaultTheme } from '../../context/ThemeContext';

@@ -1,7 +1,8 @@
-import { VaultStorage } from './storage';
+import { VaultStorage, OfflineVault } from './storage';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { PendingSyncItem, SyncStatus } from '../types/vault';
 import { Platform } from 'react-native';
+import { toSafeUUID } from '../utils/uuid';
 
 const SYNC_QUEUE_KEY = 'vault_pending_sync_queue_v1';
 const LAST_SYNCED_KEY = 'vault_last_synced_timestamp_v1';
@@ -133,8 +134,10 @@ export const SyncQueue = {
         const table = item.entity === 'game' ? 'games' : 'sellers';
 
         if (item.action === 'UPSERT') {
+          const safeId = toSafeUUID(item.payload.id);
           const payloadWithUser = {
             ...item.payload,
+            id: safeId,
             user_id: userId || item.payload.user_id,
             updated_at: new Date().toISOString(),
           };
@@ -142,23 +145,52 @@ export const SyncQueue = {
           // Remove client-only joined fields before upserting
           if (item.entity === 'game') {
             delete payloadWithUser.seller;
+            // Clean up seller_id: empty string is invalid in PostgreSQL, ensure valid UUID
+            if (payloadWithUser.seller_id) {
+              payloadWithUser.seller_id = toSafeUUID(payloadWithUser.seller_id);
+            } else {
+              delete payloadWithUser.seller_id;
+            }
+            // Ensure psn_password is never null for Postgres not-null constraint
+            if (payloadWithUser.psn_password === undefined || payloadWithUser.psn_password === null) {
+              payloadWithUser.psn_password = '';
+            }
+            if (!payloadWithUser.notes) {
+              payloadWithUser.notes = '';
+            }
+            if (!payloadWithUser.backup_codes) {
+              payloadWithUser.backup_codes = [];
+            }
           }
 
           const { error } = await supabase.from(table).upsert(payloadWithUser);
           if (error) {
+            console.error(`[SyncQueue] Upsert error on table '${table}':`, error.message, error.details || '', error.hint || '');
             remainingQueue.push(item);
           } else {
             processedCount++;
+            if (item.payload.id !== safeId) {
+              if (item.entity === 'game') {
+                OfflineVault.deleteGame(item.payload.id);
+                OfflineVault.addGame({ ...item.payload, id: safeId });
+              } else if (item.entity === 'seller') {
+                OfflineVault.deleteSeller(item.payload.id);
+                OfflineVault.addSeller({ ...item.payload, id: safeId });
+              }
+            }
           }
         } else if (item.action === 'DELETE') {
-          const { error } = await supabase.from(table).delete().eq('id', item.payload.id);
+          const safeId = toSafeUUID(item.payload.id);
+          const { error } = await supabase.from(table).delete().eq('id', safeId);
           if (error) {
+            console.error(`[SyncQueue] Delete error on table '${table}':`, error.message);
             remainingQueue.push(item);
           } else {
             processedCount++;
           }
         }
       } catch (err) {
+        console.error('[SyncQueue] Exception during sync:', err);
         remainingQueue.push(item);
       }
     }

@@ -16,7 +16,7 @@ import Svg, { Path } from 'react-native-svg';
 import { VaultText as Text } from './VaultText';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import {
   X,
   Moon,

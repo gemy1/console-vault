@@ -10,7 +10,7 @@ import {
 import { VaultText as Text } from "./VaultText";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as Haptics from "expo-haptics";
+import * as Haptics from '@/utils/haptics';
 import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react-native";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { MenuToggleButton } from "./MenuToggleButton";

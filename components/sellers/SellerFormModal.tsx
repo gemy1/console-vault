@@ -11,7 +11,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { ShieldCheck, Star, Plus, X, Trash2, FileText, Pencil } from 'lucide-react-native';
 import { Seller, ContactPlatform, SellerContactMethod } from '../../types/vault';
 import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';

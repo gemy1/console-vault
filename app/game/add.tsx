@@ -1,26 +1,28 @@
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { OfflineVault } from '../../services/storage';
+import * as Haptics from '@/utils/haptics';
 import { Game } from '../../types/vault';
 import { GameFormModal, GameFormData } from '../../components/games/GameFormModal';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { useVaultSync } from '../../context/VaultSyncContext';
+import { generateUUID } from '../../utils/uuid';
 
 export default function AddGameScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
+  const { addGame } = useVaultSync();
 
   const handleSave = (gameData: GameFormData) => {
     const newGame: Game = {
-      id: `game-${Date.now()}`,
+      id: generateUUID(),
       user_id: 'user-current',
       status: 'Active',
       purchase_date: new Date().toISOString().split('T')[0],
       ...gameData,
     };
 
-    OfflineVault.addGame(newGame);
+    addGame(newGame);
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}

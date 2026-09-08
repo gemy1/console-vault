@@ -30,7 +30,7 @@ end $$;
 
 -- 3. SELLERS TABLE
 create table if not exists public.sellers (
-    id uuid primary key default uuid_generate_v4(),
+    id text primary key default uuid_generate_v4()::text,
     user_id uuid not null references auth.users(id) on delete cascade,
     name text not null,
     contact_platform contact_platform not null default 'WhatsApp',
@@ -47,9 +47,9 @@ alter table public.sellers add column if not exists contact_methods jsonb defaul
 
 -- 4. GAMES TABLE
 create table if not exists public.games (
-    id uuid primary key default uuid_generate_v4(),
+    id text primary key default uuid_generate_v4()::text,
     user_id uuid not null references auth.users(id) on delete cascade,
-    seller_id uuid references public.sellers(id) on delete set null,
+    seller_id text references public.sellers(id) on delete set null,
     title text not null,
     cover_image_url text,
     account_type account_type not null default 'Primary',
@@ -67,8 +67,8 @@ create table if not exists public.games (
 
 -- 5. CREDENTIAL HISTORY TABLE (Immutable Audit Log)
 create table if not exists public.credential_history (
-    id uuid primary key default uuid_generate_v4(),
-    game_id uuid not null references public.games(id) on delete cascade,
+    id text primary key default uuid_generate_v4()::text,
+    game_id text not null references public.games(id) on delete cascade,
     user_id uuid not null references auth.users(id) on delete cascade,
     previous_email text not null,
     previous_password text,
@@ -222,7 +222,7 @@ create table if not exists public.clients (
 create table if not exists public.client_allocations (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid not null references auth.users(id) on delete cascade,
-    game_id uuid not null references public.games(id) on delete cascade,
+    game_id text not null references public.games(id) on delete cascade,
     client_id uuid not null references public.clients(id) on delete cascade,
     slot_type account_type not null default 'Primary',
     sale_price numeric(10, 2) default 0.00,
@@ -238,9 +238,11 @@ create table if not exists public.client_allocations (
 alter table public.clients enable row level security;
 alter table public.client_allocations enable row level security;
 
+drop policy if exists "Users can manage own clients" on public.clients;
 create policy "Users can manage own clients" on public.clients
     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "Users can manage own allocations" on public.client_allocations;
 create policy "Users can manage own allocations" on public.client_allocations
     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 

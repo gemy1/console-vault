@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { VaultStorage } from '../services/storage';
 
 export type ThemeMode = 'dark' | 'light';

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { VaultText as Text } from "../../components/common/VaultText";
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
+import * as Haptics from '@/utils/haptics';
 import { Game, Seller, ContactPlatform, SellerContactMethod } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
 import { ModernHeader, QuickAddWidget } from "../../components/common";
@@ -29,6 +29,7 @@ import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { useVaultSync } from "../../context/VaultSyncContext";
+import { generateUUID } from "../../utils/uuid";
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function DashboardScreen() {
 
   const handleSaveGame = (gameData: any) => {
     const newGame: Game = {
-      id: `game-${Date.now()}`,
+      id: generateUUID(),
       user_id: 'user-demo',
       status: 'Active',
       purchase_date: new Date().toISOString().split('T')[0],
@@ -68,7 +69,7 @@ export default function DashboardScreen() {
     notes?: string;
   }) => {
     const newSeller: Seller = {
-      id: `seller-${Date.now()}`,
+      id: generateUUID(),
       user_id: 'user-demo',
       ...sellerData,
       created_at: new Date().toISOString(),

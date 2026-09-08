@@ -11,7 +11,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import {
   Gamepad2,
   Pencil,
@@ -36,6 +36,7 @@ import { SellerFormModal } from '../sellers/SellerFormModal';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { generateUUID } from '../../utils/uuid';
 
 const WARRANTY_PRESETS = ['3', '6', '12', '24'];
 
@@ -180,7 +181,7 @@ export function GameFormModal({
     notes?: string;
   }) => {
     const newSeller: Seller = {
-      id: `seller-${Date.now()}`,
+      id: generateUUID(),
       user_id: 'user-demo',
       ...sellerData,
       created_at: new Date().toISOString(),

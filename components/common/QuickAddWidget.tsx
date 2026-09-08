@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { VaultText as Text } from './VaultText';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { Gamepad2, ShieldCheck, Plus, Sparkles } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';

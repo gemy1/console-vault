@@ -1,6 +1,6 @@
 import { Linking, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { ContactPlatform, Seller, SellerContactMethod } from '../types/vault';
 
 export function getSellerContactList(seller: Seller): SellerContactMethod[] {

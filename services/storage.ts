@@ -61,27 +61,29 @@ const hydrationPromise = (async () => {
     }
 
     // 2. Hydrate from AsyncStorage / LocalStorage (for app settings like theme & language)
-    if (typeof window !== 'undefined' && window.localStorage) {
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const key = window.localStorage.key(i);
-        if (key) {
-          const val = window.localStorage.getItem(key);
-          if (val !== null && !memoryCache.has(key)) {
-            memoryCache.set(key, val);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
+          if (key) {
+            const val = window.localStorage.getItem(key);
+            if (val !== null && !memoryCache.has(key)) {
+              memoryCache.set(key, val);
+            }
           }
         }
+      } else {
+        const keys = await AsyncStorage.getAllKeys();
+        if (keys && keys.length > 0) {
+          const pairs = await AsyncStorage.multiGet(keys);
+          pairs.forEach(([k, v]) => {
+            if (v !== null && !memoryCache.has(k)) {
+              memoryCache.set(k, v);
+            }
+          });
+        }
       }
-    } else {
-      const keys = await AsyncStorage.getAllKeys();
-      if (keys && keys.length > 0) {
-        const pairs = await AsyncStorage.multiGet(keys);
-        pairs.forEach(([k, v]) => {
-          if (v !== null && !memoryCache.has(k)) {
-            memoryCache.set(k, v);
-          }
-        });
-      }
-    }
+    } catch {}
 
     // 3. Data Migration: If SQLite was empty but AsyncStorage had existing items, migrate to SQLite!
     const currentGames = memoryGames as Game[] | null;

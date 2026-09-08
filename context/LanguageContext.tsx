@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { Platform, I18nManager } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { VaultStorage } from '../services/storage';
 import { Language, TRANSLATIONS, TranslationKey } from '../constants/translations';
 

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '@/utils/haptics';
 import { ModernHeader, QuickAddWidget } from '../../components/common';
 import { GameCard, GameFormModal } from '../../components/games';
 import { Game } from '../../types/vault';
@@ -20,6 +20,7 @@ import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 import { useVaultSync } from '../../context/VaultSyncContext';
+import { generateUUID } from '../../utils/uuid';
 
 type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary' | 'Full';
 
@@ -37,7 +38,7 @@ export default function VaultScreen() {
 
   const handleSaveGame = (gameData: any) => {
     const newGame: Game = {
-      id: `game-${Date.now()}`,
+      id: generateUUID(),
       user_id: 'user-demo',
       status: 'Active',
       purchase_date: new Date().toISOString().split('T')[0],
