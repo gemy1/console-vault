@@ -9,9 +9,11 @@ import {
   Platform,
   Alert,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
+import { useSwipeDownModal } from '../../hooks/useSwipeDownModal';
 import { ShieldCheck, Star, Plus, X, Trash2, FileText, Pencil } from 'lucide-react-native';
 import { Seller, ContactPlatform, SellerContactMethod } from '../../types/vault';
 import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
@@ -163,15 +165,22 @@ export function SellerFormModal({
     });
   };
 
+  const { panY, panHandlers, closeWithSlide } = useSwipeDownModal({ visible, onClose });
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={closeWithSlide}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardContainer}
       >
-        <View style={styles.modalSheet}>
+        {/* BACKDROP DISMISS ON TAP */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeWithSlide} />
+
+        <Animated.View style={[styles.modalSheet, { transform: [{ translateY: panY }] }]}>
           {/* SHEET HANDLE */}
-          <View style={styles.sheetHandle} />
+          <View {...panHandlers} style={styles.handleContainer}>
+            <View style={styles.sheetHandle} />
+          </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* HEADER */}
@@ -186,7 +195,7 @@ export function SellerFormModal({
                   {initialSeller ? t('modalEditSellerTitle') : t('modalAddSellerTitle')}
                 </Text>
               </View>
-              <Pressable onPress={onClose} style={styles.closeButton}>
+              <Pressable onPress={closeWithSlide} style={styles.closeButton}>
                 <X size={16} color={styles.closeIcon.color} strokeWidth={2.2} />
               </Pressable>
             </View>
@@ -401,7 +410,7 @@ export function SellerFormModal({
 
             {/* BUTTONS */}
             <View style={[styles.buttonRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-              <Pressable onPress={onClose} style={styles.cancelBtn}>
+              <Pressable onPress={closeWithSlide} style={styles.cancelBtn}>
                 <Text style={styles.cancelBtnText}>{t('btnCancel')}</Text>
               </Pressable>
 
@@ -415,7 +424,7 @@ export function SellerFormModal({
               </Pressable>
             </View>
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -440,13 +449,19 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderColor: colors.border,
       maxHeight: '92%',
     },
+    handleContainer: {
+      width: '100%',
+      paddingTop: 2,
+      paddingBottom: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     sheetHandle: {
-      width: 36,
-      height: 4,
-      borderRadius: 2,
+      width: 42,
+      height: 5,
+      borderRadius: 2.5,
       backgroundColor: colors.border,
       alignSelf: 'center',
-      marginBottom: 16,
     },
     headerRow: {
       flexDirection: 'row',
