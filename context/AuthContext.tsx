@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo, type ReactNode } from 'react';
+import * as Linking from 'expo-linking';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { VaultStorage } from '../services/storage';
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Check existing session
+    // Check existing session from persistent storage
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -47,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -59,8 +60,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
+    // Handle deep linking for email confirmation and auth callbacks
+    const handleDeepLink = async (url: string | null) => {
+      if (!url) return;
+      try {
+        const parsed = Linking.parse(url);
+        const code = parsed.queryParams?.code;
+        if (typeof code === 'string') {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error && data.session) {
+            setSession(data.session);
+            setUser(data.user);
+            if (data.user) {
+              VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
+            }
+          }
+        } else if (url.includes('access_token=') && url.includes('refresh_token=')) {
+          const matchAccess = url.match(/access_token=([^&]+)/);
+          const matchRefresh = url.match(/refresh_token=([^&]+)/);
+          if (matchAccess && matchRefresh) {
+            const access_token = decodeURIComponent(matchAccess[1]);
+            const refresh_token = decodeURIComponent(matchRefresh[1]);
+            const { data, error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (!error && data.session) {
+              setSession(data.session);
+              setUser(data.user);
+              if (data.user) {
+                VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[AuthContext] Deep link handler error:', err);
+      }
+    };
+
+    Linking.getInitialURL().then(handleDeepLink);
+    const linkingSub = Linking.addEventListener('url', (event) => handleDeepLink(event.url));
+
     return () => {
       subscription.unsubscribe();
+      linkingSub.remove();
     };
   }, []);
 
@@ -107,9 +151,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      const redirectUrl = Linking.createURL('auth/callback');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
       });
 
       if (error) {
