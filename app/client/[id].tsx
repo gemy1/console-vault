@@ -190,22 +190,26 @@ export default function ClientDetailsScreen() {
     setSlotModalVisible(true);
   };
 
+  const getAllocPlatform = (slotType: SlotType, gamePlatform?: string): 'PS5' | 'PS4' | 'BOTH' => {
+    if (slotType.includes('PS5')) return 'PS5';
+    if (slotType.includes('PS4')) return 'PS4';
+    if (gamePlatform === 'BOTH') return 'BOTH';
+    return (gamePlatform as 'PS5' | 'PS4') || 'PS5';
+  };
+
   const getSlotTypeLabel = (slotType: SlotType): string => {
     switch (slotType) {
       case 'Primary_PS5':
-        return t('slotPrimaryPS5');
       case 'Primary_PS4':
-        return t('slotPrimaryPS4');
+        return t('filterPrimary');
       case 'Secondary_PS5':
-        return t('slotSecondaryPS5');
       case 'Secondary_PS4':
-        return t('slotSecondaryPS4');
       case 'Secondary':
         return t('slotSecondary');
       case 'Full':
         return t('slotFull');
       default:
-        return slotType;
+        return (slotType as string).replace('_', ' ');
     }
   };
 
@@ -425,11 +429,35 @@ export default function ClientDetailsScreen() {
 
                         <View style={[styles.gameBadgesRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                           {/* PLATFORM PILL */}
-                          <View style={styles.consolePlatformBadge}>
-                            <Text style={styles.consolePlatformText}>
-                              {game?.platform || 'PS5'}
-                            </Text>
-                          </View>
+                          {(() => {
+                            const allocPlatform = getAllocPlatform(alloc.slot_type, game?.platform);
+                            const platformLabel = allocPlatform === 'BOTH' ? 'PS4·PS5' : allocPlatform;
+                            return (
+                              <View
+                                style={[
+                                  styles.consolePlatformBadge,
+                                  allocPlatform === 'PS4'
+                                    ? styles.badgePS4
+                                    : allocPlatform === 'BOTH'
+                                    ? styles.badgeBoth
+                                    : styles.badgePS5,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.consolePlatformText,
+                                    allocPlatform === 'PS4'
+                                      ? styles.platformTextPS4
+                                      : allocPlatform === 'BOTH'
+                                      ? styles.platformTextBoth
+                                      : styles.platformTextPS5,
+                                  ]}
+                                >
+                                  {platformLabel}
+                                </Text>
+                              </View>
+                            );
+                          })()}
 
                           {/* SLOT TYPE PILL */}
                           <View style={styles.slotTypeBadge}>
@@ -937,16 +965,33 @@ const createStyles = (colors: ThemeColors, mode: ThemeMode) => {
       gap: 6,
     },
     consolePlatformBadge: {
-      backgroundColor: isDark ? '#1E293B' : '#E2E8F0',
-      paddingHorizontal: 8,
-      paddingVertical: 2.5,
-      borderRadius: 6,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 5,
+    },
+    badgePS5: {
+      backgroundColor: isDark ? 'rgba(6, 182, 212, 0.14)' : '#ECFEFF',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(6, 182, 212, 0.28)' : '#CFFAFE',
+    },
+    badgePS4: {
+      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.14)' : '#EFF6FF',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(59, 130, 246, 0.28)' : '#DBEAFE',
+    },
+    badgeBoth: {
+      backgroundColor: isDark ? 'rgba(168, 85, 247, 0.14)' : '#FAF5FF',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(168, 85, 247, 0.28)' : '#F3E8FF',
     },
     consolePlatformText: {
       fontSize: 10,
-      fontWeight: '700',
-      color: colors.text,
+      fontWeight: '800',
+      letterSpacing: 0.3,
     },
+    platformTextPS5: { color: isDark ? '#22D3EE' : '#0891B2' },
+    platformTextPS4: { color: isDark ? '#60A5FA' : '#2563EB' },
+    platformTextBoth: { color: isDark ? '#C084FC' : '#9333EA' },
     slotTypeBadge: {
       backgroundColor: 'rgba(0, 112, 209, 0.12)',
       paddingHorizontal: 8,
