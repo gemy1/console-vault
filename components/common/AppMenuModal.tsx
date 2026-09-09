@@ -33,6 +33,9 @@ import {
   RotateCcw,
   Trash2,
   HardDrive,
+  Gamepad2,
+  Store,
+  Coins,
 } from "lucide-react-native";
 import {
   useVaultTheme,
@@ -45,6 +48,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useSecurity } from "../../context/SecurityContext";
 import { useVaultSync } from "../../context/VaultSyncContext";
 import { useCustomAlert } from "../../context/AlertContext";
+import { usePersona, SUPPORTED_CURRENCIES } from "../../context/PersonaContext";
+import { SupportedCurrency } from "../../types/vault";
 import { AuthModal } from "../auth/AuthModal";
 import { isSupabaseConfigured } from "../../services/supabase";
 
@@ -64,6 +69,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   const isNativeRTL = Platform.OS !== "web" && isRTL;
   const styles = useThemedStyles(createStyles);
   const { showAlert } = useCustomAlert();
+  const { persona, setPersona, currency, setCurrency, currencyConfig } = usePersona();
 
   const animValue = useRef(new Animated.Value(0)).current;
   const [modalRendered, setModalRendered] = useState(visible);
@@ -453,7 +459,108 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {/* 1. PREFERENCES INSET GROUP (APPEARANCE & LANGUAGE) */}
+            {/* 0. APP MODE / PERSONA SWITCHER */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
+                {t("menuSectionMode")}
+              </Text>
+
+              <View style={styles.modeContainer}>
+                <Pressable
+                  onPress={() => setPersona("gamer")}
+                  style={({ pressed }) => [
+                    styles.modeCard,
+                    persona === "gamer" && styles.modeCardActive,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.modeCardInner,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.modeIconCircle,
+                        persona === "gamer" && styles.modeIconCircleActive,
+                      ]}
+                    >
+                      <Gamepad2
+                        size={17}
+                        color={persona === "gamer" ? "#00D2FF" : styles.mutedText.color}
+                        strokeWidth={2.2}
+                      />
+                    </View>
+                    <View style={styles.modeTextContainer}>
+                      <Text
+                        style={[
+                          styles.modeTitle,
+                          persona === "gamer" && styles.modeTitleActive,
+                          isRTL && styles.rtlText,
+                        ]}
+                      >
+                        {t("personaGamer")}
+                      </Text>
+                      <Text
+                        style={[styles.modeSub, isRTL && styles.rtlText]}
+                        numberOfLines={1}
+                      >
+                        {t("personaGamerSub")}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPersona("seller")}
+                  style={({ pressed }) => [
+                    styles.modeCard,
+                    persona === "seller" && styles.modeCardActive,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.modeCardInner,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.modeIconCircle,
+                        persona === "seller" && styles.modeIconCircleActive,
+                      ]}
+                    >
+                      <Store
+                        size={17}
+                        color={persona === "seller" ? "#00D2FF" : styles.mutedText.color}
+                        strokeWidth={2.2}
+                      />
+                    </View>
+                    <View style={styles.modeTextContainer}>
+                      <Text
+                        style={[
+                          styles.modeTitle,
+                          persona === "seller" && styles.modeTitleActive,
+                          isRTL && styles.rtlText,
+                        ]}
+                      >
+                        {t("personaSeller")}
+                      </Text>
+                      <Text
+                        style={[styles.modeSub, isRTL && styles.rtlText]}
+                        numberOfLines={1}
+                      >
+                        {t("personaSellerSub")}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* 1. PREFERENCES INSET GROUP (APPEARANCE, LANGUAGE, CURRENCY) */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
                 {t("menuSectionPreferences")}
@@ -556,6 +663,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                   }
                   style={({ pressed }) => [
                     styles.groupItem,
+                    styles.groupItemBorder,
                     isNativeRTL && { flexDirection: "row-reverse" },
                     pressed && styles.itemPressed,
                   ]}
@@ -569,7 +677,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                     <View style={styles.itemIconCircle}>
                       <Globe
                         size={16}
-                        color={colors.accent}
+                        color="#00D2FF"
                         strokeWidth={2.2}
                       />
                     </View>
@@ -639,6 +747,72 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                     </Pressable>
                   </View>
                 </Pressable>
+
+                {/* CURRENCY SELECTOR ROW */}
+                <View
+                  style={[
+                    styles.groupItem,
+                    isNativeRTL && { flexDirection: "row-reverse" },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
+                    <View style={styles.itemIconCircle}>
+                      <Coins size={16} color="#00D2FF" strokeWidth={2.2} />
+                    </View>
+                    <View>
+                      <Text
+                        style={[styles.groupItemText, isRTL && styles.rtlText]}
+                      >
+                        {t("preferenceCurrency")}
+                      </Text>
+                      <Text
+                        style={[styles.groupSubText, isRTL && styles.rtlText]}
+                      >
+                        {currencyConfig.code} ({currencyConfig.symbol})
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.miniSegmentTrack,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
+                    {(['USD', 'EGP', 'SAR', 'AED'] as SupportedCurrency[]).map(
+                      (currCode) => {
+                        const isCurActive = currency === currCode;
+                        return (
+                          <Pressable
+                            key={currCode}
+                            onPress={() => setCurrency(currCode)}
+                            style={[
+                              styles.miniSegmentBtn,
+                              isCurActive && styles.miniSegmentBtnActive,
+                              { minWidth: 32, paddingHorizontal: 5 },
+                            ]}
+                            hitSlop={{ top: 6, bottom: 6, left: 3, right: 3 }}
+                          >
+                            <Text
+                              style={[
+                                styles.miniSegmentText,
+                                isCurActive && styles.miniSegmentTextActive,
+                                { fontSize: 10 },
+                              ]}
+                            >
+                              {currCode}
+                            </Text>
+                          </Pressable>
+                        );
+                      }
+                    )}
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -1206,6 +1380,66 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       letterSpacing: 1.1,
       textTransform: "uppercase",
       paddingHorizontal: 2,
+    },
+
+    /* PERSONA MODE SWITCHER CARDS */
+    modeContainer: {
+      flexDirection: "column",
+      gap: 7,
+    },
+    modeCard: {
+      backgroundColor: colors.surfaceElevated,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 10,
+    },
+    modeCardActive: {
+      backgroundColor:
+        theme === "dark" ? "rgba(0, 210, 255, 0.08)" : "rgba(0, 112, 209, 0.07)",
+      borderColor: theme === "dark" ? "#00D2FF" : "#0070D1",
+      boxShadow:
+        theme === "dark"
+          ? "0px 0px 12px rgba(0, 210, 255, 0.22)"
+          : "0px 2px 8px rgba(0, 112, 209, 0.12)",
+      elevation: 3,
+    },
+    modeCardInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    modeIconCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: colors.surfaceSubtle,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modeIconCircleActive: {
+      backgroundColor:
+        theme === "dark" ? "rgba(0, 210, 255, 0.18)" : "rgba(0, 112, 209, 0.14)",
+      borderColor: theme === "dark" ? "#00D2FF" : "#0070D1",
+    },
+    modeTextContainer: {
+      flex: 1,
+    },
+    modeTitle: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    modeTitleActive: {
+      color: theme === "dark" ? "#FFFFFF" : "#0F172A",
+      fontWeight: "800",
+    },
+    modeSub: {
+      color: colors.textMuted,
+      fontSize: 10,
+      marginTop: 1,
     },
 
     /* MINI COMPACT SEGMENTED SWITCH */

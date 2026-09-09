@@ -15,6 +15,9 @@ import {
   LayoutDashboard,
   Gamepad2,
   ShieldCheck,
+  TrendingUp,
+  Package,
+  Users,
   LucideIcon,
 } from "lucide-react-native";
 import {
@@ -24,6 +27,7 @@ import {
 } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
+import { usePersona } from "../../context/PersonaContext";
 
 export interface BottomTabBarProps {
   state: {
@@ -63,30 +67,6 @@ export interface BottomTabBarProps {
   };
 }
 
-interface TabConfig {
-  name: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const TAB_CONFIGS: Record<string, TabConfig> = {
-  index: {
-    name: "index",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  vault: {
-    name: "vault",
-    label: "Game Vault",
-    icon: Gamepad2,
-  },
-  sellers: {
-    name: "sellers",
-    label: "Sellers",
-    icon: ShieldCheck,
-  },
-};
-
 export function CurvedBottomTabBar({
   state,
   descriptors,
@@ -95,14 +75,21 @@ export function CurvedBottomTabBar({
 }: BottomTabBarProps) {
   const { colors } = useVaultTheme();
   const { t, isRTL } = useLanguage();
+  const { isSeller } = usePersona();
   const hookInsets = useSafeAreaInsets();
   const insets = navInsets || hookInsets;
 
-  const getTabLabel = (name: string, fallback: string) => {
-    if (name === "index") return t("tabDashboard");
-    if (name === "vault") return t("tabVault");
-    if (name === "sellers") return t("tabSellers");
-    return fallback;
+  const getTabConfig = (name: string) => {
+    if (isSeller) {
+      if (name === "index") return { label: t("tabSalesHub"), icon: TrendingUp };
+      if (name === "vault") return { label: t("tabInventory"), icon: Package };
+      if (name === "sellers") return { label: t("tabClients"), icon: Users };
+    } else {
+      if (name === "index") return { label: t("tabDashboard"), icon: LayoutDashboard };
+      if (name === "vault") return { label: t("tabVault"), icon: Gamepad2 };
+      if (name === "sellers") return { label: t("tabSellers"), icon: ShieldCheck };
+    }
+    return { label: name, icon: LayoutDashboard };
   };
   const [layoutWidth, setLayoutWidth] = useState<number>(
     () => Dimensions.get("window").width,
@@ -205,12 +192,9 @@ export function CurvedBottomTabBar({
       <View style={[styles.tabsRow, { flexDirection: Platform.OS !== 'web' && isRTL ? 'row-reverse' : 'row' }]}>
         {state.routes.map((route, index) => {
           const isFocused = index === state.index;
-          const config = TAB_CONFIGS[route.name] || {
-            name: route.name,
-            label: descriptors[route.key]?.options?.title || route.name,
-            icon: LayoutDashboard,
-          };
+          const config = getTabConfig(route.name);
           const Icon = config.icon;
+          const tabLabel = config.label;
 
           const handlePress = () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -224,8 +208,6 @@ export function CurvedBottomTabBar({
               navigation.navigate(route.name, route.params);
             }
           };
-
-          const tabLabel = getTabLabel(route.name, config.label);
 
           return (
             <Pressable

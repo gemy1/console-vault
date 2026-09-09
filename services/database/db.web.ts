@@ -12,6 +12,8 @@ export interface SQLiteRunResult {
 class WebDatabaseEngine {
   private games = new Map<string, any>();
   private sellers = new Map<string, any>();
+  private clients = new Map<string, any>();
+  private allocations = new Map<string, any>();
   private syncQueue = new Map<string, any>();
 
   constructor() {
@@ -31,6 +33,16 @@ class WebDatabaseEngine {
         const arr = JSON.parse(s);
         arr.forEach((item: any) => this.sellers.set(item.id, item));
       }
+      const c = window.localStorage.getItem('sqlite_web_clients_v1');
+      if (c) {
+        const arr = JSON.parse(c);
+        arr.forEach((item: any) => this.clients.set(item.id, item));
+      }
+      const a = window.localStorage.getItem('sqlite_web_allocations_v1');
+      if (a) {
+        const arr = JSON.parse(a);
+        arr.forEach((item: any) => this.allocations.set(item.id, item));
+      }
       const q = window.localStorage.getItem('sqlite_web_sync_queue_v1');
       if (q) {
         const arr = JSON.parse(q);
@@ -39,7 +51,7 @@ class WebDatabaseEngine {
     } catch {}
   }
 
-  private persist(table: 'games' | 'sellers' | 'sync_queue') {
+  private persist(table: 'games' | 'sellers' | 'clients' | 'allocations' | 'sync_queue') {
     if (typeof window === 'undefined' || !window.localStorage) return;
     try {
       if (table === 'games') {
@@ -51,6 +63,16 @@ class WebDatabaseEngine {
         window.localStorage.setItem(
           'sqlite_web_sellers_v1',
           JSON.stringify(Array.from(this.sellers.values()))
+        );
+      } else if (table === 'clients') {
+        window.localStorage.setItem(
+          'sqlite_web_clients_v1',
+          JSON.stringify(Array.from(this.clients.values()))
+        );
+      } else if (table === 'allocations') {
+        window.localStorage.setItem(
+          'sqlite_web_allocations_v1',
+          JSON.stringify(Array.from(this.allocations.values()))
         );
       } else if (table === 'sync_queue') {
         window.localStorage.setItem(
@@ -70,6 +92,14 @@ class WebDatabaseEngine {
       this.sellers.clear();
       this.persist('sellers');
     }
+    if (sql.includes('DELETE FROM clients')) {
+      this.clients.clear();
+      this.persist('clients');
+    }
+    if (sql.includes('DELETE FROM client_allocations')) {
+      this.allocations.clear();
+      this.persist('allocations');
+    }
     if (sql.includes('DELETE FROM sync_queue')) {
       this.syncQueue.clear();
       this.persist('sync_queue');
@@ -83,12 +113,33 @@ class WebDatabaseEngine {
       if (sql.includes('WHERE status = ?') && bindParams && bindParams[0]) {
         items = items.filter((i) => i.status === bindParams[0]);
       }
+      if (sql.includes('WHERE is_inventory = 1')) {
+        items = items.filter((i) => i.is_inventory === 1 || i.is_inventory === true);
+      } else if (sql.includes('WHERE is_inventory = 0')) {
+        items = items.filter((i) => !i.is_inventory || i.is_inventory === 0 || i.is_inventory === false);
+      }
       items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
       return items as T[];
     }
     if (sql.includes('FROM sellers')) {
       let items = Array.from(this.sellers.values());
       items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      return items as T[];
+    }
+    if (sql.includes('FROM clients')) {
+      let items = Array.from(this.clients.values());
+      items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      return items as T[];
+    }
+    if (sql.includes('FROM client_allocations')) {
+      let items = Array.from(this.allocations.values());
+      if (sql.includes('WHERE game_id = ?') && bindParams && bindParams[0]) {
+        items = items.filter((i) => i.game_id === bindParams[0]);
+      }
+      if (sql.includes('WHERE client_id = ?') && bindParams && bindParams[0]) {
+        items = items.filter((i) => i.client_id === bindParams[0]);
+      }
+      items.sort((a, b) => (b.sale_date || '').localeCompare(a.sale_date || ''));
       return items as T[];
     }
     if (sql.includes('FROM sync_queue')) {
@@ -120,6 +171,7 @@ class WebDatabaseEngine {
           title,
           cover_image_url,
           account_type,
+          platform,
           status,
           purchase_date,
           warranty_months,
@@ -127,6 +179,9 @@ class WebDatabaseEngine {
           psn_password,
           backup_codes,
           notes,
+          cost_price,
+          currency,
+          is_inventory,
           created_at,
           updated_at,
         ] = bindParams;
@@ -137,6 +192,7 @@ class WebDatabaseEngine {
           title,
           cover_image_url,
           account_type,
+          platform: platform || 'PS5',
           status,
           purchase_date,
           warranty_months,
@@ -144,6 +200,9 @@ class WebDatabaseEngine {
           psn_password,
           backup_codes,
           notes,
+          cost_price: Number(cost_price || 0),
+          currency: currency || 'USD',
+          is_inventory: is_inventory ? 1 : 0,
           created_at,
           updated_at,
         });
@@ -181,6 +240,50 @@ class WebDatabaseEngine {
         return { changes: 1, lastInsertRowId: 1 };
       }
     }
+    if (sql.startsWith('INSERT INTO clients')) {
+      if (bindParams) {
+        const [id, user_id, name, contact_platform, contact_link, notes, created_at, updated_at] = bindParams;
+        this.clients.set(id, { id, user_id, name, contact_platform, contact_link, notes, created_at, updated_at });
+        this.persist('clients');
+        return { changes: 1, lastInsertRowId: 1 };
+      }
+    }
+    if (sql.startsWith('INSERT INTO client_allocations')) {
+      if (bindParams) {
+        const [
+          id,
+          user_id,
+          game_id,
+          client_id,
+          slot_type,
+          sale_price,
+          currency,
+          sale_date,
+          warranty_months,
+          status,
+          notes,
+          created_at,
+          updated_at,
+        ] = bindParams;
+        this.allocations.set(id, {
+          id,
+          user_id,
+          game_id,
+          client_id,
+          slot_type,
+          sale_price: Number(sale_price || 0),
+          currency: currency || 'USD',
+          sale_date,
+          warranty_months,
+          status,
+          notes,
+          created_at,
+          updated_at,
+        });
+        this.persist('allocations');
+        return { changes: 1, lastInsertRowId: 1 };
+      }
+    }
     if (sql.startsWith('INSERT INTO sync_queue')) {
       if (bindParams) {
         const [id, entity, action, payload, timestamp] = bindParams;
@@ -200,6 +303,20 @@ class WebDatabaseEngine {
       if (bindParams && bindParams[0]) {
         const deleted = this.sellers.delete(bindParams[0]);
         this.persist('sellers');
+        return { changes: deleted ? 1 : 0, lastInsertRowId: 0 };
+      }
+    }
+    if (sql.startsWith('DELETE FROM clients WHERE id = ?')) {
+      if (bindParams && bindParams[0]) {
+        const deleted = this.clients.delete(bindParams[0]);
+        this.persist('clients');
+        return { changes: deleted ? 1 : 0, lastInsertRowId: 0 };
+      }
+    }
+    if (sql.startsWith('DELETE FROM client_allocations WHERE id = ?')) {
+      if (bindParams && bindParams[0]) {
+        const deleted = this.allocations.delete(bindParams[0]);
+        this.persist('allocations');
         return { changes: deleted ? 1 : 0, lastInsertRowId: 0 };
       }
     }
@@ -241,6 +358,8 @@ export async function getDatabase(): Promise<any> {
 export async function wipeDatabase(): Promise<void> {
   await webDbInstance.execAsync('DELETE FROM games;');
   await webDbInstance.execAsync('DELETE FROM sellers;');
+  await webDbInstance.execAsync('DELETE FROM clients;');
+  await webDbInstance.execAsync('DELETE FROM client_allocations;');
   await webDbInstance.execAsync('DELETE FROM sync_queue;');
 }
 

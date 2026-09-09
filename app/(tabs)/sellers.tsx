@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -10,29 +10,60 @@ import {
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useRouter } from 'expo-router';
 import * as Haptics from '@/utils/haptics';
-import { ShieldCheck } from 'lucide-react-native';
-import { Seller } from '../../types/vault';
+import { ShieldCheck, Users } from 'lucide-react-native';
+import { Seller, Client, ClientAllocation, Game } from '../../types/vault';
 import { ModernHeader, QuickAddWidget } from '../../components/common';
 import { SellerCard, SellerFormModal } from '../../components/sellers';
+import { ClientCard, ClientFormModal, WhatsAppDispatchModal } from '../../components/seller';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
-
+import { usePersona } from '../../context/PersonaContext';
 import { useVaultSync } from '../../context/VaultSyncContext';
+import { useCustomAlert } from '../../context/AlertContext';
 import { generateUUID } from '../../utils/uuid';
 
 export default function SellersScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
-  const { t } = useLanguage();
-  const { sellers, games, addSeller, updateSeller, refreshData } = useVaultSync();
+  const { t, isRTL } = useLanguage();
+  const { isSeller } = usePersona();
+  const { showAlert } = useCustomAlert();
+  const {
+    sellers,
+    games,
+    clients,
+    allocations,
+    addSeller,
+    updateSeller,
+    addClient,
+    updateClient,
+    deleteClient,
+    refreshData,
+  } = useVaultSync();
 
   const [refreshing, setRefreshing] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
 
-  // Modal State
+  // Gamer Mode Modal State
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
+
+  // Seller Mode Client Modal State
+  const [clientModalVisible, setClientModalVisible] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+  // WhatsApp Dispatch State
+  const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
+  const [dispatchAllocation, setDispatchAllocation] = useState<ClientAllocation | null>(null);
+
+  const gamesMap = useMemo(() => {
+    const map: Record<string, Game> = {};
+    games.forEach((g) => {
+      map[g.id] = g;
+    });
+    return map;
+  }, [games]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -48,8 +79,13 @@ export default function SellersScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
-    setEditingSeller(null);
-    setModalVisible(true);
+    if (isSeller) {
+      setEditingClient(null);
+      setClientModalVisible(true);
+    } else {
+      setEditingSeller(null);
+      setModalVisible(true);
+    }
   };
 
   const handleOpenEdit = (seller: Seller) => {
@@ -58,6 +94,43 @@ export default function SellersScreen() {
     } catch {}
     setEditingSeller(seller);
     setModalVisible(true);
+  };
+
+  const handleOpenEditClient = (client: Client) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setEditingClient(client);
+    setClientModalVisible(true);
+  };
+
+  const handleDeleteClient = (client: Client) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
+
+    const clientAllocations = allocations.filter((a) => a.client_id === client.id);
+
+    showAlert({
+      title: isRTL ? 'حذف العميل' : 'Delete Client',
+      message: isRTL
+        ? `هل أنت متأكد من حذف العميل "${client.name}"؟ سيتم الاحتفاظ بالسلوتات المسجلة له.`
+        : `Are you sure you want to delete "${client.name}" from your client CRM?`,
+      type: 'danger',
+      buttons: [
+        {
+          text: t('btnDelete'),
+          style: 'destructive',
+          onPress: async () => {
+            await deleteClient(client.id);
+            try {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {}
+          },
+        },
+        { text: t('btnCancel'), style: 'cancel' },
+      ],
+    });
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -96,11 +169,35 @@ export default function SellersScreen() {
     setModalVisible(false);
   };
 
+  const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (editingClient) {
+      await updateClient(editingClient.id, clientData);
+    } else {
+      const newClient: Client = {
+        id: generateUUID(),
+        user_id: 'user-demo',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...clientData,
+      };
+      await addClient(newClient);
+    }
+    setClientModalVisible(false);
+  };
+
+  const handleDispatchReceipt = (allocation: ClientAllocation) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setDispatchAllocation(allocation);
+    setDispatchModalVisible(true);
+  };
+
   return (
     <View style={styles.container}>
       <ModernHeader
-        title={t('headerSellersTitle')}
-        subtitle={t('headerSellersSubtitle')}
+        title={isSeller ? t('clientsTitle') : t('headerSellersTitle')}
+        subtitle={isSeller ? t('clientsSubtitle') : t('headerSellersSubtitle')}
       />
 
       <ScrollView
@@ -118,13 +215,15 @@ export default function SellersScreen() {
           />
         }
       >
-        {/* STICKY QUICK REGISTER SELLER TOP WIDGET */}
+        {/* STICKY QUICK REGISTER TOP WIDGET */}
         <View style={[styles.stickyContainer, isSticky && styles.stickyContainerActive]}>
           <QuickAddWidget
             actions={[
               {
-                label: t('quickRegisterNewSeller'),
-                sublabel: t('quickRegisterNewSellerSub'),
+                label: isSeller ? t('quickAddClient') : t('quickRegisterNewSeller'),
+                sublabel: isSeller
+                  ? (isRTL ? 'تسجيل مشترٍ جديد ورقم الواتساب' : 'Add new customer & WhatsApp details')
+                  : t('quickRegisterNewSellerSub'),
                 icon: 'seller',
                 onPress: handleOpenAdd,
               },
@@ -132,42 +231,92 @@ export default function SellersScreen() {
           />
         </View>
 
-        {/* SELLERS LIST */}
+        {/* LIST SECTION */}
         <View style={styles.listContainer}>
-          {sellers.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <ShieldCheck
-                size={48}
-                color={styles.emptyIcon.color}
-                strokeWidth={1.5}
-                style={styles.emptyIconStyle}
-              />
-              <Text style={styles.emptyTitle}>{t('noSellersFound')}</Text>
-              <Text style={styles.emptySubtitle}>
-                {t('noSellersFoundSub')}
-              </Text>
-            </View>
+          {isSeller ? (
+            // SELLER MODE: CLIENT DIRECTORY
+            clients.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Users
+                  size={48}
+                  color={styles.emptyIcon.color}
+                  strokeWidth={1.5}
+                  style={styles.emptyIconStyle}
+                />
+                <Text style={styles.emptyTitle}>{t('clientNotFound')}</Text>
+                <Text style={styles.emptySubtitle}>{t('noClientsSub')}</Text>
+              </View>
+            ) : (
+              clients.map((client) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  allocations={allocations}
+                  gamesMap={gamesMap}
+                  onPress={() => handleOpenEditClient(client)}
+                  onEdit={() => handleOpenEditClient(client)}
+                  onDelete={() => handleDeleteClient(client)}
+                  onDispatchWhatsApp={handleDispatchReceipt}
+                />
+              ))
+            )
           ) : (
-            sellers.map((seller) => (
-              <SellerCard
-                key={seller.id}
-                seller={seller}
-                gamesCount={getSellerGamesCount(seller.id)}
-                onPress={() => router.push(`/seller/${seller.id}`)}
-                onEdit={() => handleOpenEdit(seller)}
-              />
-            ))
+            // GAMER MODE: DIGITAL SELLERS DIRECTORY
+            sellers.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <ShieldCheck
+                  size={48}
+                  color={styles.emptyIcon.color}
+                  strokeWidth={1.5}
+                  style={styles.emptyIconStyle}
+                />
+                <Text style={styles.emptyTitle}>{t('noSellersFound')}</Text>
+                <Text style={styles.emptySubtitle}>{t('noSellersFoundSub')}</Text>
+              </View>
+            ) : (
+              sellers.map((seller) => (
+                <SellerCard
+                  key={seller.id}
+                  seller={seller}
+                  gamesCount={getSellerGamesCount(seller.id)}
+                  onPress={() => router.push(`/seller/${seller.id}`)}
+                  onEdit={() => handleOpenEdit(seller)}
+                />
+              ))
+            )
           )}
         </View>
       </ScrollView>
 
-      {/* REUSABLE SELLER FORM MODAL */}
+      {/* GAMER: SELLER FORM MODAL */}
       <SellerFormModal
         visible={modalVisible}
         initialSeller={editingSeller}
         onClose={() => setModalVisible(false)}
         onSave={handleSaveSeller}
       />
+
+      {/* SELLER: CLIENT FORM MODAL */}
+      <ClientFormModal
+        visible={clientModalVisible}
+        initialClient={editingClient}
+        onClose={() => setClientModalVisible(false)}
+        onSave={handleSaveClient}
+      />
+
+      {/* 1-TAP WHATSAPP DISPATCH MODAL */}
+      {dispatchAllocation && gamesMap[dispatchAllocation.game_id] && (
+        <WhatsAppDispatchModal
+          visible={dispatchModalVisible}
+          game={gamesMap[dispatchAllocation.game_id]}
+          allocation={dispatchAllocation}
+          client={clients.find((c) => c.id === dispatchAllocation.client_id)}
+          onClose={() => {
+            setDispatchModalVisible(false);
+            setDispatchAllocation(null);
+          }}
+        />
+      )}
     </View>
   );
 }

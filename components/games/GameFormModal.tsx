@@ -9,6 +9,7 @@ import {
   Platform,
   StyleSheet,
   Animated,
+  Image,
 } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
@@ -29,8 +30,17 @@ import {
   Store,
   Star,
   Globe,
+  ImageIcon,
+  User,
+  Users,
+  BadgeCheck,
+  Tv2,
+  Monitor,
+  Layers,
+  ShoppingBag,
+  DollarSign,
 } from 'lucide-react-native';
-import { Game, Seller, AccountType, ContactPlatform, SellerContactMethod } from '../../types/vault';
+import { Game, Seller, AccountType, ConsolePlatform, ContactPlatform, SellerContactMethod } from '../../types/vault';
 import { OfflineVault } from '../../services/storage';
 import { PlatformIcon } from '../common/PlatformIcon';
 import { SellerFormModal } from '../sellers/SellerFormModal';
@@ -38,6 +48,7 @@ import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCustomAlert } from '../../context/AlertContext';
+import { usePersona } from '../../context/PersonaContext';
 import { generateUUID } from '../../utils/uuid';
 
 const WARRANTY_PRESETS = ['3', '6', '12', '24'];
@@ -46,12 +57,16 @@ export interface GameFormData {
   title: string;
   cover_image_url?: string;
   account_type: AccountType;
+  platform: ConsolePlatform;
   warranty_months: number;
   seller_id?: string;
   psn_email: string;
   psn_password?: string;
   backup_codes?: string[];
   notes?: string;
+  cost_price?: number;
+  currency?: string;
+  is_inventory?: boolean;
 }
 
 interface GameFormModalProps {
@@ -70,11 +85,14 @@ export function GameFormModal({
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
   const { showAlert } = useCustomAlert();
+  const { isSeller, currency } = usePersona();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [title, setTitle] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [accountType, setAccountType] = useState<AccountType>('Primary');
+  const [platform, setPlatform] = useState<ConsolePlatform>('PS5');
+  const [costPrice, setCostPrice] = useState('0');
   const [warrantyMonths, setWarrantyMonths] = useState('6');
   
   // Seller State
@@ -108,6 +126,8 @@ export function GameFormModal({
         setTitle(initialGame.title);
         setCoverUrl(initialGame.cover_image_url || '');
         setAccountType(initialGame.account_type);
+        setPlatform(initialGame.platform || 'PS5');
+        setCostPrice(initialGame.cost_price ? String(initialGame.cost_price) : '');
         setWarrantyMonths(String(initialGame.warranty_months || 6));
         
         if (initialGame.seller_id) {
@@ -126,6 +146,8 @@ export function GameFormModal({
         setTitle('');
         setCoverUrl('');
         setAccountType('Primary');
+        setPlatform('PS5');
+        setCostPrice('');
         setWarrantyMonths('6');
         setSellerMode('direct');
         setSellerId('');
@@ -230,20 +252,67 @@ export function GameFormModal({
     const parsedWarranty = parseInt(warrantyMonths, 10);
     const validWarranty = isNaN(parsedWarranty) || parsedWarranty < 0 ? 6 : parsedWarranty;
 
+    const parsedCost = parseFloat(costPrice);
+    const validCost = !isNaN(parsedCost) && parsedCost > 0 ? parsedCost : undefined;
+
     onSave({
       title: title.trim(),
       cover_image_url: coverUrl.trim() || undefined,
       account_type: accountType,
+      platform,
       warranty_months: validWarranty,
       seller_id: sellerMode === 'seller' && sellerId ? sellerId : undefined,
       psn_email: psnEmail.trim(),
       psn_password: psnPassword.trim() || undefined,
       backup_codes: backupCodes.length > 0 ? backupCodes : undefined,
       notes: notes.trim() || undefined,
+      cost_price: validCost,
+      currency: validCost !== undefined ? (initialGame?.currency || currency) : undefined,
+      is_inventory: isSeller,
     });
   };
 
   const { panY, panHandlers, closeWithSlide } = useSwipeDownModal({ visible, onClose });
+
+  // ── Derived: valid cover URL for live preview
+  const isValidCoverUrl = useMemo(() => {
+    if (!coverUrl.trim()) return false;
+    try {
+      const u = new URL(coverUrl.trim());
+      return u.protocol === 'https:' || u.protocol === 'http:';
+    } catch {
+      return false;
+    }
+  }, [coverUrl]);
+
+  // ── Account type chip data
+  const ACCOUNT_TYPES: { type: AccountType; abbr: string; labelKey: 'accountTypePrimary' | 'accountTypeSecondary' | 'accountTypeFull'; icon: React.ReactNode }[] = [
+    {
+      type: 'Primary',
+      abbr: 'PA',
+      labelKey: 'accountTypePrimary',
+      icon: null,
+    },
+    {
+      type: 'Secondary',
+      abbr: 'SA',
+      labelKey: 'accountTypeSecondary',
+      icon: null,
+    },
+    {
+      type: 'Full',
+      abbr: 'FA',
+      labelKey: 'accountTypeFull',
+      icon: null,
+    },
+  ];
+
+  // ── Platform chip data
+  const PLATFORM_TYPES: { plt: ConsolePlatform; abbr: string; labelKey: 'platformPS5' | 'platformPS4' | 'platformBoth' }[] = [
+    { plt: 'PS5', abbr: 'PS5', labelKey: 'platformPS5' },
+    { plt: 'PS4', abbr: 'PS4', labelKey: 'platformPS4' },
+    { plt: 'BOTH', abbr: isRTL ? 'كلاهما' : 'BOTH', labelKey: 'platformBoth' },
+  ];
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={closeWithSlide}>
@@ -260,8 +329,8 @@ export function GameFormModal({
             <View style={styles.sheetHandle} />
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* HEADER */}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* ── HEADER ── */}
             <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View style={[styles.titleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 {initialGame ? (
@@ -282,133 +351,245 @@ export function GameFormModal({
               {t('modalGameSubtitle')}
             </Text>
 
-            {/* GAME TITLE */}
-            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldGameTitle')}</Text>
-            <TextInput
-              placeholder={t('fieldGameTitlePlaceholder')}
-              placeholderTextColor={styles.placeholder.color}
-              value={title}
-              onChangeText={setTitle}
-              style={[styles.textInput, isRTL && styles.rtlText]}
-            />
-
-            {/* COVER ART IMAGE URL */}
-            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldCoverUrl')}</Text>
-            <TextInput
-              placeholder={t('fieldCoverUrlPlaceholder')}
-              placeholderTextColor={styles.placeholder.color}
-              value={coverUrl}
-              onChangeText={setCoverUrl}
-              autoCapitalize="none"
-              style={[styles.textInput, isRTL && styles.rtlText]}
-            />
-
-            {/* ACCOUNT ACTIVATION TYPE */}
-            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldAccountType')}</Text>
-            <View style={[styles.accountTypeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-              {(['Primary', 'Secondary', 'Full'] as AccountType[]).map((type) => {
-                const isSelected = accountType === type;
-                return (
-                  <Pressable
-                    key={type}
-                    onPress={() => {
-                      try {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      } catch {}
-                      setAccountType(type);
-                    }}
-                    style={[
-                      styles.accountTypeBtn,
-                      isSelected ? styles.accountTypeBtnActive : styles.accountTypeBtnInactive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.accountTypeText,
-                        isSelected ? styles.accountTypeTextActive : styles.accountTypeTextInactive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {type === 'Primary'
-                        ? t('accountTypePrimary')
-                        : type === 'Full'
-                        ? t('accountTypeFull')
-                        : t('accountTypeSecondary')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* WARRANTY DURATION */}
-            <View style={[styles.fieldHeaderWithIcon, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-              <Clock size={12} color={styles.fieldLabelIcon.color} strokeWidth={2.2} />
-              <Text style={styles.fieldLabelInline}>{t('fieldWarrantyDuration')}</Text>
-            </View>
-            <View style={[styles.presetsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-              {WARRANTY_PRESETS.map((preset) => {
-                const isSelected = warrantyMonths === preset;
-                return (
-                  <Pressable
-                    key={preset}
-                    onPress={() => {
-                      try {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      } catch {}
-                      setWarrantyMonths(preset);
-                    }}
-                    style={[
-                      styles.presetButton,
-                      isSelected ? styles.presetButtonSelected : styles.presetButtonUnselected,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.presetText,
-                        isSelected ? styles.presetTextSelected : styles.presetTextUnselected,
-                      ]}
-                    >
-                      {preset} {t('warrantyMonthsUnit')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* CUSTOM WARRANTY MONTHS INPUT */}
-            <TextInput
-              placeholder={t('warrantyCustomPlaceholder')}
-              placeholderTextColor={styles.placeholder.color}
-              value={warrantyMonths}
-              onChangeText={setWarrantyMonths}
-              keyboardType="numeric"
-              style={[styles.textInput, isRTL && styles.rtlText]}
-            />
-
-            {/* SELLER ASSIGNMENT SECTION (3 OPTIONS: DIRECT, SELECT SELLER, QUICK ADD SELLER) */}
-            <View style={styles.sellerSectionContainer}>
-              <View style={[styles.fieldHeaderWithIcon, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                <ShieldCheck size={12} color={styles.fieldLabelIcon.color} strokeWidth={2.2} />
-                <Text style={styles.fieldLabelInline}>{t('fieldSellerAssignment')}</Text>
+            {/* ══════════════════════════════════════════════
+                SECTION 1 — GAME INFO
+            ══════════════════════════════════════════════ */}
+            <View style={styles.sectionCard}>
+              <View style={[styles.sectionCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Gamepad2 size={13} color={styles.sectionCardIcon.color} strokeWidth={2.2} />
+                <Text style={styles.sectionCardTitle}>{isRTL ? 'معلومات اللعبة' : 'GAME INFO'}</Text>
               </View>
 
-              {/* SELLER MODE SWITCHER (DIRECT vs REGISTERED SELLER) */}
+              {/* GAME TITLE */}
+              <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldGameTitle')}</Text>
+              <TextInput
+                placeholder={t('fieldGameTitlePlaceholder')}
+                placeholderTextColor={styles.placeholder.color}
+                value={title}
+                onChangeText={setTitle}
+                style={[styles.inCardInput, isRTL && styles.rtlText]}
+              />
+
+              {/* COVER ART — with live thumbnail preview */}
+              <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldCoverUrl')}</Text>
+              <View style={[styles.coverArtRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                {/* URL Input — rendered FIRST so we can measure its height */}
+                <TextInput
+                  placeholder={t('fieldCoverUrlPlaceholder')}
+                  placeholderTextColor={styles.placeholder.color}
+                  value={coverUrl}
+                  onChangeText={setCoverUrl}
+                  autoCapitalize="none"
+                  style={[styles.inCardInput, styles.coverInput, isRTL && styles.rtlText]}
+                />
+                {/* Thumbnail — same height as input via alignSelf stretch */}
+                <View style={styles.coverThumbContainer}>
+                  {isValidCoverUrl ? (
+                    <Image
+                      source={{ uri: coverUrl.trim() }}
+                      style={styles.coverThumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.coverThumbPlaceholder}>
+                      <ImageIcon size={18} color={styles.placeholder.color} strokeWidth={1.5} />
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* ══════════════════════════════════════════════
+                SECTION 2 — ACCOUNT & PLATFORM
+            ══════════════════════════════════════════════ */}
+            <View style={styles.sectionCard}>
+              <View style={[styles.sectionCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <ShieldCheck size={13} color={styles.sectionCardIcon.color} strokeWidth={2.2} />
+                <Text style={styles.sectionCardTitle}>{isRTL ? 'نوع الحساب والمنصة' : 'ACCOUNT & PLATFORM'}</Text>
+              </View>
+
+              {/* ACCOUNT ACTIVATION TYPE — 2-line chips, NO icons */}
+              <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldAccountType')}</Text>
+              <View style={[styles.chipRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                {ACCOUNT_TYPES.map(({ type, abbr, labelKey }) => {
+                  const isSelected = accountType === type;
+                  return (
+                    <Pressable
+                      key={type}
+                      onPress={() => {
+                        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                        setAccountType(type);
+                      }}
+                      style={[
+                        styles.twoLineChip,
+                        isSelected ? styles.twoLineChipActive : styles.twoLineChipInactive,
+                      ]}
+                    >
+                      {/* Abbreviation */}
+                      <Text style={[
+                        styles.chipAbbr,
+                        isSelected ? styles.chipAbbrActive : styles.chipAbbrInactive,
+                      ]}>
+                        {abbr}
+                      </Text>
+                      {/* Full label */}
+                      <Text
+                        style={[
+                          styles.chipSubLabel,
+                          isSelected ? styles.chipSubLabelActive : styles.chipSubLabelInactive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t(labelKey)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* CONSOLE PLATFORM — chips, NO icons */}
+              <Text style={[styles.fieldLabel, isRTL && styles.rtlText, { marginTop: 4 }]}>{t('platformLabel')}</Text>
+              <View style={[styles.chipRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                {PLATFORM_TYPES.map(({ plt, abbr, labelKey }) => {
+                  const isSelected = platform === plt;
+                  return (
+                    <Pressable
+                      key={plt}
+                      onPress={() => {
+                        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                        setPlatform(plt);
+                      }}
+                      style={[
+                        styles.twoLineChip,
+                        isSelected ? styles.twoLineChipActive : styles.twoLineChipInactive,
+                      ]}
+                    >
+                      {/* Abbreviation */}
+                      <Text style={[
+                        styles.chipAbbr,
+                        isSelected ? styles.chipAbbrActive : styles.chipAbbrInactive,
+                      ]}>
+                        {abbr}
+                      </Text>
+                      {/* Full label */}
+                      <Text
+                        style={[
+                          styles.chipSubLabel,
+                          isSelected ? styles.chipSubLabelActive : styles.chipSubLabelInactive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t(labelKey)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* ══════════════════════════════════════════════
+                SECTION 3 — PRICING & WARRANTY
+            ══════════════════════════════════════════════ */}
+            <View style={styles.sectionCard}>
+              <View style={[styles.sectionCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <DollarSign size={13} color={styles.sectionCardIcon.color} strokeWidth={2.2} />
+                <Text style={styles.sectionCardTitle}>{isRTL ? 'السعر والضمان' : 'PRICING & WARRANTY'}</Text>
+              </View>
+
+              {/* COST / PURCHASE PRICE */}
+              <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>
+                {isSeller ? t('costPrice') : t('purchasePrice')} ({currency})
+              </Text>
+              <TextInput
+                style={[styles.inCardInput, isRTL && styles.rtlText]}
+                value={costPrice}
+                onChangeText={setCostPrice}
+                placeholder="0.00"
+                placeholderTextColor={styles.placeholder.color}
+                keyboardType="numeric"
+              />
+
+              {/* WARRANTY DURATION */}
+              <View style={[styles.fieldHeaderWithIcon, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Clock size={12} color={styles.fieldLabelIcon.color} strokeWidth={2.2} />
+                <Text style={styles.fieldLabelInline}>{t('fieldWarrantyDuration')}</Text>
+              </View>
+              {/* Quick presets */}
+              <View style={[styles.presetsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                {WARRANTY_PRESETS.map((preset) => {
+                  const isSelected = warrantyMonths === preset;
+                  return (
+                    <Pressable
+                      key={preset}
+                      onPress={() => {
+                        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                        setWarrantyMonths(preset);
+                      }}
+                      style={[
+                        styles.presetButton,
+                        isSelected ? styles.presetButtonSelected : styles.presetButtonUnselected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.presetText,
+                          isSelected ? styles.presetTextSelected : styles.presetTextUnselected,
+                        ]}
+                      >
+                        {preset} {t('warrantyMonthsUnit')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {/* Custom override input — shown only when no preset matches */}
+              <TextInput
+                placeholder={t('warrantyCustomPlaceholder')}
+                placeholderTextColor={styles.placeholder.color}
+                value={warrantyMonths}
+                onChangeText={(val) => {
+                  setWarrantyMonths(val);
+                }}
+                keyboardType="numeric"
+                style={[styles.warrantyCustomInput, isRTL && styles.rtlText,
+                  WARRANTY_PRESETS.includes(warrantyMonths) && styles.warrantyCustomInputDimmed,
+                ]}
+              />
+            </View>
+
+            {/* ══════════════════════════════════════════════
+                SECTION 4 — SELLER / STORE
+            ══════════════════════════════════════════════ */}
+            <View style={styles.sectionCard}>
+              <View style={[styles.sectionCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <ShoppingBag size={13} color={styles.sectionCardIcon.color} strokeWidth={2.2} />
+                <Text style={styles.sectionCardTitle}>{isRTL ? 'المتجر / البائع' : 'SELLER / STORE'}</Text>
+              </View>
+
+              {/* SELLER MODE SWITCHER — equal-width, icon above label */}
               <View style={[styles.sellerModeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <Pressable
                   onPress={() => handleSelectSellerMode('direct')}
                   style={[
-                    styles.sellerModeBtn,
-                    sellerMode === 'direct' ? styles.sellerModeBtnActive : styles.sellerModeBtnInactive,
-                    isNativeRTL && { flexDirection: 'row-reverse' },
+                    styles.sellerModeChip,
+                    sellerMode === 'direct' ? styles.sellerModeChipActive : styles.sellerModeChipInactive,
                   ]}
                 >
-                  <Globe size={13} color={sellerMode === 'direct' ? styles.sellerModeTextActive.color : styles.sellerModeTextInactive.color} strokeWidth={2.2} />
-                  <Text
-                    style={[
-                      styles.sellerModeText,
-                      sellerMode === 'direct' ? styles.sellerModeTextActive : styles.sellerModeTextInactive,
-                    ]}
-                  >
+                  <Globe
+                    size={18}
+                    color={sellerMode === 'direct' ? styles.sellerModeTextActive.color : styles.sellerModeTextInactive.color}
+                    strokeWidth={2.2}
+                  />
+                  <Text style={[
+                    styles.sellerModeChipLabel,
+                    sellerMode === 'direct' ? styles.sellerModeTextActive : styles.sellerModeTextInactive,
+                  ]}>
+                    {isRTL ? 'مباشر' : 'Direct'}
+                  </Text>
+                  <Text style={[
+                    styles.sellerModeChipSub,
+                    sellerMode === 'direct' ? styles.sellerModeChipSubActive : styles.sellerModeChipSubInactive,
+                  ]} numberOfLines={1}>
                     {t('sellerModeDirect')}
                   </Text>
                 </Pressable>
@@ -416,18 +597,25 @@ export function GameFormModal({
                 <Pressable
                   onPress={() => handleSelectSellerMode('seller')}
                   style={[
-                    styles.sellerModeBtn,
-                    sellerMode === 'seller' ? styles.sellerModeBtnActive : styles.sellerModeBtnInactive,
-                    isNativeRTL && { flexDirection: 'row-reverse' },
+                    styles.sellerModeChip,
+                    sellerMode === 'seller' ? styles.sellerModeChipActive : styles.sellerModeChipInactive,
                   ]}
                 >
-                  <Store size={13} color={sellerMode === 'seller' ? styles.sellerModeTextActive.color : styles.sellerModeTextInactive.color} strokeWidth={2.2} />
-                  <Text
-                    style={[
-                      styles.sellerModeText,
-                      sellerMode === 'seller' ? styles.sellerModeTextActive : styles.sellerModeTextInactive,
-                    ]}
-                  >
+                  <Store
+                    size={18}
+                    color={sellerMode === 'seller' ? styles.sellerModeTextActive.color : styles.sellerModeTextInactive.color}
+                    strokeWidth={2.2}
+                  />
+                  <Text style={[
+                    styles.sellerModeChipLabel,
+                    sellerMode === 'seller' ? styles.sellerModeTextActive : styles.sellerModeTextInactive,
+                  ]}>
+                    {isRTL ? 'متجر' : 'Seller'}
+                  </Text>
+                  <Text style={[
+                    styles.sellerModeChipSub,
+                    sellerMode === 'seller' ? styles.sellerModeChipSubActive : styles.sellerModeChipSubInactive,
+                  ]} numberOfLines={1}>
                     {t('sellerModeRegistered')} ({sellers.length})
                   </Text>
                 </Pressable>
@@ -446,9 +634,7 @@ export function GameFormModal({
                   {/* DROPDOWN TRIGGER BUTTON */}
                   <Pressable
                     onPress={() => {
-                      try {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      } catch {}
+                      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
                       setSellerDropdownOpen(!sellerDropdownOpen);
                     }}
                     style={[styles.dropdownTrigger, isNativeRTL && { flexDirection: 'row-reverse' }]}
@@ -494,9 +680,7 @@ export function GameFormModal({
                       {/* QUICK ADD NEW SELLER BUTTON */}
                       <Pressable
                         onPress={() => {
-                          try {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          } catch {}
+                          try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
                           setQuickAddSellerVisible(true);
                         }}
                         style={({ pressed }) => [
@@ -599,7 +783,9 @@ export function GameFormModal({
               )}
             </View>
 
-            {/* SENSITIVE CREDENTIALS BOX */}
+            {/* ══════════════════════════════════════════════
+                SECTION 5 — SENSITIVE CREDENTIALS
+            ══════════════════════════════════════════════ */}
             <View style={styles.sensitiveBox}>
               <View style={[styles.sensitiveTitleRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <Lock size={15} color={styles.accentIcon.color} strokeWidth={2.2} />
@@ -639,7 +825,9 @@ export function GameFormModal({
               />
             </View>
 
-            {/* GAME NOTES */}
+            {/* ══════════════════════════════════════════════
+                SECTION 6 — NOTES
+            ══════════════════════════════════════════════ */}
             <View style={styles.notesSection}>
               <View style={[styles.notesHeaderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                 <FileText size={13} color={styles.closeIcon.color} strokeWidth={2.2} />
@@ -658,7 +846,7 @@ export function GameFormModal({
               />
             </View>
 
-            {/* BUTTONS */}
+            {/* ── ACTION BUTTONS ── */}
             <View style={[styles.buttonRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <Pressable onPress={closeWithSlide} style={styles.cancelBtn}>
                 <Text style={styles.cancelBtnText}>{t('btnCancel')}</Text>
@@ -701,10 +889,198 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       backgroundColor: colors.surface,
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
-      padding: 22,
+      padding: 20,
       borderWidth: 1,
       borderColor: colors.border,
       maxHeight: '92%',
+    },
+    scrollContent: {
+      paddingBottom: 32,
+    },
+
+    /* ── SECTION CARDS ── */
+    sectionCard: {
+      backgroundColor: colors.surfaceSubtle,
+      borderRadius: 18,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 14,
+    },
+    sectionCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 12,
+    },
+    sectionCardIcon: {
+      color: colors.accent,
+    },
+    sectionCardTitle: {
+      color: colors.accent,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+    },
+
+    /* ── COVER ART ROW ── */
+    coverArtRow: {
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'stretch',
+      marginBottom: 4,
+    },
+    coverThumbContainer: {
+      width: 46,
+      alignSelf: 'stretch',
+      borderRadius: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexShrink: 0,
+    },
+    coverThumb: {
+      width: '100%',
+      height: '100%',
+    },
+    coverThumbPlaceholder: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    coverInput: {
+      flex: 1,
+      marginBottom: 0,
+    },
+
+    /* ── 2-LINE CHIPS (Account type & Platform) ── */
+    chipRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 8,
+    },
+    twoLineChip: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      gap: 4,
+    },
+    twoLineChipActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    twoLineChipInactive: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+    },
+    chipIconWrap: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chipIconWrapActive: {
+      backgroundColor: colors.accent,
+    },
+    chipIconWrapInactive: {
+      backgroundColor: colors.surfaceSubtle,
+    },
+    chipAbbr: {
+      fontSize: 14,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+    chipAbbrActive: {
+      color: '#FFFFFF',
+    },
+    chipAbbrInactive: {
+      color: colors.textSecondary,
+    },
+    chipSubLabel: {
+      fontSize: 9,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    chipSubLabelActive: {
+      color: 'rgba(255,255,255,0.82)',
+    },
+    chipSubLabelInactive: {
+      color: colors.textMuted,
+    },
+
+    /* ── WARRANTY CUSTOM INPUT ── */
+    warrantyCustomInput: {
+      backgroundColor: colors.surface,
+      color: colors.text,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 4,
+      fontSize: 14,
+    },
+    warrantyCustomInputDimmed: {
+      opacity: 0.45,
+    },
+
+    /* ── IN-CARD INPUT (solid surface bg, matches compactInput) ── */
+    inCardInput: {
+      backgroundColor: colors.surface,
+      color: colors.text,
+      borderRadius: 12,
+      paddingHorizontal: 13,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 12,
+      fontSize: 14,
+    },
+
+    /* ── SELLER MODE CHIPS ── */
+    sellerModeChip: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      gap: 4,
+    },
+    sellerModeChipActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    sellerModeChipInactive: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+    },
+    sellerModeChipLabel: {
+      fontSize: 13,
+      fontWeight: '900',
+      letterSpacing: 0.3,
+    },
+    sellerModeChipSub: {
+      fontSize: 9,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    sellerModeChipSubActive: {
+      color: 'rgba(255,255,255,0.82)',
+    },
+    sellerModeChipSubInactive: {
+      color: colors.textMuted,
+    },
+    sellerModeTextActive: {
+      color: '#FFFFFF',
+    },
+    sellerModeTextInactive: {
+      color: colors.textSecondary,
     },
     handleContainer: {
       width: '100%',
@@ -886,12 +1262,6 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     sellerModeText: {
       fontSize: 12,
       fontWeight: '800',
-    },
-    sellerModeTextActive: {
-      color: colors.pillActiveText,
-    },
-    sellerModeTextInactive: {
-      color: colors.textSecondary,
     },
     directNoticeBox: {
       backgroundColor: colors.surfaceSubtle,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -15,28 +15,51 @@ import { useRouter } from "expo-router";
 import * as Haptics from '@/utils/haptics';
 import { Game, Seller, ContactPlatform, SellerContactMethod } from "../../types/vault";
 import { calculateWarranty, generateSellerDeepLink } from "../../utils/padlock";
+import { getGameAvailableSlots } from "../../utils/slots";
 import { ModernHeader, QuickAddWidget } from "../../components/common";
 import { GameCard, PulsingPadlockBadge, GameFormModal } from "../../components/games";
 import { SellerFormModal } from "../../components/sellers";
+import { ClientFormModal, WhatsAppDispatchModal } from "../../components/seller";
 import {
   Gamepad2,
   ShieldCheck,
   Lock,
   ChevronRight,
   ChevronLeft,
+  TrendingUp,
+  Package,
+  Users,
+  DollarSign,
+  Share2,
+  CheckCircle2,
+  Clock,
+  User,
+  Plus,
 } from "lucide-react-native";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
+import { usePersona } from "../../context/PersonaContext";
 import { useVaultSync } from "../../context/VaultSyncContext";
+import { Client, ClientAllocation } from "../../types/vault";
 import { generateUUID } from "../../utils/uuid";
 
 export default function DashboardScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const { isSeller, formatCurrency, currency } = usePersona();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
-  const { games, sellers, addGame, addSeller, refreshData } = useVaultSync();
+  const {
+    games,
+    sellers,
+    clients,
+    allocations,
+    addGame,
+    addSeller,
+    addClient,
+    refreshData,
+  } = useVaultSync();
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<
@@ -44,6 +67,11 @@ export default function DashboardScreen() {
   >("All");
   const [sellerModalVisible, setSellerModalVisible] = useState(false);
   const [gameModalVisible, setGameModalVisible] = useState(false);
+  const [clientModalVisible, setClientModalVisible] = useState(false);
+
+  // WhatsApp Dispatch State
+  const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
+  const [dispatchAllocation, setDispatchAllocation] = useState<ClientAllocation | null>(null);
 
   const handleSaveGame = (gameData: any) => {
     const newGame: Game = {
@@ -92,6 +120,20 @@ export default function DashboardScreen() {
   };
 
   const sellerMap = new Map(sellers.map((s) => [s.id, s]));
+  const clientsMap = useMemo(() => {
+    const map: Record<string, Client> = {};
+    clients.forEach((c) => {
+      map[c.id] = c;
+    });
+    return map;
+  }, [clients]);
+  const gamesMap = useMemo(() => {
+    const map: Record<string, Game> = {};
+    games.forEach((g) => {
+      map[g.id] = g;
+    });
+    return map;
+  }, [games]);
 
   const totalGames = games.length;
   const lockedGames = games.filter((g) => g.status === "Locked");
@@ -99,6 +141,43 @@ export default function DashboardScreen() {
     const w = calculateWarranty(g.purchase_date, g.warranty_months);
     return w.isWarrantyActive;
   });
+
+  // Seller KPI calculations
+  const activeSellerAllocs = allocations.filter((a) => a.status === 'Active');
+  const totalSalesRevenue = activeSellerAllocs.reduce((sum, a) => sum + (a.sale_price || 0), 0);
+  const totalInventoryCost = games.reduce((sum, g) => sum + (g.cost_price || 0), 0);
+  const netSellerProfit = totalSalesRevenue - totalInventoryCost;
+  const isProfitable = netSellerProfit > 0;
+
+  // Pre-index allocations by game_id in O(M) so we NEVER scan allocations in a loop
+  const allocsByGameId = useMemo(() => {
+    const map = new Map<string, ClientAllocation[]>();
+    for (let i = 0; i < activeSellerAllocs.length; i++) {
+      const a = activeSellerAllocs[i];
+      const list = map.get(a.game_id);
+      if (list) {
+        list.push(a);
+      } else {
+        map.set(a.game_id, [a]);
+      }
+    }
+    return map;
+  }, [activeSellerAllocs]);
+
+  // Available slots count: O(N) single-pass with instant O(1) dictionary lookups
+  const totalAvailableSlots = useMemo(() => {
+    let count = 0;
+    for (let i = 0; i < games.length; i++) {
+      const g = games[i];
+      const gameAllocs = allocsByGameId.get(g.id) || [];
+      count += getGameAvailableSlots(g, gameAllocs).length;
+    }
+    return count;
+  }, [games, allocsByGameId]);
+
+  const recentSales = useMemo(() => {
+    return [...activeSellerAllocs].reverse().slice(0, 6);
+  }, [activeSellerAllocs]);
 
   const categories = [
     { key: "All", label: t("filterAll") },
@@ -112,12 +191,32 @@ export default function DashboardScreen() {
     return true;
   });
 
+  const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const newClient: Client = {
+      id: generateUUID(),
+      user_id: 'user-demo',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...clientData,
+    };
+    await addClient(newClient);
+    setClientModalVisible(false);
+  };
+
+  const handleDispatchReceipt = (alloc: ClientAllocation) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setDispatchAllocation(alloc);
+    setDispatchModalVisible(true);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" />
       <ModernHeader
-        title={t("headerDashboardTitle")}
-        subtitle={t("headerDashboardSubtitle")}
+        title={isSeller ? t("tabSalesHub") : t("headerDashboardTitle")}
+        subtitle={isSeller ? t("financialOverview") : t("headerDashboardSubtitle")}
       />
 
       <ScrollView
@@ -136,14 +235,22 @@ export default function DashboardScreen() {
           <View style={[styles.sloganTagRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <View style={styles.sloganPulseDot} />
             <Text style={styles.sloganTagText}>
-              {isRTL ? 'الحماية والضمان المتكامل' : 'SECURE VAULT ARCHITECTURE'}
+              {isSeller
+                ? (isRTL ? 'إدارة المبيعات وتوزيع السلوتات' : 'PLAYSTATION DISTRIBUTION')
+                : (isRTL ? 'الحماية والضمان المتكامل' : 'SECURE VAULT ARCHITECTURE')}
             </Text>
           </View>
           <Text style={[styles.sloganMainText, isRTL && styles.rtlText]}>
-            {t('appSlogan')}
+            {isSeller
+              ? (isRTL ? 'منصة التوزيع والمبيعات' : 'PlayStation Sales Hub')
+              : t('appSlogan')}
           </Text>
           <Text style={[styles.sloganSubText, isRTL && styles.rtlText]}>
-            {t('appSloganSub')}
+            {isSeller
+              ? (isRTL
+                  ? 'متابعة شاملة لإيرادات الحسابات، الأرباح الصافية، وتوزيع السلوتات للعملاء'
+                  : 'Live tracking for master inventory, profit margins & WhatsApp receipts')
+              : t('appSloganSub')}
           </Text>
         </View>
 
@@ -151,317 +258,585 @@ export default function DashboardScreen() {
         <View style={styles.topWidgetWrapper}>
           <QuickAddWidget
             tag={t("quickShortcutsTag")}
-            actions={[
-              {
-                label: t("quickAddGame"),
-                sublabel: t("quickAddGameSub"),
-                icon: "game",
-                onPress: () => setGameModalVisible(true),
-              },
-              {
-                label: t("quickAddSeller"),
-                sublabel: t("quickAddSellerSub"),
-                icon: "seller",
-                onPress: () => setSellerModalVisible(true),
-              },
-            ]}
+            actions={
+              isSeller
+                ? [
+                    {
+                      label: t("quickAddInventory"),
+                      sublabel: isRTL ? 'تسجيل حساب وتكلفة شراء' : 'Register account & cost price',
+                      icon: "game",
+                      onPress: () => setGameModalVisible(true),
+                    },
+                    {
+                      label: t("quickAddClient"),
+                      sublabel: isRTL ? 'تسجيل مشترٍ وتفاصيل واتساب' : 'Register buyer & WhatsApp link',
+                      icon: "seller",
+                      onPress: () => setClientModalVisible(true),
+                    },
+                  ]
+                : [
+                    {
+                      label: t("quickAddGame"),
+                      sublabel: t("quickAddGameSub"),
+                      icon: "game",
+                      onPress: () => setGameModalVisible(true),
+                    },
+                    {
+                      label: t("quickAddSeller"),
+                      sublabel: t("quickAddSellerSub"),
+                      icon: "seller",
+                      onPress: () => setSellerModalVisible(true),
+                    },
+                  ]
+            }
           />
         </View>
 
-        {/* METRICS ROW */}
-        <View style={[styles.metricsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-          {/* Total Games */}
-          <View style={styles.metricCard}>
-            <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-              <Text style={[styles.metricLabel, isRTL && styles.rtlText]}>{t("metricVaultTotal")}</Text>
-              <Gamepad2
-                size={15}
-                color={styles.accentColor.color}
-                strokeWidth={2.2}
-              />
-            </View>
-            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{totalGames}</Text>
-            <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>{t("metricGamesStored")}</Text>
-          </View>
-
-          {/* Active Warranties */}
-          <View style={styles.metricCard}>
-            <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-              <Text style={[styles.metricLabel, styles.metricLabelSuccess, isRTL && styles.rtlText]}>
-                {t("metricProtected")}
+        {/* METRICS SECTION */}
+        {isSeller ? (
+          // SELLER HUB KPI GRID
+          <View style={[styles.sellerKpiGrid, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            {/* TOTAL SALES */}
+            <View style={styles.sellerKpiCard}>
+              <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Text style={[styles.metricLabel, styles.metricLabelSuccess, isRTL && styles.rtlText]}>
+                  {t('totalSales')}
+                </Text>
+                <TrendingUp size={15} color="#10B981" strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.sellerKpiValue, isRTL && styles.rtlText]}>
+                {formatCurrency(totalSalesRevenue, currency)}
               </Text>
-              <ShieldCheck
-                size={15}
-                color={styles.successColor.color}
-                strokeWidth={2.2}
-              />
+              <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>
+                {activeSellerAllocs.length} {t('soldSlots')}
+              </Text>
             </View>
-            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{activeWarranties.length}</Text>
-            <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>{t("metricUnderWarranty")}</Text>
-          </View>
 
-          {/* Locked / Issues */}
-          <View
-            style={[
-              styles.metricCard,
-              lockedGames.length > 0 && styles.metricCardDanger,
-            ]}
-          >
-            <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            {/* TOTAL COST */}
+            <View style={styles.sellerKpiCard}>
+              <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Text style={[styles.metricLabel, isRTL && styles.rtlText]}>
+                  {t('totalCost')}
+                </Text>
+                <Package size={15} color={styles.accentColor.color} strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.sellerKpiValue, isRTL && styles.rtlText]}>
+                {formatCurrency(totalInventoryCost, currency)}
+              </Text>
+              <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>
+                {totalGames} {isRTL ? 'حساب في المخزون' : 'master accounts'}
+              </Text>
+            </View>
+
+            {/* NET PROFIT */}
+            <View style={styles.sellerKpiCard}>
+              <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Text
+                  style={[
+                    styles.metricLabel,
+                    isProfitable ? styles.metricLabelSuccess : styles.metricLabelWarning,
+                    isRTL && styles.rtlText,
+                  ]}
+                >
+                  {t('netProfit')}
+                </Text>
+                <DollarSign
+                  size={15}
+                  color={isProfitable ? '#10B981' : '#F59E0B'}
+                  strokeWidth={2.2}
+                />
+              </View>
               <Text
                 style={[
-                  styles.metricLabel,
-                  lockedGames.length > 0 && styles.metricLabelDanger,
+                  styles.sellerKpiValue,
+                  isProfitable ? styles.kpiProfitPositive : styles.kpiProfitNegative,
                   isRTL && styles.rtlText,
                 ]}
               >
-                {t("metricLocked")}
+                {isProfitable ? '+' : ''}
+                {formatCurrency(netSellerProfit, currency)}
               </Text>
-              <Lock
-                size={15}
-                color={
-                  lockedGames.length > 0
-                    ? styles.dangerColor.color
-                    : styles.mutedColor.color
-                }
-                strokeWidth={2.2}
-              />
+              <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>
+                {isProfitable
+                  ? (isRTL ? 'أرباح صافية محققة' : 'Net positive margin')
+                  : (isRTL ? 'جاري استرداد رأس المال' : 'Recovering inventory')}
+              </Text>
             </View>
-            <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{lockedGames.length}</Text>
-            <Text
+
+            {/* AVAILABLE SLOTS */}
+            <View style={styles.sellerKpiCard}>
+              <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Text style={[styles.metricLabel, isRTL && styles.rtlText]}>
+                  {t('availableSlots')}
+                </Text>
+                <Users size={15} color="#3B82F6" strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.sellerKpiValue, { color: '#3B82F6' }, isRTL && styles.rtlText]}>
+                {totalAvailableSlots}
+              </Text>
+              <Text style={[styles.metricSubtext, isRTL && styles.rtlText]}>
+                {isRTL ? 'سلوت متاح للبيع' : 'ready for allocation'}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          // GAMER DASHBOARD METRICS ROW
+          <View style={[styles.metricsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            {/* Total Games */}
+            <View style={styles.metricCard}>
+              <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Text
+                  style={[styles.metricLabel, isRTL && styles.rtlText]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {t("metricVaultTotal")}
+                </Text>
+                <Gamepad2
+                  size={14}
+                  color={styles.accentColor.color}
+                  strokeWidth={2.2}
+                />
+              </View>
+              <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{totalGames}</Text>
+              <Text
+                style={[styles.metricSubtext, isRTL && styles.rtlText]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {t("metricGamesStored")}
+              </Text>
+            </View>
+
+            {/* Active Warranties */}
+            <View style={styles.metricCard}>
+              <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Text
+                  style={[styles.metricLabel, styles.metricLabelSuccess, isRTL && styles.rtlText]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {t("metricProtected")}
+                </Text>
+                <ShieldCheck
+                  size={14}
+                  color={styles.successColor.color}
+                  strokeWidth={2.2}
+                />
+              </View>
+              <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{activeWarranties.length}</Text>
+              <Text
+                style={[styles.metricSubtext, isRTL && styles.rtlText]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {t("metricUnderWarranty")}
+              </Text>
+            </View>
+
+            {/* Locked / Issues */}
+            <View
               style={[
-                styles.metricSubtext,
-                lockedGames.length > 0 && styles.metricSubtextDanger,
-                isRTL && styles.rtlText,
+                styles.metricCard,
+                lockedGames.length > 0 && styles.metricCardDanger,
               ]}
             >
-              {lockedGames.length > 0 ? t("metricPadlockAlert") : t("metricAllClear")}
-            </Text>
-          </View>
-        </View>
-
-        {/* PADLOCK PROTOCOL SECTION (IF ANY LOCKED) */}
-        {lockedGames.length > 0 && (
-          <View style={styles.padlockSection}>
-            <View style={styles.padlockAlertBanner}>
-              <View style={[styles.padlockHeaderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                <View style={[styles.padlockTitleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                  <PulsingPadlockBadge size="md" showLabel={false} />
-                  <Text style={styles.padlockBannerTitle}>
-                    {t("padlockProtocolActive")}
-                  </Text>
-                </View>
-                <View style={styles.padlockBadge}>
-                  <Text style={styles.padlockBadgeText}>
-                    {lockedGames.length} {t("padlockRevokedCount")}
-                  </Text>
-                </View>
+              <View style={[styles.metricCardHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <Text
+                  style={[
+                    styles.metricLabel,
+                    lockedGames.length > 0 && styles.metricLabelDanger,
+                    isRTL && styles.rtlText,
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {t("metricLocked")}
+                </Text>
+                <Lock
+                  size={14}
+                  color={
+                    lockedGames.length > 0
+                      ? styles.dangerColor.color
+                      : styles.mutedColor.color
+                  }
+                  strokeWidth={2.2}
+                />
               </View>
-
-              <Text style={[styles.padlockInstruction, isRTL && styles.rtlText]}>
-                {t("padlockInstruction")}
+              <Text style={[styles.metricValue, isRTL && styles.rtlText]}>{lockedGames.length}</Text>
+              <Text
+                style={[
+                  styles.metricSubtext,
+                  lockedGames.length > 0 && styles.metricSubtextDanger,
+                  isRTL && styles.rtlText,
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {lockedGames.length > 0 ? t("metricPadlockAlert") : t("metricAllClear")}
               </Text>
-
-              {lockedGames.map((game) => {
-                const seller = game.seller_id
-                  ? sellerMap.get(game.seller_id)
-                  : undefined;
-                const warranty = calculateWarranty(
-                  game.purchase_date,
-                  game.warranty_months,
-                );
-
-                return (
-                  <View key={game.id} style={[styles.lockedGameItem, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                    {game.cover_image_url ? (
-                      <Image
-                        source={{ uri: game.cover_image_url }}
-                        style={styles.lockedCoverImage}
-                      />
-                    ) : (
-                      <View style={styles.lockedCoverPlaceholder}>
-                        <Gamepad2
-                          size={20}
-                          color={styles.mutedColor.color}
-                          strokeWidth={1.8}
-                        />
-                      </View>
-                    )}
-
-                    <View style={[styles.lockedGameDetails, isRTL ? { marginRight: 12, marginLeft: 0 } : { marginLeft: 12 }]}>
-                      <Text style={[styles.lockedGameTitle, isRTL && styles.rtlText]} numberOfLines={1}>
-                        {game.title}
-                      </Text>
-
-                      {seller && (
-                        <Pressable
-                          onPress={() => router.push(`/seller/${seller.id}`)}
-                          style={[styles.lockedSellerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}
-                        >
-                          <Text style={[styles.lockedSellerText, isRTL && styles.rtlText]}>
-                            <Text>{t("padlockSeller")}: </Text>
-                            <Text>{seller.name}</Text>
-                          </Text>
-                          {isRTL ? (
-                            <ChevronLeft
-                              size={11}
-                              color={styles.accentColor.color}
-                              strokeWidth={2.4}
-                            />
-                          ) : (
-                            <ChevronRight
-                              size={11}
-                              color={styles.accentColor.color}
-                              strokeWidth={2.4}
-                            />
-                          )}
-                        </Pressable>
-                      )}
-
-                      <Text
-                        style={[
-                          styles.lockedWarrantyText,
-                          isRTL && styles.rtlText,
-                          warranty.isWarrantyActive
-                            ? styles.warrantyActiveText
-                            : styles.warrantyExpiredText,
-                        ]}
-                      >
-                        {warranty.isWarrantyActive
-                          ? t("padlockWarrantyActive", { days: warranty.daysRemaining })
-                          : t("padlockWarrantyExpired")}
-                      </Text>
-                    </View>
-
-                    <Pressable
-                      onPress={() => {
-                        try {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Medium,
-                          );
-                        } catch {}
-                        const deepLink = generateSellerDeepLink(game, seller);
-                        if (deepLink) {
-                          Linking.openURL(deepLink);
-                        } else {
-                          router.push(`/game/${game.id}`);
-                        }
-                      }}
-                      style={({ pressed }) => [
-                        styles.claimBtn,
-                        pressed && styles.claimBtnPressed,
-                      ]}
-                    >
-                      <Text style={styles.claimBtnText}>{t("padlockClaimBtn")}</Text>
-                    </Pressable>
-                  </View>
-                );
-              })}
             </View>
           </View>
         )}
 
-        {/* CATEGORY PILLS */}
-        <View style={styles.categorySection}>
-          <Text style={[styles.categoryHeading, isRTL && styles.rtlText]}>{t("categoryVaultCollection")}</Text>
+        {/* BODY CONTENT: SELLER RECENT SALES VS GAMER GAMES LIST */}
+        {isSeller ? (
+          // SELLER HUB: RECENT SLOT DELIVERIES
+          <View style={styles.recentSalesSection}>
+            <View style={[styles.recentSalesHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              <View style={isRTL && { alignItems: 'flex-end' }}>
+                <Text style={[styles.categoryHeading, isRTL && styles.rtlText]}>
+                  {isRTL ? 'أحدث مبيعات السلوتات' : 'Recent Slot Allocations'}
+                </Text>
+                <Text style={[styles.recentSalesSub, isRTL && styles.rtlText]}>
+                  {isRTL ? 'المشترون والفواتير وإيصالات التسليم' : 'Latest customer deliveries & WhatsApp receipts'}
+                </Text>
+              </View>
 
-          <View style={[styles.categoryPillsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-            {categories.map((cat) => {
-              const isSelected = selectedCategory === cat.key;
-              return (
+              <Pressable
+                onPress={() => router.push('/(tabs)/vault')}
+                style={styles.viewInventoryLink}
+              >
+                <Text style={styles.viewInventoryLinkText}>
+                  {isRTL ? 'المخزون بالكامل' : 'All Inventory'}
+                </Text>
+                {isRTL ? <ChevronLeft size={14} color="#0070D1" /> : <ChevronRight size={14} color="#0070D1" />}
+              </Pressable>
+            </View>
+
+            {recentSales.length === 0 ? (
+              <View style={styles.emptyVaultCard}>
+                <View style={styles.emptyIconCircle}>
+                  <TrendingUp size={36} color="#10B981" strokeWidth={2} />
+                </View>
+                <Text style={[styles.emptyVaultTitle, isRTL && styles.rtlText]}>
+                  {isRTL ? 'لا توجد مبيعات مسجلة حتى الآن' : 'No Slot Sales Recorded Yet'}
+                </Text>
+                <Text style={[styles.emptyVaultSubtitle, isRTL && styles.rtlText]}>
+                  {isRTL
+                    ? 'أضف أول حساب للمخزون أو افتح أي لعبة لبيع أول سلوت للعملاء.'
+                    : 'Add master accounts to your inventory and start allocating slots to buyers.'}
+                </Text>
                 <Pressable
-                  key={cat.key}
-                  onPress={() => {
-                    try {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    } catch {}
-                    setSelectedCategory(cat.key as any);
-                  }}
-                  style={[
-                    styles.categoryPill,
-                    isSelected
-                      ? styles.categoryPillActive
-                      : styles.categoryPillInactive,
-                  ]}
+                  onPress={() => setGameModalVisible(true)}
+                  style={styles.emptyAddBtn}
                 >
-                  <Text
-                    style={[
-                      styles.categoryPillText,
-                      isSelected
-                        ? styles.categoryPillTextActive
-                        : styles.categoryPillTextInactive,
+                  <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={styles.emptyAddBtnText}>{t('quickAddInventory')}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              recentSales.map((alloc: ClientAllocation) => {
+                const game = gamesMap[alloc.game_id];
+                const client = clientsMap[alloc.client_id];
+                const warrantyInfo = calculateWarranty(alloc.sale_date, alloc.warranty_months);
+
+                return (
+                  <Pressable
+                    key={alloc.id}
+                    onPress={() => {
+                      try {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      } catch {}
+                      router.push(`/game/${alloc.game_id}`);
+                    }}
+                    style={({ pressed }) => [
+                      styles.recentSaleCard,
+                      isNativeRTL && { flexDirection: 'row-reverse' },
+                      pressed && styles.recentSaleCardPressed,
                     ]}
                   >
-                    {cat.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+                    {/* GAME COVER */}
+                    {game?.cover_image_url ? (
+                      <Image source={{ uri: game.cover_image_url }} style={styles.recentSaleImage} />
+                    ) : (
+                      <View style={styles.recentSalePlaceholder}>
+                        <Gamepad2 size={20} color={styles.mutedColor.color} />
+                      </View>
+                    )}
 
-        {/* MODERN GAME CARDS LIST */}
-        <View style={styles.gamesListSection}>
-          {displayedGames.length === 0 ? (
-            <View style={styles.emptyVaultCard}>
-              <View style={styles.emptyIconCircle}>
-                <Gamepad2 size={36} color="#00D2FF" strokeWidth={2} />
-              </View>
-              <Text style={[styles.emptyVaultTitle, isRTL && styles.rtlText]}>
-                {games.length === 0
-                  ? t('emptyDashboardTitle')
-                  : t('noGamesFound')}
-              </Text>
-              <Text style={[styles.emptyVaultSubtitle, isRTL && styles.rtlText]}>
-                {games.length === 0
-                  ? t('emptyDashboardSubtitle')
-                  : t('noGamesFoundSub')}
-              </Text>
-              {games.length === 0 && (
-                <Pressable
-                  onPress={() => {
-                    try {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    } catch {}
-                    setGameModalVisible(true);
-                  }}
-                  style={({ pressed }) => [
-                    styles.emptyAddBtn,
-                    pressed && styles.emptyAddBtnPressed,
-                    isNativeRTL && { flexDirection: 'row-reverse' },
-                  ]}
-                >
-                  <Gamepad2 size={16} color="#FFFFFF" strokeWidth={2.2} />
-                  <Text style={styles.emptyAddBtnText}>
-                    {t('emptyDashboardActionBtn')}
+                    {/* SALE INFO */}
+                    <View style={[styles.recentSaleDetails, isRTL ? { marginRight: 12 } : { marginLeft: 12 }]}>
+                      <Text style={[styles.recentSaleTitle, isRTL && styles.rtlText]} numberOfLines={1}>
+                        {game?.title || 'PlayStation Game'}
+                      </Text>
+
+                      <View style={[styles.recentSaleMetaRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                        <View style={styles.slotTypePill}>
+                          <Text style={styles.slotTypePillText}>
+                            {alloc.slot_type.replace('_', ' ')}
+                          </Text>
+                        </View>
+                        <Text style={styles.recentClientName} numberOfLines={1}>
+                          {client?.name || 'Client'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* PRICE & RECEIPT BUTTON */}
+                    <View style={[styles.recentSaleRight, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                      <Text style={styles.recentSalePrice}>
+                        {formatCurrency(alloc.sale_price, alloc.currency || currency)}
+                      </Text>
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDispatchReceipt(alloc);
+                        }}
+                        style={styles.recentReceiptBtn}
+                      >
+                        <Share2 size={14} color="#10B981" />
+                      </Pressable>
+                    </View>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
+        ) : (
+          // GAMER DASHBOARD: COLLECTION & STATUS
+          <>
+            {/* PADLOCK PROTOCOL SECTION (IF ANY LOCKED) */}
+            {lockedGames.length > 0 && (
+              <View style={styles.padlockSection}>
+                <View style={styles.padlockAlertBanner}>
+                  <View style={[styles.padlockHeaderRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <View style={[styles.padlockTitleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                      <PulsingPadlockBadge size="md" showLabel={false} />
+                      <Text style={styles.padlockBannerTitle}>
+                        {t("padlockProtocolActive")}
+                      </Text>
+                    </View>
+                    <View style={styles.padlockBadge}>
+                      <Text style={styles.padlockBadgeText}>
+                        {lockedGames.length} {t("padlockRevokedCount")}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.padlockInstruction, isRTL && styles.rtlText]}>
+                    {t("padlockInstruction")}
                   </Text>
-                </Pressable>
+
+                  {lockedGames.map((game) => {
+                    const seller = game.seller_id
+                      ? sellerMap.get(game.seller_id)
+                      : undefined;
+                    const warranty = calculateWarranty(
+                      game.purchase_date,
+                      game.warranty_months,
+                    );
+
+                    return (
+                      <Pressable
+                        key={game.id}
+                        onPress={() => {
+                          try {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          } catch {}
+                          router.push(`/game/${game.id}`);
+                        }}
+                        style={({ pressed }) => [
+                          styles.lockedGameItem,
+                          isNativeRTL && { flexDirection: 'row-reverse' },
+                          pressed && { opacity: 0.9 },
+                        ]}
+                      >
+                        {game.cover_image_url ? (
+                          <Image
+                            source={{ uri: game.cover_image_url }}
+                            style={styles.lockedCoverImage}
+                          />
+                        ) : (
+                          <View style={styles.lockedCoverPlaceholder}>
+                            <Gamepad2
+                              size={20}
+                              color={styles.mutedColor.color}
+                              strokeWidth={1.8}
+                            />
+                          </View>
+                        )}
+
+                        <View style={[styles.lockedGameDetails, isRTL ? { marginRight: 12, marginLeft: 0 } : { marginLeft: 12 }]}>
+                          <Text style={[styles.lockedGameTitle, isRTL && styles.rtlText]} numberOfLines={1}>
+                            {game.title}
+                          </Text>
+
+                          {seller && (
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                router.push(`/seller/${seller.id}`);
+                              }}
+                              style={[styles.lockedSellerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}
+                            >
+                              <Text style={[styles.lockedSellerText, isRTL && styles.rtlText]}>
+                                <Text>{t("padlockSeller")}: </Text>
+                                <Text>{seller.name}</Text>
+                              </Text>
+                              {isRTL ? (
+                                <ChevronLeft
+                                  size={11}
+                                  color={styles.accentColor.color}
+                                  strokeWidth={2.4}
+                                />
+                              ) : (
+                                <ChevronRight
+                                  size={11}
+                                  color={styles.accentColor.color}
+                                  strokeWidth={2.4}
+                                />
+                              )}
+                            </Pressable>
+                          )}
+
+                          <Text
+                            style={[
+                              styles.lockedWarrantyText,
+                              isRTL && styles.rtlText,
+                              warranty.isWarrantyActive
+                                ? styles.warrantyActiveText
+                                : styles.warrantyExpiredText,
+                            ]}
+                          >
+                            {warranty.isWarrantyActive
+                              ? t("padlockWarrantyActive", { days: warranty.daysRemaining })
+                              : t("padlockWarrantyExpired")}
+                          </Text>
+                        </View>
+
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            try {
+                              Haptics.impactAsync(
+                                Haptics.ImpactFeedbackStyle.Medium,
+                              );
+                            } catch {}
+                            const deepLink = generateSellerDeepLink(game, seller);
+                            if (deepLink) {
+                              Linking.openURL(deepLink);
+                            } else {
+                              router.push(`/game/${game.id}`);
+                            }
+                          }}
+                          style={({ pressed }) => [
+                            styles.claimBtn,
+                            pressed && styles.claimBtnPressed,
+                          ]}
+                        >
+                          <Text style={styles.claimBtnText}>{t("padlockClaimBtn")}</Text>
+                        </Pressable>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {/* CATEGORY PILLS */}
+            <View style={styles.categorySection}>
+              <Text style={[styles.categoryHeading, isRTL && styles.rtlText]}>{t("categoryVaultCollection")}</Text>
+
+              <View style={[styles.categoryPillsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                {categories.map((cat) => {
+                  const isSelected = selectedCategory === cat.key;
+                  return (
+                    <Pressable
+                      key={cat.key}
+                      onPress={() => {
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        } catch {}
+                        setSelectedCategory(cat.key as any);
+                      }}
+                      style={[
+                        styles.categoryPill,
+                        isSelected
+                          ? styles.categoryPillActive
+                          : styles.categoryPillInactive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryPillText,
+                          isSelected
+                            ? styles.categoryPillTextActive
+                            : styles.categoryPillTextInactive,
+                        ]}
+                      >
+                        {cat.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* MODERN GAME CARDS LIST */}
+            <View style={styles.gamesListSection}>
+              {displayedGames.length === 0 ? (
+                <View style={styles.emptyVaultCard}>
+                  <View style={styles.emptyIconCircle}>
+                    <Gamepad2 size={36} color="#00D2FF" strokeWidth={2} />
+                  </View>
+                  <Text style={[styles.emptyVaultTitle, isRTL && styles.rtlText]}>
+                    {games.length === 0
+                      ? t('emptyDashboardTitle')
+                      : t('noGamesFound')}
+                  </Text>
+                  <Text style={[styles.emptyVaultSubtitle, isRTL && styles.rtlText]}>
+                    {games.length === 0
+                      ? t('emptyDashboardSubtitle')
+                      : t('noGamesFoundSub')}
+                  </Text>
+                  {games.length === 0 && (
+                    <Pressable
+                      onPress={() => {
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        } catch {}
+                        setGameModalVisible(true);
+                      }}
+                      style={({ pressed }) => [
+                        styles.emptyAddBtn,
+                        pressed && styles.emptyAddBtnPressed,
+                        isNativeRTL && { flexDirection: 'row-reverse' },
+                      ]}
+                    >
+                      <Gamepad2 size={16} color="#FFFFFF" strokeWidth={2.2} />
+                      <Text style={styles.emptyAddBtnText}>
+                        {t('emptyDashboardActionBtn')}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              ) : (
+                displayedGames.map((game) => {
+                  const seller = game.seller_id
+                    ? sellerMap.get(game.seller_id)
+                    : undefined;
+                  return (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      sellerName={seller?.name}
+                      onPress={() => {
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        } catch {}
+                        router.push(`/game/${game.id}`);
+                      }}
+                      onSellerPress={
+                        seller ? () => router.push(`/seller/${seller.id}`) : undefined
+                      }
+                    />
+                  );
+                })
               )}
             </View>
-          ) : (
-            displayedGames.map((game) => {
-              const seller = game.seller_id
-                ? sellerMap.get(game.seller_id)
-                : undefined;
-              return (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  sellerName={seller?.name}
-                  onPress={() => {
-                    try {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    } catch {}
-                    router.push(`/game/${game.id}`);
-                  }}
-                  onSellerPress={
-                    seller ? () => router.push(`/seller/${seller.id}`) : undefined
-                  }
-                />
-              );
-            })
-          )}
-        </View>
+          </>
+        )}
       </ScrollView>
 
       {/* QUICK SELLER REGISTRATION MODAL */}
@@ -477,6 +852,27 @@ export default function DashboardScreen() {
         onClose={() => setGameModalVisible(false)}
         onSave={handleSaveGame}
       />
+
+      {/* QUICK CLIENT REGISTRATION MODAL */}
+      <ClientFormModal
+        visible={clientModalVisible}
+        onClose={() => setClientModalVisible(false)}
+        onSave={handleSaveClient}
+      />
+
+      {/* 1-TAP WHATSAPP DISPATCH MODAL */}
+      {dispatchAllocation && gamesMap[dispatchAllocation.game_id] && (
+        <WhatsAppDispatchModal
+          visible={dispatchModalVisible}
+          game={gamesMap[dispatchAllocation.game_id]}
+          allocation={dispatchAllocation}
+          client={clientsMap[dispatchAllocation.client_id]}
+          onClose={() => {
+            setDispatchModalVisible(false);
+            setDispatchAllocation(null);
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -492,7 +888,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     scrollContent: {
       paddingTop: 10,
-      paddingBottom: 96,
+      paddingBottom: 135,
     },
     sloganBanner: {
       paddingHorizontal: 20,
@@ -548,15 +944,18 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     metricsRow: {
       flexDirection: "row",
-      paddingHorizontal: 20,
-      gap: 10,
+      paddingHorizontal: 16,
+      gap: 8,
       marginBottom: 18,
     },
     metricCard: {
       flex: 1,
+      minWidth: 0,
+      overflow: 'hidden',
       backgroundColor: colors.surface,
-      borderRadius: 18,
-      padding: 14,
+      borderRadius: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 10,
       borderWidth: 1,
       borderColor: colors.border,
       boxShadow: theme === "dark" ? "0px 2px 6px rgba(0, 0, 0, 0.2)" : "0px 2px 6px rgba(0, 0, 0, 0.04)",
@@ -570,10 +969,13 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      gap: 4,
     },
     metricLabel: {
+      flex: 1,
+      minWidth: 0,
       color: colors.textMuted,
-      fontSize: 11,
+      fontSize: 10.5,
       fontWeight: "700",
       textTransform: "uppercase",
     },
@@ -585,13 +987,13 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     metricValue: {
       color: colors.text,
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: "800",
       marginTop: 4,
     },
     metricSubtext: {
       color: colors.textSecondary,
-      fontSize: 10,
+      fontSize: 9.5,
       marginTop: 2,
     },
     metricSubtextDanger: {
@@ -818,5 +1220,139 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     rtlText: {
       textAlign: 'right',
+    },
+    sellerKpiGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      paddingHorizontal: 20,
+      gap: 12,
+      marginBottom: 20,
+    },
+    sellerKpiCard: {
+      width: '48%',
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      boxShadow: theme === 'dark' ? '0px 2px 8px rgba(0, 0, 0, 0.25)' : '0px 2px 8px rgba(0, 0, 0, 0.04)',
+      elevation: 2,
+    },
+    metricLabelWarning: {
+      color: colors.warning,
+    },
+    sellerKpiValue: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.text,
+      marginTop: 6,
+      marginBottom: 2,
+    },
+    kpiProfitPositive: {
+      color: '#10B981',
+    },
+    kpiProfitNegative: {
+      color: '#F59E0B',
+    },
+    recentSalesSection: {
+      paddingHorizontal: 20,
+      marginTop: 4,
+    },
+    recentSalesHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 14,
+    },
+    recentSalesSub: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 1,
+    },
+    viewInventoryLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    viewInventoryLinkText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#0070D1',
+    },
+    recentSaleCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 12,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    recentSaleCardPressed: {
+      opacity: 0.92,
+      transform: [{ scale: 0.995 }],
+    },
+    recentSaleImage: {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: theme === 'dark' ? '#1E293B' : '#E2E8F0',
+    },
+    recentSalePlaceholder: {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: theme === 'dark' ? '#1E293B' : '#F1F5F9',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    recentSaleDetails: {
+      flex: 1,
+    },
+    recentSaleTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    recentSaleMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    slotTypePill: {
+      backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#DBEAFE',
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 4,
+    },
+    slotTypePillText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: '#3B82F6',
+    },
+    recentClientName: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      fontWeight: '600',
+      flex: 1,
+    },
+    recentSaleRight: {
+      alignItems: 'flex-end',
+      gap: 4,
+    },
+    recentSalePrice: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#10B981',
+    },
+    recentReceiptBtn: {
+      width: 28,
+      height: 28,
+      borderRadius: 7,
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
   });

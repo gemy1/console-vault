@@ -95,6 +95,8 @@ function RootNavigator() {
   );
 }
 
+import { PersonaProvider } from "../context/PersonaContext";
+
 function VaultAppProviders({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
@@ -103,10 +105,12 @@ function VaultAppProviders({ children }: { children: React.ReactNode }) {
       <VaultSyncProvider userId={user?.id}>
         <LanguageProvider>
           <VaultThemeProvider>
-            <AlertProvider>
-              {children}
-              <BiometricLockScreen />
-            </AlertProvider>
+            <PersonaProvider>
+              <AlertProvider>
+                {children}
+                <BiometricLockScreen />
+              </AlertProvider>
+            </PersonaProvider>
           </VaultThemeProvider>
         </LanguageProvider>
       </VaultSyncProvider>

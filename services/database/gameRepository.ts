@@ -8,6 +8,7 @@ interface SQLiteGameRow {
   title: string;
   cover_image_url: string | null;
   account_type: string;
+  platform?: string | null;
   status: string;
   purchase_date: string;
   warranty_months: number;
@@ -15,6 +16,9 @@ interface SQLiteGameRow {
   psn_password: string | null;
   backup_codes: string | null;
   notes: string | null;
+  cost_price?: number | null;
+  currency?: string | null;
+  is_inventory?: number | boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -27,6 +31,8 @@ function mapRowToGame(row: SQLiteGameRow): Game {
     } catch {}
   }
 
+  const isInv = row.is_inventory === 1 || row.is_inventory === true;
+
   return {
     id: row.id,
     user_id: row.user_id,
@@ -34,6 +40,7 @@ function mapRowToGame(row: SQLiteGameRow): Game {
     title: row.title,
     cover_image_url: row.cover_image_url || undefined,
     account_type: row.account_type as Game['account_type'],
+    platform: (row.platform as Game['platform']) || 'PS5',
     status: row.status as Game['status'],
     purchase_date: row.purchase_date,
     warranty_months: row.warranty_months,
@@ -41,6 +48,9 @@ function mapRowToGame(row: SQLiteGameRow): Game {
     psn_password: row.psn_password || undefined,
     backup_codes: backupCodes,
     notes: row.notes || undefined,
+    cost_price: Number(row.cost_price || 0),
+    currency: row.currency || 'USD',
+    is_inventory: isInv,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -91,18 +101,20 @@ export const GameRepository = {
     const createdAt = game.created_at || now;
     const updatedAt = game.updated_at || now;
     const backupCodesStr = game.backup_codes ? JSON.stringify(game.backup_codes) : null;
+    const isInv = game.is_inventory ? 1 : 0;
 
     await db.runAsync(
       `INSERT INTO games (
         id, user_id, seller_id, title, cover_image_url, account_type,
-        status, purchase_date, warranty_months, psn_email, psn_password,
-        backup_codes, notes, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        platform, status, purchase_date, warranty_months, psn_email, psn_password,
+        backup_codes, notes, cost_price, currency, is_inventory, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         seller_id = excluded.seller_id,
         title = excluded.title,
         cover_image_url = excluded.cover_image_url,
         account_type = excluded.account_type,
+        platform = excluded.platform,
         status = excluded.status,
         purchase_date = excluded.purchase_date,
         warranty_months = excluded.warranty_months,
@@ -110,6 +122,9 @@ export const GameRepository = {
         psn_password = excluded.psn_password,
         backup_codes = excluded.backup_codes,
         notes = excluded.notes,
+        cost_price = excluded.cost_price,
+        currency = excluded.currency,
+        is_inventory = excluded.is_inventory,
         updated_at = excluded.updated_at;`,
       [
         game.id,
@@ -118,6 +133,7 @@ export const GameRepository = {
         game.title,
         game.cover_image_url || null,
         game.account_type,
+        game.platform || 'PS5',
         game.status || 'Active',
         game.purchase_date,
         game.warranty_months,
@@ -125,6 +141,9 @@ export const GameRepository = {
         game.psn_password || null,
         backupCodesStr,
         game.notes || null,
+        game.cost_price || 0,
+        game.currency || 'USD',
+        isInv,
         createdAt,
         updatedAt,
       ]
@@ -132,6 +151,10 @@ export const GameRepository = {
 
     return {
       ...game,
+      platform: game.platform || 'PS5',
+      cost_price: game.cost_price || 0,
+      currency: game.currency || 'USD',
+      is_inventory: !!game.is_inventory,
       created_at: createdAt,
       updated_at: updatedAt,
     };

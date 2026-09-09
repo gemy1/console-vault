@@ -153,17 +153,25 @@ export const SyncQueue = {
     let processedCount = 0;
     const remainingQueue: PendingSyncItem[] = [];
 
-    // CRITICAL: Sort queue so 'seller' records are ALWAYS synced before 'game' records
-    // to satisfy relational foreign key constraints in PostgreSQL
+    // CRITICAL: Sort queue so foreign key dependencies are satisfied in PostgreSQL:
+    // 1. sellers -> 2. clients -> 3. games -> 4. client_allocations
+    const entityPriority: Record<string, number> = {
+      seller: 1,
+      client: 2,
+      game: 3,
+      client_allocation: 4,
+    };
     const sortedQueue = [...queue].sort((a, b) => {
-      if (a.entity === 'seller' && b.entity !== 'seller') return -1;
-      if (a.entity !== 'seller' && b.entity === 'seller') return 1;
-      return 0;
+      return (entityPriority[a.entity] || 99) - (entityPriority[b.entity] || 99);
     });
 
     for (const item of sortedQueue) {
       try {
-        const table = item.entity === 'game' ? 'games' : 'sellers';
+        let table = 'games';
+        if (item.entity === 'game') table = 'games';
+        else if (item.entity === 'seller') table = 'sellers';
+        else if (item.entity === 'client') table = 'clients';
+        else if (item.entity === 'client_allocation') table = 'client_allocations';
 
         if (item.action === 'UPSERT') {
           const safeId = toSafeUUID(item.payload.id);
@@ -177,6 +185,7 @@ export const SyncQueue = {
           // Remove client-only joined fields before upserting
           if (item.entity === 'game') {
             delete payloadWithUser.seller;
+            delete payloadWithUser.allocations;
             
             // Clean up seller_id and ensure parent seller exists in Supabase
             if (payloadWithUser.seller_id) {
@@ -226,6 +235,11 @@ export const SyncQueue = {
             if (!payloadWithUser.backup_codes) {
               payloadWithUser.backup_codes = [];
             }
+          } else if (item.entity === 'client_allocation') {
+            delete payloadWithUser.client;
+            delete payloadWithUser.game;
+            payloadWithUser.game_id = toSafeUUID(payloadWithUser.game_id);
+            payloadWithUser.client_id = toSafeUUID(payloadWithUser.client_id);
           }
 
           const { error } = await supabase.from(table).upsert(payloadWithUser);
@@ -244,6 +258,16 @@ export const SyncQueue = {
               if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
                 OfflineVault.deleteSeller(item.payload.id);
                 OfflineVault.addSeller({ ...item.payload, id: safeId, user_id: authUserId });
+              }
+            } else if (item.entity === 'client') {
+              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
+                OfflineVault.deleteClient(item.payload.id);
+                OfflineVault.addClient({ ...item.payload, id: safeId, user_id: authUserId });
+              }
+            } else if (item.entity === 'client_allocation') {
+              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
+                OfflineVault.deleteAllocation(item.payload.id);
+                OfflineVault.addAllocation({ ...item.payload, id: safeId, user_id: authUserId });
               }
             }
           }

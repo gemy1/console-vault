@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
-import { Game, Seller, SyncStatus } from '../types/vault';
+import { Game, Seller, Client, ClientAllocation, SyncStatus } from '../types/vault';
 import { OfflineVault, VaultStorage } from '../services/storage';
 import { SyncQueue } from '../services/syncQueue';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
@@ -7,6 +7,8 @@ import { supabase, isSupabaseConfigured } from '../services/supabase';
 interface VaultSyncContextType {
   games: Game[];
   sellers: Seller[];
+  clients: Client[];
+  allocations: ClientAllocation[];
   syncStatus: SyncStatus;
   pendingCount: number;
   lastSyncedAt: string | null;
@@ -17,6 +19,12 @@ interface VaultSyncContextType {
   addSeller: (seller: Seller) => Seller;
   updateSeller: (id: string, partial: Partial<Seller>) => Seller | null;
   deleteSeller: (id: string) => boolean;
+  addClient: (client: Client) => Client;
+  updateClient: (id: string, partial: Partial<Client>) => Client | null;
+  deleteClient: (id: string) => boolean;
+  addAllocation: (allocation: ClientAllocation) => ClientAllocation;
+  updateAllocation: (id: string, partial: Partial<ClientAllocation>) => ClientAllocation | null;
+  deleteAllocation: (id: string) => boolean;
   refreshData: () => void;
   pullFromCloud: () => Promise<boolean>;
   clearLocalVault: () => void;
@@ -28,6 +36,8 @@ const VaultSyncContext = createContext<VaultSyncContextType | undefined>(undefin
 export function VaultSyncProvider({ children, userId }: { children: ReactNode; userId?: string }) {
   const [games, setGames] = useState<Game[]>(() => OfflineVault.getGames());
   const [sellers, setSellers] = useState<Seller[]>(() => OfflineVault.getSellers());
+  const [clients, setClients] = useState<Client[]>(() => OfflineVault.getClients());
+  const [allocations, setAllocations] = useState<ClientAllocation[]>(() => OfflineVault.getAllocations());
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
     return isSupabaseConfigured && userId ? 'synced' : 'local_only';
   });
@@ -51,6 +61,8 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
   const refreshData = useCallback(() => {
     setGames([...OfflineVault.getGames()]);
     setSellers([...OfflineVault.getSellers()]);
+    setClients([...OfflineVault.getClients()]);
+    setAllocations([...OfflineVault.getAllocations()]);
   }, []);
 
   // Hydration listener: when AsyncStorage finishes reading from disk, update state
@@ -69,14 +81,29 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     if (!isSupabaseConfigured || !userId) return false;
 
     try {
-      const [gamesRes, sellersRes] = await Promise.all([
+      const [gamesRes, sellersRes, clientsRes, allocationsRes] = await Promise.all([
         supabase.from('games').select('*').order('created_at', { ascending: false }),
         supabase.from('sellers').select('*').order('created_at', { ascending: false }),
+        supabase.from('clients').select('*').order('created_at', { ascending: false }),
+        supabase.from('client_allocations').select('*').order('created_at', { ascending: false }),
       ]);
 
       if (gamesRes.data && sellersRes.data) {
-        if (gamesRes.data.length > 0 || sellersRes.data.length > 0) {
-          OfflineVault.hydrateVault(gamesRes.data as Game[], sellersRes.data as Seller[]);
+        const cloudClients = (clientsRes.data || []) as Client[];
+        const cloudAllocations = (allocationsRes.data || []) as ClientAllocation[];
+
+        if (
+          gamesRes.data.length > 0 ||
+          sellersRes.data.length > 0 ||
+          cloudClients.length > 0 ||
+          cloudAllocations.length > 0
+        ) {
+          OfflineVault.hydrateVault(
+            gamesRes.data as Game[],
+            sellersRes.data as Seller[],
+            cloudClients,
+            cloudAllocations
+          );
           refreshData();
           SyncQueue.setLastSyncedAt(new Date().toISOString());
           setLastSyncedAt(new Date().toISOString());
@@ -217,6 +244,113 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     [userId]
   );
 
+  const addClient = useCallback(
+    (client: Client): Client => {
+      const clientWithUser: Client = {
+        ...client,
+        user_id: userId || client.user_id || 'user-demo',
+      };
+      const saved = OfflineVault.addClient(clientWithUser);
+      setClients([...OfflineVault.getClients()]);
+      SyncQueue.enqueue({
+        entity: 'client',
+        action: 'UPSERT',
+        payload: saved,
+      });
+      SyncQueue.flush(userId).catch(() => {});
+      return saved;
+    },
+    [userId]
+  );
+
+  const updateClient = useCallback(
+    (id: string, partial: Partial<Client>): Client | null => {
+      const updated = OfflineVault.updateClient(id, partial);
+      if (updated) {
+        setClients([...OfflineVault.getClients()]);
+        SyncQueue.enqueue({
+          entity: 'client',
+          action: 'UPSERT',
+          payload: updated,
+        });
+        SyncQueue.flush(userId).catch(() => {});
+      }
+      return updated;
+    },
+    [userId]
+  );
+
+  const deleteClient = useCallback(
+    (id: string): boolean => {
+      const success = OfflineVault.deleteClient(id);
+      if (success) {
+        setClients([...OfflineVault.getClients()]);
+        setAllocations([...OfflineVault.getAllocations()]);
+        SyncQueue.enqueue({
+          entity: 'client',
+          action: 'DELETE',
+          payload: { id },
+        });
+        SyncQueue.flush(userId).catch(() => {});
+      }
+      return success;
+    },
+    [userId]
+  );
+
+  const addAllocation = useCallback(
+    (allocation: ClientAllocation): ClientAllocation => {
+      const allocationWithUser: ClientAllocation = {
+        ...allocation,
+        user_id: userId || allocation.user_id || 'user-demo',
+      };
+      const saved = OfflineVault.addAllocation(allocationWithUser);
+      setAllocations([...OfflineVault.getAllocations()]);
+      SyncQueue.enqueue({
+        entity: 'client_allocation',
+        action: 'UPSERT',
+        payload: saved,
+      });
+      SyncQueue.flush(userId).catch(() => {});
+      return saved;
+    },
+    [userId]
+  );
+
+  const updateAllocation = useCallback(
+    (id: string, partial: Partial<ClientAllocation>): ClientAllocation | null => {
+      const updated = OfflineVault.updateAllocation(id, partial);
+      if (updated) {
+        setAllocations([...OfflineVault.getAllocations()]);
+        SyncQueue.enqueue({
+          entity: 'client_allocation',
+          action: 'UPSERT',
+          payload: updated,
+        });
+        SyncQueue.flush(userId).catch(() => {});
+      }
+      return updated;
+    },
+    [userId]
+  );
+
+  const deleteAllocation = useCallback(
+    (id: string): boolean => {
+      const success = OfflineVault.deleteAllocation(id);
+      if (success) {
+        setAllocations([...OfflineVault.getAllocations()]);
+        SyncQueue.enqueue({
+          entity: 'client_allocation',
+          action: 'DELETE',
+          payload: { id },
+        });
+        SyncQueue.flush(userId).catch(() => {});
+      }
+      return success;
+    },
+    [userId]
+  );
+
   const clearLocalVault = useCallback(() => {
     OfflineVault.clearVault();
     SyncQueue.clearQueue();
@@ -226,10 +360,12 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
   const clearCloudAndLocalVault = useCallback(async (): Promise<boolean> => {
     try {
       if (isSupabaseConfigured && userId) {
-        // Delete all games and sellers belonging to this user in Supabase
+        // Delete all data belonging to this user in Supabase
         await Promise.all([
           supabase.from('games').delete().eq('user_id', userId),
           supabase.from('sellers').delete().eq('user_id', userId),
+          supabase.from('clients').delete().eq('user_id', userId),
+          supabase.from('client_allocations').delete().eq('user_id', userId),
         ]);
       }
     } catch (err) {
@@ -246,6 +382,8 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     () => ({
       games,
       sellers,
+      clients,
+      allocations,
       syncStatus,
       pendingCount,
       lastSyncedAt,
@@ -256,6 +394,12 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       addSeller,
       updateSeller,
       deleteSeller,
+      addClient,
+      updateClient,
+      deleteClient,
+      addAllocation,
+      updateAllocation,
+      deleteAllocation,
       refreshData,
       pullFromCloud,
       clearLocalVault,
@@ -264,6 +408,8 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     [
       games,
       sellers,
+      clients,
+      allocations,
       syncStatus,
       pendingCount,
       lastSyncedAt,
@@ -274,6 +420,12 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       addSeller,
       updateSeller,
       deleteSeller,
+      addClient,
+      updateClient,
+      deleteClient,
+      addAllocation,
+      updateAllocation,
+      deleteAllocation,
       refreshData,
       pullFromCloud,
       clearLocalVault,
@@ -287,6 +439,8 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
 const DEFAULT_SYNC_FALLBACK: VaultSyncContextType = {
   games: [],
   sellers: [],
+  clients: [],
+  allocations: [],
   syncStatus: 'local_only',
   pendingCount: 0,
   lastSyncedAt: null,
@@ -297,6 +451,12 @@ const DEFAULT_SYNC_FALLBACK: VaultSyncContextType = {
   addSeller: (s) => s,
   updateSeller: () => null,
   deleteSeller: () => false,
+  addClient: (c) => c,
+  updateClient: () => null,
+  deleteClient: () => false,
+  addAllocation: (a) => a,
+  updateAllocation: () => null,
+  deleteAllocation: () => false,
   refreshData: () => {},
   pullFromCloud: async () => false,
   clearLocalVault: () => {},

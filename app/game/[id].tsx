@@ -16,6 +16,7 @@ import * as Haptics from '@/utils/haptics';
 import { OfflineVault } from "../../services/storage";
 import { Game, Seller, GameStatus } from "../../types/vault";
 import { calculateWarranty } from "../../utils/padlock";
+import { getGamePotentialSlots } from "../../utils/slots";
 import { useBiometricGuard } from "../../hooks/useBiometricGuard";
 import { MenuToggleButton } from "../../components/common";
 import {
@@ -28,6 +29,9 @@ import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { useCustomAlert } from "../../context/AlertContext";
+import { usePersona } from "../../context/PersonaContext";
+import { SlotAllocationModal, WhatsAppDispatchModal } from "../../components/seller";
+import { ClientAllocation, Client, SlotType, ConsolePlatform } from "../../types/vault";
 import {
   ChevronLeft,
   Heart,
@@ -41,6 +45,12 @@ import {
   RefreshCw,
   Pencil,
   Trash2,
+  User,
+  Plus,
+  Share2,
+  CheckCircle2,
+  Clock,
+  Phone,
 } from "lucide-react-native";
 
 export default function GameDetailsScreen() {
@@ -61,6 +71,14 @@ export default function GameDetailsScreen() {
 
   const vaultSync = useVaultSync();
   const { showAlert } = useCustomAlert();
+  const { isSeller, formatCurrency, currency } = usePersona();
+
+  const [slotModalVisible, setSlotModalVisible] = useState(false);
+  const [selectedSlotForAllocation, setSelectedSlotForAllocation] = useState<SlotType | undefined>(undefined);
+  const [editingAllocation, setEditingAllocation] = useState<ClientAllocation | null>(null);
+  const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
+  const [selectedDispatchAllocation, setSelectedDispatchAllocation] = useState<ClientAllocation | null>(null);
+  const [selectedDispatchClient, setSelectedDispatchClient] = useState<Client | null>(null);
 
   const { isUnlocked, requestUnlock, lock } = useBiometricGuard(60);
 
@@ -91,6 +109,84 @@ export default function GameDetailsScreen() {
 
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
   const isLocked = game.status === "Locked";
+
+  // Seller Hub allocations and clients
+  const gameAllocations = (vaultSync ? vaultSync.allocations : OfflineVault.getAllocations()).filter(
+    (a) => a.game_id === id
+  );
+  const activeAllocations = gameAllocations.filter((a) => a.status === 'Active');
+  const clientsList = vaultSync ? vaultSync.clients : OfflineVault.getClients();
+  const clientsMap: Record<string, Client> = {};
+  clientsList.forEach((c) => {
+    clientsMap[c.id] = c;
+  });
+
+  // Financial calculations
+  const totalCost = game.cost_price || 0;
+  const totalSales = activeAllocations.reduce((sum, a) => sum + (a.sale_price || 0), 0);
+  const netProfit = totalSales - totalCost;
+  const recoveryPercent = totalCost > 0 ? Math.min(100, Math.round((totalSales / totalCost) * 100)) : 100;
+  const isProfitable = netProfit > 0;
+
+  // Potential slots gated by BOTH platform AND account_type
+  const platform = (game.platform || 'PS5') as ConsolePlatform;
+  const potentialSlots = getGamePotentialSlots(game.platform, game.account_type);
+
+  const fullAlloc = activeAllocations.find((a) => a.slot_type === 'Full');
+
+  const getSlotLabel = (slot: SlotType) => {
+    switch (slot) {
+      case 'Primary_PS5':
+        return t('slotPrimaryPS5');
+      case 'Primary_PS4':
+        return t('slotPrimaryPS4');
+      case 'Secondary_PS5':
+        return t('slotSecondaryPS5');
+      case 'Secondary_PS4':
+        return t('slotSecondaryPS4');
+      case 'Secondary':
+        return t('slotSecondary');
+      case 'Full':
+        return t('slotFull');
+      default:
+        return slot;
+    }
+  };
+
+  const handleOpenSellSlot = (slot?: SlotType) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setEditingAllocation(null);
+    setSelectedSlotForAllocation(slot);
+    setSlotModalVisible(true);
+  };
+
+  const handleOpenManageSlot = (allocation: ClientAllocation) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setEditingAllocation(allocation);
+    setSelectedSlotForAllocation(allocation.slot_type);
+    setSlotModalVisible(true);
+  };
+
+  const handleOpenDispatchWhatsApp = (allocation: ClientAllocation) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    const client = clientsMap[allocation.client_id];
+    setSelectedDispatchAllocation(allocation);
+    setSelectedDispatchClient(client || null);
+    setDispatchModalVisible(true);
+  };
+
+  const handleSlotAllocated = (allocation: ClientAllocation, client?: Client) => {
+    setSlotModalVisible(false);
+    setSelectedDispatchAllocation(allocation);
+    setSelectedDispatchClient(client || clientsMap[allocation.client_id] || null);
+    setDispatchModalVisible(true);
+  };
 
   const copyToClipboard = async (text: string, fieldKey: string) => {
     await Clipboard.setStringAsync(text);
@@ -339,8 +435,33 @@ export default function GameDetailsScreen() {
           </View>
 
           {/* BADGES & METADATA ROW */}
-          <View style={styles.badgesRow}>
-            <View style={styles.accountTypeRow}>
+          <View style={[styles.badgesRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            {/* PLATFORM BADGE */}
+            <View
+              style={[
+                styles.platformBadge,
+                platform === 'PS4'
+                  ? styles.platformBadgePS4
+                  : platform === 'BOTH'
+                  ? styles.platformBadgeBoth
+                  : styles.platformBadgePS5,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.platformBadgeText,
+                  platform === 'PS4'
+                    ? styles.platformTextPS4
+                    : platform === 'BOTH'
+                    ? styles.platformTextBoth
+                    : styles.platformTextPS5,
+                ]}
+              >
+                {platform === 'BOTH' ? 'PS4 • PS5' : platform}
+              </Text>
+            </View>
+
+            <View style={[styles.accountTypeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View
                 style={[
                   styles.statusIndicatorDot,
@@ -348,11 +469,19 @@ export default function GameDetailsScreen() {
                 ]}
               />
               <Text style={styles.accountTypeText}>
-                PS5 {game.account_type === 'Primary'
-                  ? t('accountTypePrimary')
-                  : game.account_type === 'Full'
-                  ? t('accountTypeFull')
-                  : t('accountTypeSecondary')}
+                {isSeller ? (
+                  game.is_inventory
+                    ? (isRTL ? 'حساب مخزون رئيسي' : 'Master Inventory')
+                    : (isRTL ? 'حساب ألعاب شخصي' : 'Personal Game')
+                ) : (
+                  `${platform === 'BOTH' ? 'PS4/PS5' : platform} ${
+                    game.account_type === 'Primary'
+                      ? t('accountTypePrimary')
+                      : game.account_type === 'Full'
+                      ? t('accountTypeFull')
+                      : t('accountTypeSecondary')
+                  }`
+                )}
               </Text>
             </View>
 
@@ -383,126 +512,393 @@ export default function GameDetailsScreen() {
             <Text style={styles.purchaseDateText}>
               {t('purchasedOn', { date: game.purchase_date })}
             </Text>
-          </View>
 
-          {/* CLICKABLE SELLER CARD */}
-          {seller && (
-            <Pressable
-              onPress={() => router.push(`/seller/${seller.id}`)}
-              style={({ pressed }) => [
-                styles.sellerCard,
-                pressed && styles.sellerCardPressed,
-              ]}
-            >
-              <View style={styles.sellerCardLeft}>
-                <View style={styles.sellerAvatar}>
-                  <ShieldCheck
-                    size={20}
-                    color={styles.accentIcon.color}
-                    strokeWidth={2}
-                  />
-                </View>
-                <View>
-                  <Text style={[styles.sellerCardName, isRTL && styles.rtlText]}>
-                    {t('sellerCardPrefix')} {seller.name}
-                  </Text>
-                  <View style={styles.sellerSubtextRow}>
-                    <Text style={styles.sellerSubtext}>
-                      {t('sellerCardSubtext')}
-                    </Text>
-                    {isRTL ? (
-                      <ChevronLeft
-                        size={12}
-                        color={styles.accentIcon.color}
-                        strokeWidth={2.4}
-                      />
-                    ) : (
-                      <ChevronRight
-                        size={12}
-                        color={styles.accentIcon.color}
-                        strokeWidth={2.4}
-                      />
-                    )}
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.sellerRatingPill}>
-                <Star size={11} color="#FFD700" fill="#FFD700" />
-                <Text style={styles.sellerRatingText}>
-                  {seller.reputation_score.toFixed(1)}
+            {game.cost_price !== undefined && game.cost_price > 0 ? (
+              <View style={styles.gameDetailPriceBadge}>
+                <Text style={styles.gameDetailPriceText}>
+                  {formatCurrency(game.cost_price, game.currency || currency)}
                 </Text>
               </View>
-            </Pressable>
-          )}
+            ) : null}
+          </View>
 
-          {/* PADLOCK BANNER */}
-          {isLocked && (
-            <View style={styles.padlockBanner}>
-              <View style={styles.padlockHeaderRow}>
-                <PulsingPadlockBadge size="sm" showLabel={false} />
-                <Text style={[styles.padlockTitle, isRTL && styles.rtlText]}>{t('licenseRevokedTitle')}</Text>
+          {/* IF SELLER MODE: SHOW FINANCIAL SUMMARY AND DUAL-SLOT COMMAND CENTER */}
+          {isSeller ? (
+            <>
+              {/* FINANCIAL RECOVERY PERFORMANCE */}
+              <View style={styles.sellerFinanceBox}>
+                <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>
+                  {t('financialOverview')}
+                </Text>
+
+                <View style={[styles.financeStatsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <View style={[styles.financeStatCol, isRTL && { alignItems: 'flex-end' }]}>
+                    <Text style={styles.financeStatLabel}>{t('costPrice')}</Text>
+                    <Text style={styles.financeCostVal}>
+                      {formatCurrency(totalCost, game.currency || currency)}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.financeStatCol, isRTL && { alignItems: 'flex-end' }]}>
+                    <Text style={styles.financeStatLabel}>{t('totalSales')}</Text>
+                    <Text style={styles.financeSalesVal}>
+                      {formatCurrency(totalSales, currency)}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.financeStatCol, isRTL && { alignItems: 'flex-end' }]}>
+                    <Text style={styles.financeStatLabel}>{t('netProfit')}</Text>
+                    <Text
+                      style={[
+                        styles.financeProfitVal,
+                        isProfitable ? styles.profitPositive : styles.profitNegative,
+                      ]}
+                    >
+                      {isProfitable ? '+' : ''}
+                      {formatCurrency(netProfit, currency)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.recoveryProgressWrapper}>
+                  <View
+                    style={[
+                      styles.recoveryProgressBar,
+                      { width: `${recoveryPercent}%` },
+                      isProfitable && styles.recoveryProgressBarProfitable,
+                    ]}
+                  />
+                </View>
+                <View style={[styles.recoveryInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <Text style={styles.recoveryInfoText}>
+                    {isRTL
+                      ? `تم استرداد ${recoveryPercent}% من التكلفة`
+                      : `${recoveryPercent}% of cost recovered`}
+                  </Text>
+                  <Text style={styles.recoveryInfoText}>
+                    {activeAllocations.length} {t('soldSlots')}
+                  </Text>
+                </View>
               </View>
 
-              <Text style={[styles.padlockDescription, isRTL && styles.rtlText]}>
-                {warranty.isWarrantyActive
-                  ? t('warrantyActiveNotice', { days: warranty.daysRemaining, seller: seller?.name || t('sellerCardPrefix') })
-                  : t('warrantyExpiredNotice', { date: warranty.expiryDate })}
-              </Text>
+              {/* LIVE PLAYSTATION SLOT DISTRIBUTION COMMAND CENTER */}
+              <View style={styles.slotCommandCenter}>
+                <View style={[styles.slotHeaderBlock, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <View style={isRTL && { alignItems: 'flex-end' }}>
+                    <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>
+                      {isRTL ? 'توزيع سلوتات الحساب' : 'PlayStation Slot Distribution'}
+                    </Text>
+                    <Text style={[styles.slotHeaderSub, isRTL && styles.rtlText]}>
+                      {isRTL
+                        ? 'حالة كل سلوت، المشتري، وسعر البيع'
+                        : 'Active console allocations, buyer & pricing matrix'}
+                    </Text>
+                  </View>
 
+                  <Pressable
+                    onPress={() => handleOpenSellSlot()}
+                    style={styles.quickSellBtn}
+                  >
+                    <Plus size={14} color="#FFFFFF" strokeWidth={2.5} />
+                    <Text style={styles.quickSellBtnText}>{t('btnSellSlot')}</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.slotsList}>
+                  {fullAlloc ? (
+                    // Full account sold
+                    <View
+                      style={[
+                        styles.slotDetailCard,
+                        styles.slotCardTaken,
+                        isNativeRTL && { flexDirection: 'row-reverse' },
+                      ]}
+                    >
+                      <View style={[styles.slotDetailInfo, isRTL && { alignItems: 'flex-end' }]}>
+                        <View style={[styles.slotTypeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                          <Text style={styles.slotDetailTitle}>{t('slotFull')}</Text>
+                          <View style={[styles.slotStatusBadge, styles.slotStatusSold]}>
+                            <Text style={styles.slotStatusTextSold}>{t('slotSold')}</Text>
+                          </View>
+                        </View>
+
+                        <View style={[styles.buyerInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                          <User size={13} color="#94A3B8" />
+                          <Text style={styles.buyerNameText}>
+                            {clientsMap[fullAlloc.client_id]?.name || t('selectClient')}
+                          </Text>
+                          <Text style={styles.buyerPriceText}>
+                            • {formatCurrency(fullAlloc.sale_price, fullAlloc.currency || currency)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={[styles.slotDetailActions, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                        <Pressable
+                          onPress={() => handleOpenDispatchWhatsApp(fullAlloc)}
+                          style={styles.actionCircleBtn}
+                        >
+                          <Share2 size={16} color="#10B981" />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => handleOpenManageSlot(fullAlloc)}
+                          style={styles.actionManageBtn}
+                        >
+                          <Text style={styles.actionManageText}>{t('manageSlot')}</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : (
+                    potentialSlots.map((slot) => {
+                      const alloc = activeAllocations.find((a) => a.slot_type === slot);
+                      const isSold = !!alloc;
+                      const client = isSold && alloc ? clientsMap[alloc.client_id] : null;
+                      const warrantyInfo = alloc
+                        ? calculateWarranty(alloc.sale_date, alloc.warranty_months)
+                        : null;
+
+                      return (
+                        <View
+                          key={slot}
+                          style={[
+                            styles.slotDetailCard,
+                            isSold ? styles.slotCardTaken : styles.slotCardFree,
+                            isNativeRTL && { flexDirection: 'row-reverse' },
+                          ]}
+                        >
+                          <View style={[styles.slotDetailInfo, isRTL && { alignItems: 'flex-end' }]}>
+                            <View style={[styles.slotTypeRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                              <Text style={styles.slotDetailTitle}>{getSlotLabel(slot)}</Text>
+                              <View
+                                style={[
+                                  styles.slotStatusBadge,
+                                  isSold ? styles.slotStatusSold : styles.slotStatusAvailable,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.slotStatusTextCommon,
+                                    isSold ? styles.slotStatusTextSold : styles.slotStatusTextAvailable,
+                                  ]}
+                                >
+                                  {isSold ? t('slotSold') : t('slotAvailable')}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {isSold && alloc ? (
+                              <View style={[styles.buyerInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                                <User size={13} color="#94A3B8" />
+                                <Text style={styles.buyerNameText}>
+                                  {client?.name || 'Client'}
+                                </Text>
+                                <Text style={styles.buyerPriceText}>
+                                  • {formatCurrency(alloc.sale_price, alloc.currency || currency)}
+                                </Text>
+                                {warrantyInfo ? (
+                                  <View style={[styles.slotWarrantyPill, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                                    {!warrantyInfo.isWarrantyActive ? (
+                                      <Clock size={10} color="#EF4444" />
+                                    ) : (
+                                      <CheckCircle2 size={10} color="#10B981" />
+                                    )}
+                                    <Text
+                                      style={[
+                                        styles.slotWarrantyText,
+                                        !warrantyInfo.isWarrantyActive && { color: '#EF4444' },
+                                        warrantyInfo.isExpiringSoon && { color: '#F59E0B' },
+                                      ]}
+                                    >
+                                      {!warrantyInfo.isWarrantyActive
+                                        ? t('warrantyExpired')
+                                        : `${warrantyInfo.daysRemaining}d`}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            ) : (
+                              <Text style={[styles.freeSlotSubtext, isRTL && styles.rtlText]}>
+                                {isRTL
+                                  ? 'جاهز للتخصيص والبيع لمشترٍ جديد'
+                                  : 'Ready for allocation to a new buyer'}
+                              </Text>
+                            )}
+                          </View>
+
+                          <View style={[styles.slotDetailActions, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                            {isSold && alloc ? (
+                              <>
+                                <Pressable
+                                  onPress={() => handleOpenDispatchWhatsApp(alloc)}
+                                  style={styles.actionCircleBtn}
+                                >
+                                  <Share2 size={16} color="#10B981" />
+                                </Pressable>
+                                <Pressable
+                                  onPress={() => handleOpenManageSlot(alloc)}
+                                  style={styles.actionManageBtn}
+                                >
+                                  <Text style={styles.actionManageText}>{t('manageSlot')}</Text>
+                                </Pressable>
+                              </>
+                            ) : (
+                              <Pressable
+                                onPress={() => handleOpenSellSlot(slot)}
+                                style={styles.sellSlotBtn}
+                              >
+                                <Plus size={13} color="#FFFFFF" strokeWidth={2.5} />
+                                <Text style={styles.sellSlotBtnText}>{t('btnSellSlot')}</Text>
+                              </Pressable>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* CLICKABLE SELLER CARD */}
               {seller && (
                 <Pressable
-                  onPress={() => {
-                    try {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    } catch {}
-                    router.push(`/game/padlock?id=${game.id}`);
-                  }}
+                  onPress={() => router.push(`/seller/${seller.id}`)}
                   style={({ pressed }) => [
-                    styles.padlockDispatchBtn,
-                    pressed && styles.padlockDispatchBtnPressed,
+                    styles.sellerCard,
+                    pressed && styles.sellerCardPressed,
                   ]}
                 >
-                  <Text style={styles.padlockDispatchText}>
-                    {t('dispatchClaimBtn')}
-                  </Text>
-                  {isRTL ? (
-                    <ChevronLeft size={15} color="#FFFFFF" strokeWidth={2.4} />
-                  ) : (
-                    <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
-                  )}
+                  <View style={styles.sellerCardLeft}>
+                    <View style={styles.sellerAvatar}>
+                      <ShieldCheck
+                        size={20}
+                        color={styles.accentIcon.color}
+                        strokeWidth={2}
+                      />
+                    </View>
+                    <View>
+                      <Text style={[styles.sellerCardName, isRTL && styles.rtlText]}>
+                        {t('sellerCardPrefix')} {seller.name}
+                      </Text>
+                      <View style={styles.sellerSubtextRow}>
+                        <Text style={styles.sellerSubtext}>
+                          {t('sellerCardSubtext')}
+                        </Text>
+                        {isRTL ? (
+                          <ChevronLeft
+                            size={12}
+                            color={styles.accentIcon.color}
+                            strokeWidth={2.4}
+                          />
+                        ) : (
+                          <ChevronRight
+                            size={12}
+                            color={styles.accentIcon.color}
+                            strokeWidth={2.4}
+                          />
+                        )}
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.sellerRatingPill}>
+                    <Star size={11} color="#FFD700" fill="#FFD700" />
+                    <Text style={styles.sellerRatingText}>
+                      {seller.reputation_score.toFixed(1)}
+                    </Text>
+                  </View>
                 </Pressable>
               )}
-            </View>
+
+              {/* PADLOCK BANNER */}
+              {isLocked && (
+                <View style={styles.padlockBanner}>
+                  <View style={styles.padlockHeaderRow}>
+                    <PulsingPadlockBadge size="sm" showLabel={false} />
+                    <Text style={[styles.padlockTitle, isRTL && styles.rtlText]}>{t('licenseRevokedTitle')}</Text>
+                  </View>
+
+                  <Text style={[styles.padlockDescription, isRTL && styles.rtlText]}>
+                    {warranty.isWarrantyActive
+                      ? t('warrantyActiveNotice', { days: warranty.daysRemaining, seller: seller?.name || t('sellerCardPrefix') })
+                      : t('warrantyExpiredNotice', { date: warranty.expiryDate })}
+                  </Text>
+
+                  {seller && (
+                    <Pressable
+                      onPress={() => {
+                        try {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        } catch {}
+                        router.push(`/game/padlock?id=${game.id}`);
+                      }}
+                      style={({ pressed }) => [
+                        styles.padlockDispatchBtn,
+                        pressed && styles.padlockDispatchBtnPressed,
+                      ]}
+                    >
+                      <Text style={styles.padlockDispatchText}>
+                        {t('dispatchClaimBtn')}
+                      </Text>
+                      {isRTL ? (
+                        <ChevronLeft size={15} color="#FFFFFF" strokeWidth={2.4} />
+                      ) : (
+                        <ChevronRight size={15} color="#FFFFFF" strokeWidth={2.4} />
+                      )}
+                    </Pressable>
+                  )}
+                </View>
+              )}
+
+              {/* PURCHASE PRICE / INVESTMENT CARD */}
+              {game.cost_price !== undefined && game.cost_price > 0 ? (
+                <View style={styles.purchasePriceCard}>
+                  <View style={[styles.purchasePriceCardRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <View style={isRTL && { alignItems: 'flex-end' }}>
+                      <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>
+                        {t('purchasePrice')}
+                      </Text>
+                      <Text style={[styles.purchasePriceSub, isRTL && styles.rtlText]}>
+                        {t('purchasedOn', { date: game.purchase_date })}
+                      </Text>
+                    </View>
+                    <Text style={styles.purchasePriceBigValue}>
+                      {formatCurrency(game.cost_price, game.currency || currency)}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {/* WARRANTY COVERAGE */}
+              <View style={styles.warrantyCard}>
+                <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('warrantyCoverageTitle')}</Text>
+
+                <View style={styles.warrantyRow}>
+                  <Text
+                    style={[
+                      styles.warrantyDaysText,
+                      isRTL && styles.rtlText,
+                      warranty.isWarrantyActive
+                        ? styles.statusTextSuccess
+                        : styles.statusTextDanger,
+                    ]}
+                  >
+                    {warranty.isWarrantyActive
+                      ? t('daysLeft', { days: warranty.daysRemaining })
+                      : t('warrantyExpired')}
+                  </Text>
+                  <Text style={[styles.warrantyMonthsTotal, isRTL && styles.rtlText]}>
+                    {t('monthsTotal', { months: game.warranty_months })}
+                  </Text>
+                </View>
+
+                <Text style={[styles.warrantyExpiresText, isRTL && styles.rtlText]}>
+                  {t('expiresOn', { date: warranty.expiryDate })}
+                </Text>
+              </View>
+            </>
           )}
-
-          {/* WARRANTY COVERAGE */}
-          <View style={styles.warrantyCard}>
-            <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>{t('warrantyCoverageTitle')}</Text>
-
-            <View style={styles.warrantyRow}>
-              <Text
-                style={[
-                  styles.warrantyDaysText,
-                  isRTL && styles.rtlText,
-                  warranty.isWarrantyActive
-                    ? styles.statusTextSuccess
-                    : styles.statusTextDanger,
-                ]}
-              >
-                {warranty.isWarrantyActive
-                  ? t('daysLeft', { days: warranty.daysRemaining })
-                  : t('warrantyExpired')}
-              </Text>
-              <Text style={[styles.warrantyMonthsTotal, isRTL && styles.rtlText]}>
-                {t('monthsTotal', { months: game.warranty_months })}
-              </Text>
-            </View>
-
-            <Text style={[styles.warrantyExpiresText, isRTL && styles.rtlText]}>
-              {t('expiresOn', { date: warranty.expiryDate })}
-            </Text>
-          </View>
 
           {/* SENSITIVE CREDENTIALS (BIOMETRIC SHIELD) */}
           <View
@@ -792,6 +1188,27 @@ export default function GameDetailsScreen() {
         onClose={() => setEditModalVisible(false)}
         onSave={handleSaveEditedGame}
       />
+
+      {/* SELLER HUB: SLOT ALLOCATION MODAL */}
+      <SlotAllocationModal
+        visible={slotModalVisible}
+        game={game}
+        preselectedSlot={selectedSlotForAllocation}
+        existingAllocation={editingAllocation}
+        onClose={() => setSlotModalVisible(false)}
+        onAllocated={handleSlotAllocated}
+      />
+
+      {/* SELLER HUB: 1-TAP WHATSAPP DISPATCH MODAL */}
+      {selectedDispatchAllocation && (
+        <WhatsAppDispatchModal
+          visible={dispatchModalVisible}
+          game={game}
+          allocation={selectedDispatchAllocation}
+          client={selectedDispatchClient || undefined}
+          onClose={() => setDispatchModalVisible(false)}
+        />
+      )}
     </View>
   );
 }
@@ -1109,6 +1526,47 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       fontWeight: "800",
       fontSize: 13,
     },
+    gameDetailPriceBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+      backgroundColor: theme === "dark" ? "rgba(16, 185, 129, 0.15)" : "#DCFCE7",
+      borderWidth: 1,
+      borderColor: theme === "dark" ? "rgba(16, 185, 129, 0.3)" : "#BBF7D0",
+    },
+    gameDetailPriceText: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: "#10B981",
+    },
+    purchasePriceCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      padding: 16,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      boxShadow:
+        theme === "dark"
+          ? "0px 1px 4px rgba(0, 0, 0, 0.2)"
+          : "0px 1px 4px rgba(0, 0, 0, 0.04)",
+      elevation: 2,
+    },
+    purchasePriceCardRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    purchasePriceSub: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    purchasePriceBigValue: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: "#10B981",
+    },
     warrantyCard: {
       backgroundColor: colors.surface,
       borderRadius: 18,
@@ -1375,5 +1833,267 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: '#EF4444',
       fontSize: 14,
       fontWeight: '700',
+    },
+    platformBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    platformBadgePS5: {
+      backgroundColor: theme === 'dark' ? 'rgba(6, 182, 212, 0.15)' : '#ECFEFF',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(6, 182, 212, 0.3)' : '#CFFAFE',
+    },
+    platformBadgePS4: {
+      backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.3)' : '#DBEAFE',
+    },
+    platformBadgeBoth: {
+      backgroundColor: theme === 'dark' ? 'rgba(168, 85, 247, 0.15)' : '#FAF5FF',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(168, 85, 247, 0.3)' : '#F3E8FF',
+    },
+    platformBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    platformTextPS5: {
+      color: theme === 'dark' ? '#22D3EE' : '#0891B2',
+    },
+    platformTextPS4: {
+      color: theme === 'dark' ? '#60A5FA' : '#2563EB',
+    },
+    platformTextBoth: {
+      color: theme === 'dark' ? '#C084FC' : '#9333EA',
+    },
+    sellerFinanceBox: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    financeStatsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      marginBottom: 12,
+    },
+    financeStatCol: {
+      flex: 1,
+    },
+    financeStatLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: 3,
+    },
+    financeCostVal: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textSecondary,
+    },
+    financeSalesVal: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    financeProfitVal: {
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    profitPositive: {
+      color: '#10B981',
+    },
+    profitNegative: {
+      color: '#F59E0B',
+    },
+    recoveryProgressWrapper: {
+      height: 6,
+      backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    recoveryProgressBar: {
+      height: '100%',
+      backgroundColor: '#F59E0B',
+      borderRadius: 3,
+    },
+    recoveryProgressBarProfitable: {
+      backgroundColor: '#10B981',
+    },
+    recoveryInfoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 6,
+    },
+    recoveryInfoText: {
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+    slotCommandCenter: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    slotHeaderBlock: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    slotHeaderSub: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 1,
+    },
+    quickSellBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 10,
+      backgroundColor: '#0070D1',
+    },
+    quickSellBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    slotsList: {
+      gap: 10,
+    },
+    slotDetailCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+    slotCardFree: {
+      backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.02)' : '#FFFFFF',
+      borderColor: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+    },
+    slotCardTaken: {
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.04)' : '#F0FDF4',
+      borderColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7',
+    },
+    slotDetailInfo: {
+      flex: 1,
+    },
+    slotTypeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 4,
+    },
+    slotDetailTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    slotStatusBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 1.5,
+      borderRadius: 5,
+    },
+    slotStatusSold: {
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7',
+    },
+    slotStatusAvailable: {
+      backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.2)' : '#DBEAFE',
+    },
+    slotStatusTextCommon: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    slotStatusTextSold: {
+      color: '#10B981',
+    },
+    slotStatusTextAvailable: {
+      color: '#3B82F6',
+    },
+    buyerInfoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      marginTop: 2,
+    },
+    buyerNameText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    buyerPriceText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#10B981',
+    },
+    slotWarrantyPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 4,
+      marginLeft: 4,
+    },
+    slotWarrantyText: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: '#10B981',
+    },
+    freeSlotSubtext: {
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+    slotDetailActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    actionCircleBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionManageBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 10,
+      backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+    },
+    actionManageText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    sellSlotBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 10,
+      backgroundColor: '#0070D1',
+    },
+    sellSlotBtnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
     },
   });

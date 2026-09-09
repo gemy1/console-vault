@@ -6,6 +6,7 @@ import { calculateWarranty } from '../../utils/padlock';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { usePersona } from '../../context/PersonaContext';
 
 interface GameCardProps {
   game: Game;
@@ -17,6 +18,7 @@ interface GameCardProps {
 export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const { formatCurrency, currency } = usePersona();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
   const isLocked = game.status === 'Locked';
@@ -75,6 +77,40 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
                 : t('accountTypeSecondary')}
             </Text>
           </View>
+
+          {/* PLATFORM BADGE */}
+          <View
+            style={[
+              styles.platformBadge,
+              game.platform === 'PS4'
+                ? styles.platformBadgePS4
+                : game.platform === 'BOTH'
+                ? styles.platformBadgeBoth
+                : styles.platformBadgePS5,
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                game.platform === 'PS4'
+                  ? styles.platformTextPS4
+                  : game.platform === 'BOTH'
+                  ? styles.platformTextBoth
+                  : styles.platformTextPS5,
+              ]}
+            >
+              {game.platform === 'BOTH' ? 'PS4 • PS5' : game.platform || 'PS5'}
+            </Text>
+          </View>
+
+          {/* PRICE BADGE (INLINE) */}
+          {game.cost_price !== undefined && game.cost_price > 0 ? (
+            <View style={styles.priceBadge}>
+              <Text style={styles.priceBadgeText}>
+                {formatCurrency(game.cost_price, game.currency || currency)}
+              </Text>
+            </View>
+          ) : null}
 
           <View
             style={[
@@ -209,6 +245,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     pillRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      flexWrap: 'wrap',
       gap: 6,
       marginTop: 4,
     },
@@ -234,6 +271,29 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     fullText: {
       color: '#F59E0B',
+    },
+    platformBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    platformBadgePS5: {
+      backgroundColor: 'rgba(0, 210, 255, 0.15)',
+    },
+    platformTextPS5: {
+      color: '#00D2FF',
+    },
+    platformBadgePS4: {
+      backgroundColor: 'rgba(0, 112, 209, 0.18)',
+    },
+    platformTextPS4: {
+      color: '#0070D1',
+    },
+    platformBadgeBoth: {
+      backgroundColor: 'rgba(168, 85, 247, 0.18)',
+    },
+    platformTextBoth: {
+      color: '#A855F7',
     },
     badgeText: {
       fontSize: 10,
@@ -306,5 +366,23 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     arrowIcon: {
       color: colors.text,
+    },
+    priceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 6,
+    },
+    priceBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2.5,
+      borderRadius: 6,
+      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.3)' : '#BBF7D0',
+    },
+    priceBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: '#10B981',
     },
   });

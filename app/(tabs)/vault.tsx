@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -13,28 +13,43 @@ import { useRouter } from 'expo-router';
 import * as Haptics from '@/utils/haptics';
 import { ModernHeader, QuickAddWidget } from '../../components/common';
 import { GameCard, GameFormModal } from '../../components/games';
-import { Game } from '../../types/vault';
-import { Search, X, Gamepad2 } from 'lucide-react-native';
+import { SellerInventoryCard, SlotAllocationModal, WhatsAppDispatchModal } from '../../components/seller';
+import { Game, ClientAllocation, Client, SlotType } from '../../types/vault';
+import { Search, X, Gamepad2, Package } from 'lucide-react-native';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
-
+import { usePersona } from '../../context/PersonaContext';
 import { useVaultSync } from '../../context/VaultSyncContext';
 import { generateUUID } from '../../utils/uuid';
+import { isGameSoldOut } from '../../utils/slots';
 
-type FilterType = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary' | 'Full';
+type GamerFilter = 'All' | 'Active' | 'Locked' | 'Primary' | 'Secondary' | 'Full';
+type SellerFilter = 'All' | 'Available' | 'SoldOut' | 'PS5' | 'PS4' | 'BOTH';
 
 export default function VaultScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const { isSeller } = usePersona();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
-  const { games, sellers, addGame, refreshData } = useVaultSync();
+  const { games, sellers, clients, allocations, addGame, refreshData } = useVaultSync();
 
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterType>('All');
+  const [gamerFilter, setGamerFilter] = useState<GamerFilter>('All');
+  const [sellerFilter, setSellerFilter] = useState<SellerFilter>('All');
   const [refreshing, setRefreshing] = useState(false);
   const [gameModalVisible, setGameModalVisible] = useState(false);
+
+  // Seller Modals State
+  const [slotModalVisible, setSlotModalVisible] = useState(false);
+  const [selectedGameForSlot, setSelectedGameForSlot] = useState<Game | null>(null);
+  const [selectedSlotType, setSelectedSlotType] = useState<SlotType | undefined>(undefined);
+  const [editingAllocation, setEditingAllocation] = useState<ClientAllocation | null>(null);
+
+  const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
+  const [dispatchGame, setDispatchGame] = useState<Game | null>(null);
+  const [dispatchAllocation, setDispatchAllocation] = useState<ClientAllocation | null>(null);
 
   const handleSaveGame = (gameData: any) => {
     const newGame: Game = {
@@ -42,6 +57,7 @@ export default function VaultScreen() {
       user_id: 'user-demo',
       status: 'Active',
       purchase_date: new Date().toISOString().split('T')[0],
+      is_inventory: isSeller,
       ...gameData,
     };
     addGame(newGame);
@@ -57,24 +73,48 @@ export default function VaultScreen() {
     setTimeout(() => setRefreshing(false), 300);
   };
 
-  const sellerMap = new Map(sellers.map((s) => [s.id, s]));
+  const sellerMap = useMemo(() => new Map(sellers.map((s) => [s.id, s])), [sellers]);
+  const clientsMap = useMemo(() => {
+    const map: Record<string, Client> = {};
+    clients.forEach((c) => {
+      map[c.id] = c;
+    });
+    return map;
+  }, [clients]);
 
-  const filteredGames = games.filter((g) => {
-    const matchesSearch =
-      g.title.toLowerCase().includes(search.toLowerCase()) ||
-      g.psn_email.toLowerCase().includes(search.toLowerCase());
+  // Filtered games
+  const filteredGames = useMemo(() => {
+    return games.filter((g) => {
+      const matchesSearch =
+        g.title.toLowerCase().includes(search.toLowerCase()) ||
+        g.psn_email.toLowerCase().includes(search.toLowerCase());
 
-    if (!matchesSearch) return false;
-    if (filter === 'All') return true;
-    if (filter === 'Active') return g.status === 'Active';
-    if (filter === 'Locked') return g.status === 'Locked';
-    if (filter === 'Primary') return g.account_type === 'Primary';
-    if (filter === 'Secondary') return g.account_type === 'Secondary';
-    if (filter === 'Full') return g.account_type === 'Full';
-    return true;
-  });
+      if (!matchesSearch) return false;
 
-  const filterButtons: { key: FilterType; label: string }[] = [
+      if (isSeller) {
+        // Seller mode filters
+        const soldOut = isGameSoldOut(g, allocations);
+
+        if (sellerFilter === 'Available') return !soldOut;
+        if (sellerFilter === 'SoldOut') return soldOut;
+        if (sellerFilter === 'PS5') return g.platform === 'PS5';
+        if (sellerFilter === 'PS4') return g.platform === 'PS4';
+        if (sellerFilter === 'BOTH') return g.platform === 'BOTH';
+        return true;
+      } else {
+        // Gamer mode filters
+        if (gamerFilter === 'All') return true;
+        if (gamerFilter === 'Active') return g.status === 'Active';
+        if (gamerFilter === 'Locked') return g.status === 'Locked';
+        if (gamerFilter === 'Primary') return g.account_type === 'Primary';
+        if (gamerFilter === 'Secondary') return g.account_type === 'Secondary';
+        if (gamerFilter === 'Full') return g.account_type === 'Full';
+        return true;
+      }
+    });
+  }, [games, search, isSeller, sellerFilter, gamerFilter, allocations]);
+
+  const gamerFilterButtons: { key: GamerFilter; label: string }[] = [
     { key: 'All', label: t('filterAll') },
     { key: 'Active', label: t('filterActive') },
     { key: 'Locked', label: t('filterLocked') },
@@ -83,21 +123,74 @@ export default function VaultScreen() {
     { key: 'Full', label: t('filterFull') },
   ];
 
+  const sellerFilterButtons: { key: SellerFilter; label: string }[] = [
+    { key: 'All', label: t('filterAll') },
+    { key: 'Available', label: t('availableSlots') },
+    { key: 'SoldOut', label: t('soldSlots') },
+    { key: 'PS5', label: 'PS5' },
+    { key: 'PS4', label: 'PS4' },
+    { key: 'BOTH', label: t('platformBoth') },
+  ];
+
+  const handleOpenSellSlot = (game: Game, slot?: SlotType) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setSelectedGameForSlot(game);
+    setSelectedSlotType(slot);
+    setEditingAllocation(null);
+    setSlotModalVisible(true);
+  };
+
+  const handleOpenManageSlot = (allocation: ClientAllocation) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    const game = games.find((g) => g.id === allocation.game_id);
+    if (!game) return;
+    setSelectedGameForSlot(game);
+    setSelectedSlotType(allocation.slot_type);
+    setEditingAllocation(allocation);
+    setSlotModalVisible(true);
+  };
+
+  const handleOpenDispatchWhatsApp = (allocation: ClientAllocation) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    const game = games.find((g) => g.id === allocation.game_id);
+    if (!game) return;
+    setDispatchGame(game);
+    setDispatchAllocation(allocation);
+    setDispatchModalVisible(true);
+  };
+
+  const handleSlotAllocated = (allocation: ClientAllocation, client?: Client) => {
+    setSlotModalVisible(false);
+    if (selectedGameForSlot) {
+      setDispatchGame(selectedGameForSlot);
+      setDispatchAllocation(allocation);
+      setDispatchModalVisible(true);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* MODERN HEADER WITH CIRCULAR BUTTONS BELOW NOTIFICATION BAR */}
+      {/* HEADER */}
       <ModernHeader
-        title={t('headerVaultTitle')}
-        subtitle={t('headerVaultSubtitle')}
+        title={isSeller ? t('inventoryTitle') : t('headerVaultTitle')}
+        subtitle={isSeller ? t('inventorySubtitle') : t('headerVaultSubtitle')}
       />
 
       <View style={styles.controlsHeader}>
-        {/* QUICK ADD GAME TOP WIDGET */}
+        {/* QUICK ADD TOP WIDGET */}
         <QuickAddWidget
           actions={[
             {
-              label: t('quickAddNewGame'),
-              sublabel: t('quickAddNewGameSub'),
+              label: isSeller ? t('quickAddInventory') : t('quickAddNewGame'),
+              sublabel: isSeller
+                ? (isRTL ? 'تسجيل حساب وسعر الشراء والسلوتات' : 'Register account, cost price & console slots')
+                : t('quickAddNewGameSub'),
               icon: 'game',
               onPress: () => setGameModalVisible(true),
             },
@@ -133,14 +226,22 @@ export default function VaultScreen() {
           style={styles.filterScroll}
           contentContainerStyle={[styles.filterScrollContent, isNativeRTL && { flexDirection: 'row-reverse' }]}
         >
-          {filterButtons.map((item) => {
-            const isSelected = filter === item.key;
+          {(isSeller ? sellerFilterButtons : gamerFilterButtons).map((item) => {
+            const isSelected = isSeller
+              ? sellerFilter === item.key
+              : gamerFilter === item.key;
             return (
               <Pressable
                 key={item.key}
                 onPress={() => {
-                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-                  setFilter(item.key);
+                  try {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  } catch {}
+                  if (isSeller) {
+                    setSellerFilter(item.key as SellerFilter);
+                  } else {
+                    setGamerFilter(item.key as GamerFilter);
+                  }
                 }}
                 style={[
                   styles.filterChip,
@@ -161,7 +262,7 @@ export default function VaultScreen() {
         </ScrollView>
       </View>
 
-      {/* GAMES LIST */}
+      {/* GAMES / INVENTORY LIST */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -175,22 +276,54 @@ export default function VaultScreen() {
       >
         {filteredGames.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Gamepad2 size={48} color={styles.searchIcon.color} strokeWidth={1.5} style={styles.emptyIconMargin} />
-            <Text style={styles.emptyTitle}>{t('noGamesFound')}</Text>
+            {isSeller ? (
+              <Package size={48} color={styles.searchIcon.color} strokeWidth={1.5} style={styles.emptyIconMargin} />
+            ) : (
+              <Gamepad2 size={48} color={styles.searchIcon.color} strokeWidth={1.5} style={styles.emptyIconMargin} />
+            )}
+            <Text style={styles.emptyTitle}>
+              {isSeller ? (isRTL ? 'المخزون فارغ' : 'No Inventory Found') : t('noGamesFound')}
+            </Text>
             <Text style={styles.emptySubtitle}>
-              {search ? t('noGamesFoundSub') : t('vaultEmptySub')}
+              {search
+                ? t('noGamesFoundSub')
+                : isSeller
+                ? (isRTL ? 'أضف أول حساب للمخزون للبدء في توزيع السلوتات والمبيعات.' : 'Add your first master game account to start distributing slots.')
+                : t('vaultEmptySub')}
             </Text>
           </View>
         ) : (
           filteredGames.map((game) => {
+            if (isSeller) {
+              return (
+                <SellerInventoryCard
+                  key={`seller-${game.id}`}
+                  game={game}
+                  allocations={allocations}
+                  clientsMap={clientsMap}
+                  onPress={() => {
+                    try {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    } catch {}
+                    router.push(`/game/${game.id}`);
+                  }}
+                  onSellSlot={handleOpenSellSlot}
+                  onManageSlot={handleOpenManageSlot}
+                  onDispatchWhatsApp={handleOpenDispatchWhatsApp}
+                />
+              );
+            }
+
             const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
             return (
               <GameCard
-                key={game.id}
+                key={`buyer-${game.id}`}
                 game={game}
                 sellerName={seller?.name}
                 onPress={() => {
-                  try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+                  try {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  } catch {}
                   router.push(`/game/${game.id}`);
                 }}
                 onSellerPress={seller ? () => router.push(`/seller/${seller.id}`) : undefined}
@@ -200,12 +333,42 @@ export default function VaultScreen() {
         )}
       </ScrollView>
 
-      {/* QUICK GAME REGISTRATION MODAL */}
+      {/* QUICK GAME / INVENTORY REGISTRATION MODAL */}
       <GameFormModal
         visible={gameModalVisible}
         onClose={() => setGameModalVisible(false)}
         onSave={handleSaveGame}
       />
+
+      {/* SLOT ALLOCATION MODAL */}
+      {selectedGameForSlot && (
+        <SlotAllocationModal
+          visible={slotModalVisible}
+          game={selectedGameForSlot}
+          preselectedSlot={selectedSlotType}
+          existingAllocation={editingAllocation}
+          onClose={() => {
+            setSlotModalVisible(false);
+            setSelectedGameForSlot(null);
+          }}
+          onAllocated={handleSlotAllocated}
+        />
+      )}
+
+      {/* 1-TAP WHATSAPP DISPATCH MODAL */}
+      {dispatchGame && dispatchAllocation && (
+        <WhatsAppDispatchModal
+          visible={dispatchModalVisible}
+          game={dispatchGame}
+          allocation={dispatchAllocation}
+          client={clientsMap[dispatchAllocation.client_id]}
+          onClose={() => {
+            setDispatchModalVisible(false);
+            setDispatchGame(null);
+            setDispatchAllocation(null);
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -288,7 +451,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       paddingHorizontal: 20,
     },
     scrollContent: {
-      paddingBottom: 96,
+      paddingBottom: 135,
     },
     accentTint: {
       color: colors.accent,
