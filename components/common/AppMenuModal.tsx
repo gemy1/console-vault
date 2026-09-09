@@ -36,6 +36,7 @@ import {
   Gamepad2,
   Store,
   Coins,
+  CheckCircle2,
 } from "lucide-react-native";
 import {
   useVaultTheme,
@@ -54,7 +55,8 @@ import { AuthModal } from "../auth/AuthModal";
 import { isSupabaseConfigured } from "../../services/supabase";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const DRAWER_WIDTH = Math.min(320, Math.round(SCREEN_WIDTH * 0.8));
+const DRAWER_WIDTH = Math.min(310, Math.round(SCREEN_WIDTH * 0.8));
+const CURRENCIES: SupportedCurrency[] = ["USD", "EGP", "SAR", "AED"];
 
 interface AppMenuModalProps {
   visible: boolean;
@@ -74,6 +76,23 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   const animValue = useRef(new Animated.Value(0)).current;
   const [modalRendered, setModalRendered] = useState(visible);
   const [authModalVisible, setAuthModalVisible] = useState(false);
+
+  const handleCycleTheme = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  const handleCycleLanguage = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    setLanguage(language === "en" ? "ar" : "en");
+  };
+
+  const handleCycleCurrency = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    const currentIdx = CURRENCIES.indexOf(currency as SupportedCurrency);
+    const nextIdx = (currentIdx + 1) % CURRENCIES.length;
+    setCurrency(CURRENCIES[nextIdx]);
+  };
 
   let authState = { user: null as any, signOut: async () => {} };
   try {
@@ -325,7 +344,6 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     return null;
   }
 
-  // Slide animation output
   const translateX = animValue.interpolate({
     inputRange: [0, 1],
     outputRange: [isRTL ? -DRAWER_WIDTH : DRAWER_WIDTH, 0],
@@ -336,8 +354,20 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     outputRange: [0, 1],
   });
 
-  const safeTop = Math.max(insets.top, 24) + 10;
+  const safeTop = Math.max(insets.top, 24);
   const safeBottom = Math.max(insets.bottom, 20);
+
+  const syncColor =
+    syncState.syncStatus === "synced" ? "#30D158"
+    : syncState.syncStatus === "syncing" ? "#00D2FF"
+    : syncState.syncStatus === "local_only" ? "#64748B"
+    : "#FF9F0A";
+
+  const syncLabel =
+    syncState.syncStatus === "synced" ? (isRTL ? "متزامن" : "Synced")
+    : syncState.syncStatus === "syncing" ? (isRTL ? "مزامنة..." : "Syncing...")
+    : syncState.syncStatus === "local_only" ? (isRTL ? "محلي" : "Local Vault")
+    : (isRTL ? `معلق (${syncState.pendingCount})` : `Offline`);
 
   return (
     <Modal
@@ -347,881 +377,289 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
       onRequestClose={handleDismiss}
     >
       <View style={styles.container}>
-        {/* BACKDROP OVERLAY */}
+        {/* BACKDROP */}
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
           <Pressable style={styles.backdropPressable} onPress={handleDismiss} />
         </Animated.View>
 
-        {/* CLEAN SIDE DRAWER */}
+        {/* DRAWER */}
         <Animated.View
           style={[
             styles.drawer,
             isRTL ? styles.drawerLeft : styles.drawerRight,
-            {
-              paddingTop: safeTop,
-              paddingBottom: safeBottom,
-              transform: [{ translateX }],
-            },
+            { paddingTop: safeTop, paddingBottom: safeBottom, transform: [{ translateX }] },
           ]}
         >
-          {/* HEADER ROW */}
-          <View
-            style={[
-              styles.headerRow,
-              isNativeRTL && { flexDirection: "row-reverse" },
-            ]}
-          >
-            <View
-              style={[
-                styles.headerLeft,
-                isNativeRTL && { flexDirection: "row-reverse" },
-              ]}
-            >
-              <View style={styles.brandIconCircle}>
-                <ShieldCheck
-                  size={19}
-                  color={styles.brandIcon.color}
-                  strokeWidth={2.2}
-                />
+          {/* ── HEADER ── */}
+          <View style={[styles.header, isNativeRTL && { flexDirection: "row-reverse" }]}>
+            <View style={[styles.headerBrand, isNativeRTL && { flexDirection: "row-reverse" }]}>
+              <View style={styles.brandMark}>
+                <ShieldCheck size={18} color="#00D2FF" strokeWidth={2.2} />
               </View>
               <View>
                 <Text style={[styles.headerTitle, isRTL && styles.rtlText]}>
                   {t("menuDrawerTitle")}
                 </Text>
-                <Text style={[styles.headerSubtitle, isRTL && styles.rtlText]}>
-                  {t("menuDrawerSubtitle")}
-                </Text>
+                <View style={[styles.syncRow, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                  <View style={[styles.syncDot, { backgroundColor: syncColor }]} />
+                  <Text style={styles.syncLabel}>{syncLabel}</Text>
+                </View>
               </View>
             </View>
-
-            <View
-              style={[
-                styles.headerRightGroup,
-                isNativeRTL && { flexDirection: "row-reverse" },
-              ]}
+            <Pressable
+              onPress={handleDismiss}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
             >
-              {/* CLOUD SYNC LIVE BADGE */}
-              <Pressable
-                onPress={handleSyncPress}
-                style={({ pressed }) => [
-                  styles.headerSyncBadge,
-                  pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
-                  isNativeRTL && { flexDirection: "row-reverse" },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.syncLiveDot,
-                    syncState.syncStatus === "synced"
-                      ? styles.syncDotSuccess
-                      : syncState.syncStatus === "syncing"
-                        ? styles.syncDotSyncing
-                        : syncState.syncStatus === "offline"
-                          ? styles.syncDotOffline
-                          : syncState.syncStatus === "local_only"
-                            ? styles.syncDotLocal
-                            : styles.syncDotOffline,
-                  ]}
-                />
-                <Text style={styles.headerSyncBadgeText}>
-                  {syncState.syncStatus === "synced"
-                    ? isRTL
-                      ? "متزامن"
-                      : "Synced"
-                    : syncState.syncStatus === "syncing"
-                      ? isRTL
-                        ? "مزامنة..."
-                        : "Syncing..."
-                      : syncState.syncStatus === "local_only"
-                        ? isRTL
-                          ? "خزينة محلية"
-                          : "Local Vault"
-                        : isRTL
-                          ? `معلق (${syncState.pendingCount})`
-                          : `Offline (${syncState.pendingCount})`}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleDismiss}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={({ pressed }) => [
-                  styles.closeBtn,
-                  pressed && styles.closeBtnPressed,
-                ]}
-              >
-                <X size={17} color={styles.closeIcon.color} strokeWidth={2.4} />
-              </Pressable>
-            </View>
+              <X size={16} color={styles.closeBtnIcon.color} strokeWidth={2.5} />
+            </Pressable>
           </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {/* 0. APP MODE / PERSONA SWITCHER */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
-                {t("menuSectionMode")}
-              </Text>
+          {/* ── SCROLLABLE BODY ── */}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-              <View style={styles.modeContainer}>
+            {/* MODE */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, isRTL && styles.rtlText]}>{t("menuSectionMode")}</Text>
+              <View style={styles.modeRow}>
                 <Pressable
-                  onPress={() => setPersona("gamer")}
-                  style={({ pressed }) => [
-                    styles.modeCard,
-                    persona === "gamer" && styles.modeCardActive,
-                    pressed && { opacity: 0.8 },
-                  ]}
+                  onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {} setPersona("gamer"); }}
+                  style={({ pressed }) => [styles.modeCard, persona === "gamer" && styles.modeCardActive, pressed && styles.modeCardPressed]}
                 >
-                  <View
-                    style={[
-                      styles.modeCardInner,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.modeIconCircle,
-                        persona === "gamer" && styles.modeIconCircleActive,
-                      ]}
-                    >
-                      <Gamepad2
-                        size={17}
-                        color={persona === "gamer" ? "#00D2FF" : styles.mutedText.color}
-                        strokeWidth={2.2}
-                      />
-                    </View>
-                    <View style={styles.modeTextContainer}>
-                      <Text
-                        style={[
-                          styles.modeTitle,
-                          persona === "gamer" && styles.modeTitleActive,
-                          isRTL && styles.rtlText,
-                        ]}
-                      >
-                        {t("personaGamer")}
-                      </Text>
-                      <Text
-                        style={[styles.modeSub, isRTL && styles.rtlText]}
-                        numberOfLines={1}
-                      >
-                        {t("personaGamerSub")}
-                      </Text>
-                    </View>
+                  <View style={[styles.modeIconWrap, persona === "gamer" && styles.modeIconWrapActive]}>
+                    <Gamepad2 size={17} color={persona === "gamer" ? "#00D2FF" : styles.mutedIcon.color} strokeWidth={2} />
                   </View>
+                  <Text style={[styles.modeCardLabel, persona === "gamer" && styles.modeCardLabelActive, isRTL && styles.rtlText]} numberOfLines={1}>
+                    {t("personaGamer")}
+                  </Text>
+                  {persona === "gamer" && <CheckCircle2 size={13} color="#00D2FF" strokeWidth={2.5} />}
                 </Pressable>
 
                 <Pressable
-                  onPress={() => setPersona("seller")}
-                  style={({ pressed }) => [
-                    styles.modeCard,
-                    persona === "seller" && styles.modeCardActive,
-                    pressed && { opacity: 0.8 },
-                  ]}
+                  onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {} setPersona("seller"); }}
+                  style={({ pressed }) => [styles.modeCard, persona === "seller" && styles.modeCardActive, pressed && styles.modeCardPressed]}
                 >
-                  <View
-                    style={[
-                      styles.modeCardInner,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.modeIconCircle,
-                        persona === "seller" && styles.modeIconCircleActive,
-                      ]}
-                    >
-                      <Store
-                        size={17}
-                        color={persona === "seller" ? "#00D2FF" : styles.mutedText.color}
-                        strokeWidth={2.2}
-                      />
+                  <View style={[styles.modeIconWrap, persona === "seller" && styles.modeIconWrapActive]}>
+                    <Store size={17} color={persona === "seller" ? "#00D2FF" : styles.mutedIcon.color} strokeWidth={2} />
+                  </View>
+                  <Text style={[styles.modeCardLabel, persona === "seller" && styles.modeCardLabelActive, isRTL && styles.rtlText]} numberOfLines={1}>
+                    {t("personaSeller")}
+                  </Text>
+                  {persona === "seller" && <CheckCircle2 size={13} color="#00D2FF" strokeWidth={2.5} />}
+                </Pressable>
+              </View>
+            </View>
+
+            {/* PREFERENCES */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, isRTL && styles.rtlText]}>{t("menuSectionPreferences")}</Text>
+              <View style={styles.listGroup}>
+                {/* THEME */}
+                <Pressable
+                  onPress={handleCycleTheme}
+                  style={({ pressed }) => [styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
+                >
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      {theme === "dark" ? <Moon size={18} color="#00D2FF" strokeWidth={2} /> : <Sun size={18} color="#FF9F0A" strokeWidth={2} />}
                     </View>
-                    <View style={styles.modeTextContainer}>
-                      <Text
-                        style={[
-                          styles.modeTitle,
-                          persona === "seller" && styles.modeTitleActive,
-                          isRTL && styles.rtlText,
-                        ]}
-                      >
-                        {t("personaSeller")}
-                      </Text>
-                      <Text
-                        style={[styles.modeSub, isRTL && styles.rtlText]}
-                        numberOfLines={1}
-                      >
-                        {t("personaSellerSub")}
-                      </Text>
+                    <View>
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>{t("menuSectionAppearance")}</Text>
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>{isRTL ? "فاتح · داكن" : "Light · Dark"}</Text>
                     </View>
+                  </View>
+                  <View style={styles.valueBadge}>
+                    <Text style={styles.valueBadgeText}>{theme === "dark" ? "Dark" : "Light"}</Text>
+                  </View>
+                </Pressable>
+
+                {/* LANGUAGE */}
+                <Pressable
+                  onPress={handleCycleLanguage}
+                  style={({ pressed }) => [styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
+                >
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <Globe size={18} color="#00D2FF" strokeWidth={2} />
+                    </View>
+                    <View>
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>{t("menuSectionLanguage")}</Text>
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>English · عربي</Text>
+                    </View>
+                  </View>
+                  <View style={styles.valueBadge}>
+                    <Text style={styles.valueBadgeText}>{language === "ar" ? "عربي" : "EN"}</Text>
+                  </View>
+                </Pressable>
+
+                {/* CURRENCY */}
+                <Pressable
+                  onPress={handleCycleCurrency}
+                  style={({ pressed }) => [styles.row, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
+                >
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <Coins size={18} color="#00D2FF" strokeWidth={2} />
+                    </View>
+                    <View>
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>{t("preferenceCurrency")}</Text>
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>USD · EGP · SAR · AED</Text>
+                    </View>
+                  </View>
+                  <View style={styles.valueBadge}>
+                    <Text style={styles.valueBadgeText}>{currency}</Text>
                   </View>
                 </Pressable>
               </View>
             </View>
 
-            {/* 1. PREFERENCES INSET GROUP (APPEARANCE, LANGUAGE, CURRENCY) */}
+            {/* SECURITY */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
-                {t("menuSectionPreferences")}
-              </Text>
-
-              <View style={styles.insetGroup}>
-                {/* THEME (APPEARANCE) ROW */}
-                <Pressable
-                  onPress={() =>
-                    handleSelectTheme(theme === "dark" ? "light" : "dark")
-                  }
-                  style={({ pressed }) => [
-                    styles.groupItem,
-                    styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                    pressed && styles.itemPressed,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      {theme === "dark" ? (
-                        <Moon size={16} color="#00D2FF" strokeWidth={2.2} />
-                      ) : (
-                        <Sun size={16} color="#FF9F0A" strokeWidth={2.2} />
-                      )}
-                    </View>
-                    <View>
-                      <Text
-                        style={[styles.groupItemText, isRTL && styles.rtlText]}
-                      >
-                        {t("menuSectionAppearance")}
-                      </Text>
-                      <Text
-                        style={[styles.groupSubText, isRTL && styles.rtlText]}
-                      >
-                        {theme === "dark"
-                          ? t("menuThemeDark")
-                          : t("menuThemeLight")}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.miniSegmentTrack,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        handleSelectTheme("dark");
-                      }}
-                      style={[
-                        styles.miniSegmentBtn,
-                        theme === "dark" && styles.miniSegmentBtnActive,
-                      ]}
-                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                    >
-                      <Moon
-                        size={13}
-                        color={
-                          theme === "dark" ? "#00D2FF" : styles.mutedText.color
-                        }
-                        strokeWidth={2.2}
-                      />
-                    </Pressable>
-
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        handleSelectTheme("light");
-                      }}
-                      style={[
-                        styles.miniSegmentBtn,
-                        theme === "light" && styles.miniSegmentBtnActive,
-                      ]}
-                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                    >
-                      <Sun
-                        size={13}
-                        color={
-                          theme === "light" ? "#0070D1" : styles.mutedText.color
-                        }
-                        strokeWidth={2.2}
-                      />
-                    </Pressable>
-                  </View>
-                </Pressable>
-
-                {/* LANGUAGE ROW */}
-                <Pressable
-                  onPress={() =>
-                    handleSelectLanguage(language === "en" ? "ar" : "en")
-                  }
-                  style={({ pressed }) => [
-                    styles.groupItem,
-                    styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                    pressed && styles.itemPressed,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <Globe
-                        size={16}
-                        color="#00D2FF"
-                        strokeWidth={2.2}
-                      />
-                    </View>
-                    <View>
-                      <Text
-                        style={[styles.groupItemText, isRTL && styles.rtlText]}
-                      >
-                        {t("menuSectionLanguage")}
-                      </Text>
-                      <Text
-                        style={[styles.groupSubText, isRTL && styles.rtlText]}
-                      >
-                        {language === "ar"
-                          ? t("menuLangArabic")
-                          : t("menuLangEnglish")}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.miniSegmentTrack,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        handleSelectLanguage("en");
-                      }}
-                      style={[
-                        styles.miniSegmentBtn,
-                        language === "en" && styles.miniSegmentBtnActive,
-                      ]}
-                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                    >
-                      <Text
-                        style={[
-                          styles.miniSegmentText,
-                          language === "en" && styles.miniSegmentTextActive,
-                        ]}
-                      >
-                        EN
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        handleSelectLanguage("ar");
-                      }}
-                      style={[
-                        styles.miniSegmentBtn,
-                        language === "ar" && styles.miniSegmentBtnActive,
-                      ]}
-                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                    >
-                      <Text
-                        style={[
-                          styles.miniSegmentText,
-                          styles.arabicFontAdjust,
-                          language === "ar" && styles.miniSegmentTextActive,
-                        ]}
-                      >
-                        عربي
-                      </Text>
-                    </Pressable>
-                  </View>
-                </Pressable>
-
-                {/* CURRENCY SELECTOR ROW */}
-                <View
-                  style={[
-                    styles.groupItem,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <Coins size={16} color="#00D2FF" strokeWidth={2.2} />
-                    </View>
-                    <View>
-                      <Text
-                        style={[styles.groupItemText, isRTL && styles.rtlText]}
-                      >
-                        {t("preferenceCurrency")}
-                      </Text>
-                      <Text
-                        style={[styles.groupSubText, isRTL && styles.rtlText]}
-                      >
-                        {currencyConfig.code} ({currencyConfig.symbol})
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.miniSegmentTrack,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    {(['USD', 'EGP', 'SAR', 'AED'] as SupportedCurrency[]).map(
-                      (currCode) => {
-                        const isCurActive = currency === currCode;
-                        return (
-                          <Pressable
-                            key={currCode}
-                            onPress={() => setCurrency(currCode)}
-                            style={[
-                              styles.miniSegmentBtn,
-                              isCurActive && styles.miniSegmentBtnActive,
-                              { minWidth: 32, paddingHorizontal: 5 },
-                            ]}
-                            hitSlop={{ top: 6, bottom: 6, left: 3, right: 3 }}
-                          >
-                            <Text
-                              style={[
-                                styles.miniSegmentText,
-                                isCurActive && styles.miniSegmentTextActive,
-                                { fontSize: 10 },
-                              ]}
-                            >
-                              {currCode}
-                            </Text>
-                          </Pressable>
-                        );
-                      }
-                    )}
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* 3. SYSTEM & SECURITY INSET GROUP */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
-                {t("menuSectionSecurity")}
-              </Text>
-
-              <View style={styles.insetGroup}>
-                {/* ARCHITECTURE LINK */}
+              <Text style={[styles.sectionLabel, isRTL && styles.rtlText]}>{t("menuSectionSecurity")}</Text>
+              <View style={styles.listGroup}>
+                {/* ARCHITECTURE */}
                 <Pressable
                   onPress={handleOpenArchitecture}
-                  style={({ pressed }) => [
-                    styles.groupItem,
-                    styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                    pressed && styles.itemPressed,
-                  ]}
+                  style={({ pressed }) => [styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
                 >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <ShieldCheck
-                        size={16}
-                        color={styles.brandIcon.color}
-                        strokeWidth={2.2}
-                      />
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <ShieldCheck size={18} color="#00D2FF" strokeWidth={2} />
                     </View>
-                    <Text
-                      style={[styles.groupItemText, isRTL && styles.rtlText]}
-                    >
-                      {t("menuArchitectureBtn")}
-                    </Text>
+                    <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>{t("menuArchitectureBtn")}</Text>
                   </View>
-
-                  {isRTL ? (
-                    <ChevronLeft
-                      size={15}
-                      color={styles.mutedText.color}
-                      strokeWidth={2.4}
-                    />
-                  ) : (
-                    <ChevronRight
-                      size={15}
-                      color={styles.mutedText.color}
-                      strokeWidth={2.4}
-                    />
-                  )}
+                  {isRTL ? <ChevronLeft size={16} color={styles.chevron.color} strokeWidth={2.2} /> : <ChevronRight size={16} color={styles.chevron.color} strokeWidth={2.2} />}
                 </Pressable>
 
-                {/* CLOUD SYNC & AUTH ROW */}
-                <View
-                  style={[
-                    styles.groupItem,
-                    styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <Cloud size={16} color="#00D2FF" strokeWidth={2.2} />
+                {/* ACCOUNT */}
+                <View style={[styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <Cloud size={18} color="#00D2FF" strokeWidth={2} />
                     </View>
                     <View>
-                      <Text
-                        style={[styles.groupItemText, isRTL && styles.rtlText]}
-                      >
-                        {authState.user
-                          ? authState.user.email?.split("@")[0] ||
-                            (isRTL ? "المستخدم" : "Account")
-                          : isRTL
-                            ? "الخزينة المحلية"
-                            : "Local Vault"}
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>
+                        {authState.user ? authState.user.email?.split("@")[0] || (isRTL ? "المستخدم" : "Account") : isRTL ? "الخزينة المحلية" : "Local Vault"}
                       </Text>
-                      <Text
-                        style={[styles.groupSubText, isRTL && styles.rtlText]}
-                      >
-                        {authState.user
-                          ? authState.user.email
-                          : isRTL
-                            ? "مزامنة السحابة غير مفعلة"
-                            : "Guest Mode (No Cloud)"}
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>
+                        {authState.user ? authState.user.email : isRTL ? "وضع الضيف" : "Guest Mode"}
                       </Text>
                     </View>
                   </View>
-
                   {authState.user ? (
-                    <Pressable
-                      onPress={async () => {
-                        try {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                        } catch {}
-                        await authState.signOut();
-                      }}
-                      style={styles.actionPillDanger}
-                    >
-                      <LogOut
-                        size={12}
-                        color={colors.danger}
-                        strokeWidth={2.2}
-                      />
-                      <Text style={styles.actionPillDangerText}>
-                        {isRTL ? "خروج" : "Sign Out"}
-                      </Text>
+                    <Pressable onPress={async () => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} await authState.signOut(); }} style={styles.dangerPill}>
+                      <LogOut size={12} color="#FF3B30" strokeWidth={2.2} />
+                      <Text style={styles.dangerPillText}>{isRTL ? "خروج" : "Sign Out"}</Text>
                     </Pressable>
                   ) : (
-                    <Pressable
-                      onPress={() => {
-                        try {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                        } catch {}
-                        setAuthModalVisible(true);
-                      }}
-                      style={styles.actionPillPrimary}
-                    >
+                    <Pressable onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} setAuthModalVisible(true); }} style={styles.primaryPill}>
                       <LogIn size={12} color="#00D2FF" strokeWidth={2.2} />
-                      <Text style={styles.actionPillPrimaryText}>
-                        {isRTL ? "دخول" : "Sign In"}
-                      </Text>
+                      <Text style={styles.primaryPillText}>{isRTL ? "دخول" : "Sign In"}</Text>
                     </Pressable>
                   )}
                 </View>
 
-                {/* CLOUD SYNC NOW ROW */}
-                <View
-                  style={[
-                    styles.groupItem,
-                    styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <RefreshCw
-                        size={15}
-                        color={colors.accent}
-                        strokeWidth={2.2}
-                      />
+                {/* CLOUD SYNC */}
+                <View style={[styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <RefreshCw size={18} color="#00D2FF" strokeWidth={2} />
                     </View>
                     <View>
-                      <View
-                        style={[
-                          {
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 6,
-                          },
-                          isNativeRTL && { flexDirection: "row-reverse" },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.groupItemText,
-                            isRTL && styles.rtlText,
-                          ]}
-                        >
-                          {syncState.syncStatus === "local_only"
-                            ? isRTL
-                              ? "وضع الخزينة"
-                              : "Vault Storage"
-                            : isRTL
-                              ? "حالة المزامنة"
-                              : "Cloud Sync"}
+                      <View style={[{ flexDirection: "row", alignItems: "center", gap: 6 }, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                        <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>
+                          {syncState.syncStatus === "local_only" ? (isRTL ? "وضع الخزينة" : "Vault Storage") : (isRTL ? "مزامنة سحابية" : "Cloud Sync")}
                         </Text>
-                        <View
-                          style={[
-                            styles.syncLiveDot,
-                            syncState.syncStatus === "synced"
-                              ? styles.syncDotSuccess
-                              : syncState.syncStatus === "syncing"
-                                ? styles.syncDotSyncing
-                                : syncState.syncStatus === "offline"
-                                  ? styles.syncDotOffline
-                                  : syncState.syncStatus === "local_only"
-                                    ? styles.syncDotLocal
-                                    : styles.syncDotOffline,
-                          ]}
-                        />
+                        <View style={[styles.syncStatusDot, { backgroundColor: syncColor }]} />
                       </View>
-                      <Text
-                        style={[styles.groupSubText, isRTL && styles.rtlText]}
-                      >
-                        {syncState.syncStatus === "synced"
-                          ? isRTL
-                            ? "متزامن بالكامل مع السحابة"
-                            : "All changes synced with cloud"
-                          : syncState.syncStatus === "syncing"
-                            ? isRTL
-                              ? "جاري رفع التغييرات للسحابة..."
-                              : "Syncing changes to cloud..."
-                            : syncState.syncStatus === "local_only"
-                              ? !isSupabaseConfigured
-                                ? isRTL
-                                  ? "غير متصل بالسحابة • الحفظ محلي بالجهاز"
-                                  : "Cloud not connected • Saved locally"
-                                : isRTL
-                                  ? "وضع الضيف • سجّل الدخول لتفعيل المزامنة"
-                                  : "Guest mode • Sign in to sync across devices"
-                              : isRTL
-                                ? `وضع غير متصل (${syncState.pendingCount} معلق)`
-                                : `Offline (${syncState.pendingCount} pending)`}
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>
+                        {syncState.syncStatus === "synced" ? (isRTL ? "متزامن بالكامل" : "Fully synced")
+                          : syncState.syncStatus === "syncing" ? (isRTL ? "جاري المزامنة..." : "Syncing...")
+                          : syncState.syncStatus === "local_only" ? (!isSupabaseConfigured ? (isRTL ? "حفظ محلي فقط" : "Saved locally") : (isRTL ? "وضع الضيف" : "Guest mode"))
+                          : (isRTL ? `${syncState.pendingCount} معلق` : `${syncState.pendingCount} pending`)}
                       </Text>
                     </View>
                   </View>
-
-                  <Pressable
-                    onPress={handleSyncPress}
-                    style={({ pressed }) => [
-                      styles.actionPillPrimary,
-                      pressed && { opacity: 0.7 },
-                    ]}
-                  >
+                  <Pressable onPress={handleSyncPress} style={({ pressed }) => [styles.primaryPill, pressed && { opacity: 0.7 }]}>
                     <RefreshCw size={11} color="#00D2FF" strokeWidth={2.2} />
-                    <Text style={styles.actionPillPrimaryText}>
-                      {syncState.syncStatus === "local_only"
-                        ? !isSupabaseConfigured
-                          ? isRTL
-                            ? "معلومات"
-                            : "Info"
-                          : isRTL
-                            ? "تفعيل"
-                            : "Connect"
-                        : isRTL
-                          ? "مزامنة الآن"
-                          : "Sync Now"}
+                    <Text style={styles.primaryPillText}>
+                      {syncState.syncStatus === "local_only" ? (!isSupabaseConfigured ? (isRTL ? "معلومات" : "Info") : (isRTL ? "تفعيل" : "Connect")) : (isRTL ? "مزامنة" : "Sync")}
                     </Text>
                   </Pressable>
                 </View>
 
-                {/* BIOMETRIC FACE ID / TOUCH ID TOGGLE */}
+                {/* BIOMETRICS */}
                 <Pressable
                   onPress={handleToggleBio}
-                  style={[
-                    styles.groupItem,
-                    styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                  ]}
+                  style={({ pressed }) => [styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
                 >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <Fingerprint
-                        size={16}
-                        color={colors.accent}
-                        strokeWidth={2.2}
-                      />
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <Fingerprint size={18} color="#00D2FF" strokeWidth={2} />
                     </View>
                     <View>
-                      <Text
-                        style={[styles.groupItemText, isRTL && styles.rtlText]}
-                      >
-                        {isRTL ? "قفل الخزينة بالبصمة" : "Biometric Lock"}
-                      </Text>
-                      <Text
-                        style={[styles.groupSubText, isRTL && styles.rtlText]}
-                      >
-                        {isRTL
-                          ? "Face ID / بصمة الإصبع"
-                          : "Require Face ID / Touch ID"}
-                      </Text>
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>{isRTL ? "قفل بالبصمة" : "Biometric Lock"}</Text>
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>{isRTL ? "Face ID / بصمة الإصبع" : "Face ID / Touch ID"}</Text>
                     </View>
                   </View>
-
-                  <View
-                    style={[
-                      styles.toggleTrack,
-                      securityState.isBiometricsEnabled &&
-                        styles.toggleTrackActive,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        securityState.isBiometricsEnabled &&
-                          styles.toggleThumbActive,
-                      ]}
-                    />
+                  <View style={[styles.toggle, securityState.isBiometricsEnabled && styles.toggleActive]}>
+                    <View style={[styles.toggleThumb, securityState.isBiometricsEnabled && styles.toggleThumbActive]} />
                   </View>
                 </Pressable>
 
-                {/* LOCK VAULT NOW */}
+                {/* LOCK NOW */}
                 <Pressable
                   onPress={handleLockPress}
-                  style={({ pressed }) => [
-                    styles.groupItem,
-                    styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                    pressed && styles.itemPressed,
-                  ]}
+                  style={({ pressed }) => [styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
                 >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <Lock size={15} color={colors.danger} strokeWidth={2.2} />
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={[styles.rowIcon, styles.rowIconDanger]}>
+                      <Lock size={18} color="#FF3B30" strokeWidth={2} />
                     </View>
-                    <Text
-                      style={[
-                        styles.groupItemText,
-                        { color: colors.danger },
-                        isRTL && styles.rtlText,
-                      ]}
-                    >
-                      {isRTL ? "قفل الخزينة الآن" : "Lock Vault Now"}
-                    </Text>
+                    <Text style={[styles.rowTitle, { color: "#FF3B30" }, isRTL && styles.rtlText]}>{isRTL ? "قفل الخزينة الآن" : "Lock Vault"}</Text>
                   </View>
-
-                  <Lock size={14} color={colors.danger} strokeWidth={2} />
+                  {isRTL ? <ChevronLeft size={16} color="#FF3B30" strokeWidth={2.2} /> : <ChevronRight size={16} color="#FF3B30" strokeWidth={2.2} />}
                 </Pressable>
 
-                {/* RESET VAULT / START FRESH */}
+                {/* RESET */}
                 <Pressable
                   onPress={handleResetVault}
-                  style={({ pressed }) => [
-                    styles.groupItem,
-                    isNativeRTL && { flexDirection: "row-reverse" },
-                    pressed && styles.itemPressed,
-                  ]}
+                  style={({ pressed }) => [styles.row, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
                 >
-                  <View
-                    style={[
-                      styles.groupItemLeft,
-                      isNativeRTL && { flexDirection: "row-reverse" },
-                    ]}
-                  >
-                    <View style={styles.itemIconCircle}>
-                      <RotateCcw
-                        size={15}
-                        color={colors.textMuted}
-                        strokeWidth={2.2}
-                      />
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <RotateCcw size={18} color={styles.mutedIcon.color} strokeWidth={2} />
                     </View>
                     <View>
-                      <Text
-                        style={[styles.groupItemText, isRTL && styles.rtlText]}
-                      >
-                        {t("menuResetVault")}
-                      </Text>
-                      <Text
-                        style={[styles.groupSubText, isRTL && styles.rtlText]}
-                      >
-                        {t("menuResetVaultSub")}
-                      </Text>
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>{t("menuResetVault")}</Text>
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>{t("menuResetVaultSub")}</Text>
                     </View>
                   </View>
-
-                  <RotateCcw
-                    size={14}
-                    color={colors.textMuted}
-                    strokeWidth={2}
-                  />
+                  {isRTL ? <ChevronLeft size={16} color={styles.chevron.color} strokeWidth={2.2} /> : <ChevronRight size={16} color={styles.chevron.color} strokeWidth={2.2} />}
                 </Pressable>
               </View>
             </View>
           </ScrollView>
 
-          {/* AUTH MODAL DIALOG */}
-          <AuthModal
-            visible={authModalVisible}
-            onClose={() => setAuthModalVisible(false)}
-          />
+          {/* AUTH MODAL */}
+          <AuthModal visible={authModalVisible} onClose={() => setAuthModalVisible(false)} />
 
-          {/* FOOTER: APP NAME, VERSION & GAMAL HAROUN ATTRIBUTION */}
+          {/* ── FOOTER ── */}
           <View style={styles.footer}>
-            <Text style={styles.footerAppName}>
-              Console Vault <Text style={styles.footerVersion}>• v1.0.0</Text>
+            <Text style={styles.footerApp}>
+              Console Vault{"  "}<Text style={styles.footerVersion}>v1.0.0</Text>
             </Text>
-
             <Pressable
               onPress={handleOpenLinkedIn}
-              style={({ pressed }) => [
-                styles.authorPill,
-                isNativeRTL && { flexDirection: "row-reverse" },
-                pressed && styles.authorPillPressed,
-              ]}
+              style={({ pressed }) => [styles.authorRow, isNativeRTL && { flexDirection: "row-reverse" }, pressed && { opacity: 0.65 }]}
               accessibilityRole="link"
               accessibilityLabel="Gamal Haroun LinkedIn profile"
             >
               <Text style={styles.authorText}>
                 {isRTL ? "صُنع بكل ❤️ بواسطة " : "Made with ❤️ by "}
-                <Text style={styles.authorHighlight}>Gamal Haroun</Text>
+                <Text style={styles.authorName}>Gamal Haroun</Text>
               </Text>
-              <View style={styles.linkedInCircle}>
+              <View style={styles.liIcon}>
                 <Svg width={11} height={11} viewBox="0 0 24 24" fill="#0A66C2">
                   <Path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.45a1.64 1.64 0 1 0 0 3.28 1.64 1.64 0 0 0 0-3.28" />
                 </Svg>
@@ -1233,20 +671,16 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     </Modal>
   );
 }
-
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
+    // ── LAYOUT ──
     container: {
       flex: 1,
       position: "relative",
     },
     backdrop: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      ...StyleSheet.absoluteFill,
+      backgroundColor: "rgba(0, 0, 0, 0.55)",
     },
     backdropPressable: {
       flex: 1,
@@ -1256,425 +690,344 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       top: 0,
       bottom: 0,
       width: DRAWER_WIDTH,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 18,
-      boxShadow:
-        theme === "dark"
-          ? "-8px 0px 32px rgba(0, 0, 0, 0.6)"
-          : "-8px 0px 32px rgba(0, 0, 0, 0.12)",
-      elevation: 20,
+      backgroundColor: theme === "dark" ? "#0D1117" : "#F8FAFC",
+      paddingHorizontal: 20,
     },
     drawerRight: {
       right: 0,
-      borderLeftWidth: 1,
-      borderColor: colors.border,
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderColor: theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.09)",
+      boxShadow: theme === "dark"
+        ? "-12px 0px 40px rgba(0, 0, 0, 0.7)"
+        : "-12px 0px 40px rgba(0, 0, 0, 0.1)",
+      elevation: 24,
     },
     drawerLeft: {
       left: 0,
-      borderRightWidth: 1,
-      borderColor: colors.border,
-      boxShadow:
-        theme === "dark"
-          ? "8px 0px 32px rgba(0, 0, 0, 0.6)"
-          : "8px 0px 32px rgba(0, 0, 0, 0.12)",
+      borderRightWidth: StyleSheet.hairlineWidth,
+      borderColor: theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.09)",
+      boxShadow: theme === "dark"
+        ? "12px 0px 40px rgba(0, 0, 0, 0.7)"
+        : "12px 0px 40px rgba(0, 0, 0, 0.1)",
+      elevation: 24,
     },
-    headerRow: {
+
+    // ── HEADER ──
+    header: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      paddingBottom: 18,
       marginBottom: 20,
-      paddingBottom: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
     },
-    headerLeft: {
+    headerBrand: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
+      gap: 11,
       flex: 1,
     },
-    brandIconCircle: {
-      width: 36,
-      height: 36,
+    brandMark: {
+      width: 38,
+      height: 38,
       borderRadius: 12,
-      backgroundColor: "rgba(0, 112, 209, 0.14)",
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.1)" : "rgba(0, 112, 209, 0.08)",
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1,
-      borderColor: "rgba(0, 210, 255, 0.25)",
+      borderColor: theme === "dark" ? "rgba(0, 210, 255, 0.22)" : "rgba(0, 112, 209, 0.18)",
     },
     headerTitle: {
       color: colors.text,
       fontSize: 16,
       fontWeight: "800",
-      letterSpacing: -0.2,
+      letterSpacing: -0.3,
     },
-    headerSubtitle: {
-      color: colors.textSecondary,
+    syncRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      marginTop: 2,
+    },
+    syncDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    syncLabel: {
+      color: colors.textMuted,
       fontSize: 10,
-      fontWeight: "500",
-      marginTop: 1,
+      fontWeight: "600",
     },
     closeBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: colors.surfaceSubtle,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
       alignItems: "center",
       justifyContent: "center",
     },
     closeBtnPressed: {
-      opacity: 0.6,
+      opacity: 0.5,
+      transform: [{ scale: 0.92 }],
     },
-    headerRightGroup: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    headerSyncBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      paddingHorizontal: 8,
-      paddingVertical: 5,
-      borderRadius: 12,
-      backgroundColor:
-        theme === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)",
-      borderWidth: 1,
-      borderColor:
-        theme === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
-    },
-    headerSyncBadgeText: {
+    closeBtnIcon: {
       color: colors.textSecondary,
-      fontSize: 10,
-      fontWeight: "700",
     },
-    syncLiveDot: {
-      width: 7,
-      height: 7,
-      borderRadius: 4,
-    },
-    syncDotSuccess: {
-      backgroundColor: "#30D158",
-    },
-    syncDotSyncing: {
-      backgroundColor: "#00D2FF",
-    },
-    syncDotOffline: {
-      backgroundColor: "#FF9F0A",
-    },
-    syncDotLocal: {
-      backgroundColor: "#64748B",
-    },
+
+    // ── SCROLL CONTENT ──
     scrollContent: {
-      gap: 20,
-      paddingBottom: 16,
+      gap: 24,
+      paddingBottom: 8,
     },
+
+    // ── SECTIONS ──
     section: {
-      gap: 8,
+      gap: 9,
     },
-    sectionTitle: {
+    sectionLabel: {
       color: colors.textMuted,
       fontSize: 10,
       fontWeight: "800",
-      letterSpacing: 1.1,
+      letterSpacing: 1.2,
       textTransform: "uppercase",
       paddingHorizontal: 2,
     },
 
-    /* PERSONA MODE SWITCHER CARDS */
-    modeContainer: {
-      flexDirection: "column",
-      gap: 7,
+    // ── PERSONA MODE CARDS (side by side) ──
+    modeRow: {
+      flexDirection: "row",
+      gap: 8,
     },
     modeCard: {
-      backgroundColor: colors.surfaceElevated,
-      borderRadius: 14,
+      flex: 1,
+      borderRadius: 12,
+      backgroundColor: theme === "dark" ? "#161B22" : "#FFFFFF",
       borderWidth: 1,
-      borderColor: colors.border,
-      padding: 10,
+      borderColor: theme === "dark" ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      alignItems: "center",
+      gap: 6,
     },
     modeCardActive: {
-      backgroundColor:
-        theme === "dark" ? "rgba(0, 210, 255, 0.08)" : "rgba(0, 112, 209, 0.07)",
-      borderColor: theme === "dark" ? "#00D2FF" : "#0070D1",
-      boxShadow:
-        theme === "dark"
-          ? "0px 0px 12px rgba(0, 210, 255, 0.22)"
-          : "0px 2px 8px rgba(0, 112, 209, 0.12)",
-      elevation: 3,
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.07)" : "rgba(0, 112, 209, 0.06)",
+      borderColor: theme === "dark" ? "rgba(0, 210, 255, 0.45)" : "rgba(0, 112, 209, 0.35)",
     },
-    modeCardInner: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
+    modeCardPressed: {
+      opacity: 0.78,
+      transform: [{ scale: 0.97 }],
     },
-    modeIconCircle: {
+    modeIconWrap: {
       width: 32,
       height: 32,
       borderRadius: 10,
-      backgroundColor: colors.surfaceSubtle,
+      backgroundColor: theme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
     },
-    modeIconCircleActive: {
-      backgroundColor:
-        theme === "dark" ? "rgba(0, 210, 255, 0.18)" : "rgba(0, 112, 209, 0.14)",
-      borderColor: theme === "dark" ? "#00D2FF" : "#0070D1",
+    modeIconWrapActive: {
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.14)" : "rgba(0, 112, 209, 0.1)",
+      borderColor: theme === "dark" ? "rgba(0, 210, 255, 0.35)" : "rgba(0, 112, 209, 0.3)",
     },
-    modeTextContainer: {
-      flex: 1,
-    },
-    modeTitle: {
+    modeCardLabel: {
       color: colors.textSecondary,
-      fontSize: 13,
+      fontSize: 11,
       fontWeight: "700",
     },
-    modeTitleActive: {
+    modeCardLabelActive: {
       color: theme === "dark" ? "#FFFFFF" : "#0F172A",
       fontWeight: "800",
     },
-    modeSub: {
-      color: colors.textMuted,
-      fontSize: 10,
-      marginTop: 1,
-    },
 
-    /* MINI COMPACT SEGMENTED SWITCH */
-    miniSegmentTrack: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.surfaceSubtle,
-      borderRadius: 10,
-      padding: 2.5,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 3,
-    },
-    miniSegmentBtn: {
-      paddingHorizontal: 8,
-      paddingVertical: 5,
-      borderRadius: 7,
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: 32,
-    },
-    miniSegmentBtnActive: {
-      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.18)" : "#FFFFFF",
-      borderWidth: 1,
-      borderColor: theme === "dark" ? "#00D2FF" : "rgba(0, 112, 209, 0.25)",
-      boxShadow:
-        theme === "dark"
-          ? "0px 1px 4px rgba(0, 210, 255, 0.2)"
-          : "0px 1px 3px rgba(0, 0, 0, 0.08)",
-      elevation: 2,
-    },
-    miniSegmentText: {
-      color: colors.textSecondary,
-      fontSize: 11,
-      fontWeight: "700",
-    },
-    miniSegmentTextActive: {
-      color: theme === "dark" ? "#00D2FF" : "#0070D1",
-      fontWeight: "900",
-    },
-    arabicFontAdjust: {
-      fontSize: 14,
-    },
-
-    /* INSET GROUP LIST */
-    insetGroup: {
-      backgroundColor: colors.surfaceElevated,
+    // ── LIST GROUP ──
+    listGroup: {
+      backgroundColor: theme === "dark" ? "#161B22" : "#FFFFFF",
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: theme === "dark" ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
       overflow: "hidden",
     },
-    groupItem: {
+
+    // ── ROW ──
+    row: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 12,
-      paddingHorizontal: 12,
+      paddingVertical: 13,
+      paddingHorizontal: 14,
+      minHeight: 56,
     },
-    groupItemBorder: {
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+    rowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme === "dark" ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
     },
-    itemPressed: {
-      backgroundColor: colors.surfaceSubtle,
+    rowPressed: {
+      backgroundColor: theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
     },
-    groupItemLeft: {
+    rowLeft: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
+      gap: 12,
       flex: 1,
     },
-    itemIconCircle: {
-      width: 30,
-      height: 30,
-      borderRadius: 9,
-      backgroundColor: colors.surfaceSubtle,
+    rowIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: theme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
       alignItems: "center",
       justifyContent: "center",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
     },
-    groupItemText: {
+    rowIconDanger: {
+      backgroundColor: "rgba(255, 59, 48, 0.08)",
+      borderColor: "rgba(255, 59, 48, 0.18)",
+    },
+    rowTitle: {
       color: colors.text,
       fontSize: 13,
       fontWeight: "700",
+      letterSpacing: -0.1,
     },
-    groupSubText: {
+    rowSub: {
       color: colors.textMuted,
       fontSize: 10,
+      fontWeight: "500",
       marginTop: 2,
     },
-    actionPillPrimary: {
+
+    // ── VALUE BADGE (tap-to-cycle indicator) ──
+    valueBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.09)" : "rgba(0, 112, 209, 0.07)",
+      borderWidth: 1,
+      borderColor: theme === "dark" ? "rgba(0, 210, 255, 0.22)" : "rgba(0, 112, 209, 0.2)",
+    },
+    valueBadgeText: {
+      color: theme === "dark" ? "#00D2FF" : "#0070D1",
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.3,
+    },
+
+    // ── INLINE SYNC STATUS DOT ──
+    syncStatusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+
+    // ── ACTION PILLS ──
+    primaryPill: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 5,
+      gap: 4,
       paddingHorizontal: 10,
-      paddingVertical: 5,
+      paddingVertical: 6,
       borderRadius: 9,
-      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.12)" : "#E8F3FC",
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.1)" : "#E8F3FC",
       borderWidth: 1,
-      borderColor:
-        theme === "dark" ? "rgba(0, 210, 255, 0.3)" : "rgba(0, 112, 209, 0.25)",
+      borderColor: theme === "dark" ? "rgba(0, 210, 255, 0.3)" : "rgba(0, 112, 209, 0.22)",
     },
-    actionPillPrimaryText: {
+    primaryPillText: {
       color: theme === "dark" ? "#00D2FF" : "#0070D1",
       fontSize: 11,
       fontWeight: "800",
     },
-    actionPillDanger: {
+    dangerPill: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 5,
+      gap: 4,
       paddingHorizontal: 10,
-      paddingVertical: 5,
+      paddingVertical: 6,
       borderRadius: 9,
-      backgroundColor: "rgba(255, 59, 48, 0.12)",
+      backgroundColor: "rgba(255, 59, 48, 0.09)",
       borderWidth: 1,
-      borderColor: "rgba(255, 59, 48, 0.25)",
+      borderColor: "rgba(255, 59, 48, 0.22)",
     },
-    actionPillDangerText: {
-      color: colors.danger,
+    dangerPillText: {
+      color: "#FF3B30",
       fontSize: 11,
       fontWeight: "800",
     },
-    toggleTrack: {
-      width: 40,
-      height: 22,
-      borderRadius: 11,
-      backgroundColor:
-        theme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)",
-      padding: 2,
+
+    // ── TOGGLE SWITCH ──
+    toggle: {
+      width: 42,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme === "dark" ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.14)",
+      padding: 3,
       justifyContent: "center",
     },
-    toggleTrackActive: {
-      backgroundColor: colors.accent,
+    toggleActive: {
+      backgroundColor: "#00D2FF",
     },
     toggleThumb: {
       width: 18,
       height: 18,
       borderRadius: 9,
       backgroundColor: "#FFFFFF",
+      alignSelf: "flex-start",
     },
     toggleThumbActive: {
       alignSelf: "flex-end",
-      backgroundColor: "#000000",
-    },
-    statusPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 8,
-      backgroundColor:
-        theme === "dark" ? "rgba(16, 185, 129, 0.12)" : "#ECFDF5",
-      borderWidth: 0.5,
-      borderColor: "#10B981",
-    },
-    statusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: "#10B981",
-    },
-    statusPillText: {
-      color: "#10B981",
-      fontSize: 10,
-      fontWeight: "800",
     },
 
-    /* FOOTER */
+    // ── FOOTER ──
     footer: {
       alignItems: "center",
-      justifyContent: "center",
-      paddingTop: 12,
-      paddingBottom: 4,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      gap: 6,
+      paddingTop: 14,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: theme === "dark" ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+      gap: 5,
     },
-    footerAppName: {
+    footerApp: {
       color: colors.textSecondary,
       fontSize: 11,
       fontWeight: "700",
-      letterSpacing: 0.4,
+      letterSpacing: 0.3,
     },
     footerVersion: {
       color: colors.textMuted,
       fontSize: 10,
-      fontWeight: "500",
+      fontWeight: "400",
     },
-    authorPill: {
+    authorRow: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: 14,
-      backgroundColor:
-        theme === "dark" ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.03)",
-      borderWidth: 1,
-      borderColor:
-        theme === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
-    },
-    authorPillPressed: {
-      opacity: 0.7,
-      transform: [{ scale: 0.97 }],
+      gap: 5,
     },
     authorText: {
-      color: colors.textSecondary,
+      color: colors.textMuted,
       fontSize: 10,
-      fontWeight: "500",
+      fontWeight: "400",
     },
-    authorHighlight: {
+    authorName: {
       color: colors.accent,
       fontWeight: "700",
     },
-    linkedInCircle: {
+    liIcon: {
       width: 16,
       height: 16,
       borderRadius: 3,
-      backgroundColor:
-        theme === "dark" ? "rgba(10, 102, 194, 0.18)" : "#E8F3FC",
+      backgroundColor: theme === "dark" ? "rgba(10,102,194,0.18)" : "#E8F3FC",
       alignItems: "center",
       justifyContent: "center",
     },
 
-    /* UTILITIES */
-    brandIcon: {
-      color: colors.accent,
+    // ── UTILITIES ──
+    mutedIcon: {
+      color: colors.textMuted,
     },
-    closeIcon: {
-      color: colors.textSecondary,
-    },
-    mutedText: {
+    chevron: {
       color: colors.textMuted,
     },
     rtlText: {

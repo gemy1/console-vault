@@ -486,7 +486,7 @@ export default function DashboardScreen() {
             <View style={[styles.recentSalesHeader, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View style={isRTL && { alignItems: 'flex-end' }}>
                 <Text style={[styles.categoryHeading, isRTL && styles.rtlText]}>
-                  {isRTL ? 'أحدث مبيعات السلوتات' : 'Recent Slot Allocations'}
+                  {isRTL ? 'أحدث الحسابات المباعة' : 'Recent Accounts Sold'}
                 </Text>
                 <Text style={[styles.recentSalesSub, isRTL && styles.rtlText]}>
                   {isRTL ? 'المشترون والفواتير وإيصالات التسليم' : 'Latest customer deliveries & WhatsApp receipts'}

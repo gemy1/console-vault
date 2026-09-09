@@ -583,16 +583,16 @@ export default function GameDetailsScreen() {
                 </View>
               </View>
 
-              {/* LIVE PLAYSTATION SLOT DISTRIBUTION COMMAND CENTER */}
+              {/* LIVE PLAYSTATION ACCOUNT DISTRIBUTION COMMAND CENTER */}
               <View style={styles.slotCommandCenter}>
                 <View style={[styles.slotHeaderBlock, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                   <View style={isRTL && { alignItems: 'flex-end' }}>
                     <Text style={[styles.sectionHeader, isRTL && styles.rtlText]}>
-                      {isRTL ? 'توزيع سلوتات الحساب' : 'PlayStation Slot Distribution'}
+                      {isRTL ? 'توزيع حساب PlayStation' : 'PlayStation Account Distribution'}
                     </Text>
                     <Text style={[styles.slotHeaderSub, isRTL && styles.rtlText]}>
                       {isRTL
-                        ? 'حالة كل سلوت، المشتري، وسعر البيع'
+                        ? 'حالة كل تفعيل، المشتري، وسعر البيع'
                         : 'Active console allocations, buyer & pricing matrix'}
                     </Text>
                   </View>
