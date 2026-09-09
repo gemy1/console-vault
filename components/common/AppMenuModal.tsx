@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Modal,
@@ -10,13 +10,12 @@ import {
   Animated,
   Easing,
   Linking,
-  Alert,
-} from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { VaultText as Text } from './VaultText';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from '@/utils/haptics';
+} from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { VaultText as Text } from "./VaultText";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "@/utils/haptics";
 import {
   X,
   Moon,
@@ -34,18 +33,22 @@ import {
   RotateCcw,
   Trash2,
   HardDrive,
-} from 'lucide-react-native';
-import { useVaultTheme, ThemeColors, ThemeMode } from '../../context/ThemeContext';
-import { useLanguage } from '../../context/LanguageContext';
-import { useThemedStyles } from '../../hooks/useThemedStyles';
-import { useAuth } from '../../context/AuthContext';
-import { useSecurity } from '../../context/SecurityContext';
-import { useVaultSync } from '../../context/VaultSyncContext';
-import { useCustomAlert } from '../../context/AlertContext';
-import { AuthModal } from '../auth/AuthModal';
-import { isSupabaseConfigured } from '../../services/supabase';
+} from "lucide-react-native";
+import {
+  useVaultTheme,
+  ThemeColors,
+  ThemeMode,
+} from "../../context/ThemeContext";
+import { useLanguage } from "../../context/LanguageContext";
+import { useThemedStyles } from "../../hooks/useThemedStyles";
+import { useAuth } from "../../context/AuthContext";
+import { useSecurity } from "../../context/SecurityContext";
+import { useVaultSync } from "../../context/VaultSyncContext";
+import { useCustomAlert } from "../../context/AlertContext";
+import { AuthModal } from "../auth/AuthModal";
+import { isSupabaseConfigured } from "../../services/supabase";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DRAWER_WIDTH = Math.min(320, Math.round(SCREEN_WIDTH * 0.8));
 
 interface AppMenuModalProps {
@@ -58,7 +61,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   const insets = useSafeAreaInsets();
   const { theme, setTheme, colors } = useVaultTheme();
   const { language, setLanguage, t, isRTL } = useLanguage();
-  const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const isNativeRTL = Platform.OS !== "web" && isRTL;
   const styles = useThemedStyles(createStyles);
   const { showAlert } = useCustomAlert();
 
@@ -86,14 +89,14 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   } catch {}
 
   let syncState: {
-    syncStatus: import('../../types/vault').SyncStatus;
+    syncStatus: import("../../types/vault").SyncStatus;
     pendingCount: number;
     lastSyncedAt: string | null;
     syncNow: () => Promise<boolean>;
     clearLocalVault: () => void;
     clearCloudAndLocalVault: () => Promise<boolean>;
   } = {
-    syncStatus: isSupabaseConfigured ? 'synced' : 'local_only',
+    syncStatus: isSupabaseConfigured ? "synced" : "local_only",
     pendingCount: 0,
     lastSyncedAt: null,
     syncNow: async () => true,
@@ -113,14 +116,14 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
         toValue: 1,
         duration: 260,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: Platform.OS !== "web",
       }).start();
     } else {
       Animated.timing(animValue, {
         toValue: 0,
         duration: 200,
         easing: Easing.in(Easing.cubic),
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: Platform.OS !== "web",
       }).start(() => {
         setModalRendered(false);
       });
@@ -135,7 +138,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
       toValue: 0,
       duration: 200,
       easing: Easing.in(Easing.cubic),
-      useNativeDriver: Platform.OS !== 'web',
+      useNativeDriver: Platform.OS !== "web",
     }).start(() => {
       onClose();
     });
@@ -149,7 +152,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     setTheme(newTheme);
   };
 
-  const handleSelectLanguage = (newLang: 'en' | 'ar') => {
+  const handleSelectLanguage = (newLang: "en" | "ar") => {
     if (newLang === language) return;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -163,7 +166,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     } catch {}
     handleDismiss();
     setTimeout(() => {
-      router.push('/modal');
+      router.push("/modal");
     }, 120);
   };
 
@@ -174,30 +177,34 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
 
     if (!isSupabaseConfigured) {
       showAlert({
-        title: isRTL ? 'الخزينة المحلية (وضع غير متصل)' : 'Local Vault (Offline Mode)',
+        title: isRTL
+          ? "الخزينة المحلية (وضع غير متصل)"
+          : "Local Vault (Offline Mode)",
         message: isRTL
-          ? 'تطبيقك يعمل حالياً كخزينة محلية بالكامل، حيث يتم حفظ وتشفير كافة ألعابك ومبيعاتك بأمان على هذا الجهاز.'
-          : 'Your vault is operating in 100% offline local storage mode. All your games and data are safely encrypted and saved on this device.',
-        type: 'info',
-        buttons: [{ text: isRTL ? 'حسناً' : 'Understood', style: 'default' }],
+          ? "تطبيقك يعمل حالياً كخزينة محلية بالكامل، حيث يتم حفظ وتشفير كافة ألعابك ومبيعاتك بأمان على هذا الجهاز."
+          : "Your vault is operating in 100% offline local storage mode. All your games and data are safely encrypted and saved on this device.",
+        type: "info",
+        buttons: [{ text: isRTL ? "حسناً" : "Understood", style: "default" }],
       });
       return;
     }
 
     if (!authState.user) {
       showAlert({
-        title: isRTL ? 'تسجيل الدخول للمزامنة السحابية' : 'Sign In Required for Cloud Sync',
+        title: isRTL
+          ? "تسجيل الدخول للمزامنة السحابية"
+          : "Sign In Required for Cloud Sync",
         message: isRTL
-          ? 'المزامنة السحابية متوفرة ولكنك في وضع الضيف. سجّل الدخول الآن لتفعيل المزامنة الفورية عبر الأجهزة.'
-          : 'Cloud sync is available, but you are currently in Guest mode. Sign in to sync your vault across devices.',
-        type: 'info',
+          ? "المزامنة السحابية متوفرة ولكنك في وضع الضيف. سجّل الدخول الآن لتفعيل المزامنة الفورية عبر الأجهزة."
+          : "Cloud sync is available, but you are currently in Guest mode. Sign in to sync your vault across devices.",
+        type: "info",
         buttons: [
           {
-            text: isRTL ? 'تسجيل الدخول' : 'Sign In',
-            style: 'default',
+            text: isRTL ? "تسجيل الدخول" : "Sign In",
+            style: "default",
             onPress: () => setAuthModalVisible(true),
           },
-          { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
+          { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
         ],
       });
       return;
@@ -231,64 +238,70 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     if (authState.user) {
       // Authenticated User: Offer choice between Local Only vs Local + Cloud
       showAlert({
-        title: t('alertResetChoiceTitle'),
-        message: t('alertResetChoiceLoggedInMsg'),
-        type: 'danger',
+        title: t("alertResetChoiceTitle"),
+        message: t("alertResetChoiceLoggedInMsg"),
+        type: "danger",
         buttons: [
           {
-            text: t('alertResetLocalAndCloud'),
-            subtext: t('alertResetLocalAndCloudSub'),
-            style: 'destructive',
+            text: t("alertResetLocalAndCloud"),
+            subtext: t("alertResetLocalAndCloudSub"),
+            style: "destructive",
             icon: Trash2,
             onPress: async () => {
               try {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
               } catch {}
               await syncState.clearCloudAndLocalVault();
               handleDismiss();
             },
           },
           {
-            text: t('alertResetLocalOnly'),
-            subtext: t('alertResetLocalOnlySub'),
-            style: 'secondary',
+            text: t("alertResetLocalOnly"),
+            subtext: t("alertResetLocalOnlySub"),
+            style: "secondary",
             icon: HardDrive,
             onPress: () => {
               try {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
               } catch {}
               syncState.clearLocalVault();
               handleDismiss();
             },
           },
           {
-            text: isRTL ? 'إلغاء' : 'Cancel',
-            style: 'cancel',
+            text: isRTL ? "إلغاء" : "Cancel",
+            style: "cancel",
           },
         ],
       });
     } else {
       // Guest / Offline Mode: Clear local only with explicit disclaimer
       showAlert({
-        title: t('alertResetTitle'),
-        message: t('alertResetGuestMsg'),
-        type: 'warning',
+        title: t("alertResetTitle"),
+        message: t("alertResetGuestMsg"),
+        type: "warning",
         buttons: [
           {
-            text: t('alertResetConfirmGuest'),
-            style: 'destructive',
+            text: t("alertResetConfirmGuest"),
+            style: "destructive",
             icon: Trash2,
             onPress: () => {
               try {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
               } catch {}
               syncState.clearLocalVault();
               handleDismiss();
             },
           },
           {
-            text: isRTL ? 'إلغاء' : 'Cancel',
-            style: 'cancel',
+            text: isRTL ? "إلغاء" : "Cancel",
+            style: "cancel",
           },
         ],
       });
@@ -298,7 +311,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   const handleOpenLinkedIn = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Linking.openURL('https://www.linkedin.com/in/gamal-haroun/');
+      Linking.openURL("https://www.linkedin.com/in/gamal-haroun/");
     } catch {}
   };
 
@@ -346,68 +359,90 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
           ]}
         >
           {/* HEADER ROW */}
-          <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-            <View style={[styles.headerLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+          <View
+            style={[
+              styles.headerRow,
+              isNativeRTL && { flexDirection: "row-reverse" },
+            ]}
+          >
+            <View
+              style={[
+                styles.headerLeft,
+                isNativeRTL && { flexDirection: "row-reverse" },
+              ]}
+            >
               <View style={styles.brandIconCircle}>
-                <ShieldCheck size={19} color={styles.brandIcon.color} strokeWidth={2.2} />
+                <ShieldCheck
+                  size={19}
+                  color={styles.brandIcon.color}
+                  strokeWidth={2.2}
+                />
               </View>
               <View>
                 <Text style={[styles.headerTitle, isRTL && styles.rtlText]}>
-                  {t('menuDrawerTitle')}
+                  {t("menuDrawerTitle")}
                 </Text>
                 <Text style={[styles.headerSubtitle, isRTL && styles.rtlText]}>
-                  {t('menuDrawerSubtitle')}
+                  {t("menuDrawerSubtitle")}
                 </Text>
               </View>
             </View>
 
-            <View style={[styles.headerRightGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            <View
+              style={[
+                styles.headerRightGroup,
+                isNativeRTL && { flexDirection: "row-reverse" },
+              ]}
+            >
               {/* CLOUD SYNC LIVE BADGE */}
               <Pressable
                 onPress={handleSyncPress}
                 style={({ pressed }) => [
                   styles.headerSyncBadge,
                   pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] },
-                  isNativeRTL && { flexDirection: 'row-reverse' },
+                  isNativeRTL && { flexDirection: "row-reverse" },
                 ]}
               >
                 <View
                   style={[
                     styles.syncLiveDot,
-                    syncState.syncStatus === 'synced'
+                    syncState.syncStatus === "synced"
                       ? styles.syncDotSuccess
-                      : syncState.syncStatus === 'syncing'
-                      ? styles.syncDotSyncing
-                      : syncState.syncStatus === 'offline'
-                      ? styles.syncDotOffline
-                      : syncState.syncStatus === 'local_only'
-                      ? styles.syncDotLocal
-                      : styles.syncDotOffline,
+                      : syncState.syncStatus === "syncing"
+                        ? styles.syncDotSyncing
+                        : syncState.syncStatus === "offline"
+                          ? styles.syncDotOffline
+                          : syncState.syncStatus === "local_only"
+                            ? styles.syncDotLocal
+                            : styles.syncDotOffline,
                   ]}
                 />
                 <Text style={styles.headerSyncBadgeText}>
-                  {syncState.syncStatus === 'synced'
+                  {syncState.syncStatus === "synced"
                     ? isRTL
-                      ? 'متزامن'
-                      : 'Synced'
-                    : syncState.syncStatus === 'syncing'
-                    ? isRTL
-                      ? 'مزامنة...'
-                      : 'Syncing...'
-                    : syncState.syncStatus === 'local_only'
-                    ? isRTL
-                      ? 'خزينة محلية'
-                      : 'Local Vault'
-                    : isRTL
-                    ? `معلق (${syncState.pendingCount})`
-                    : `Offline (${syncState.pendingCount})`}
+                      ? "متزامن"
+                      : "Synced"
+                    : syncState.syncStatus === "syncing"
+                      ? isRTL
+                        ? "مزامنة..."
+                        : "Syncing..."
+                      : syncState.syncStatus === "local_only"
+                        ? isRTL
+                          ? "خزينة محلية"
+                          : "Local Vault"
+                        : isRTL
+                          ? `معلق (${syncState.pendingCount})`
+                          : `Offline (${syncState.pendingCount})`}
                 </Text>
               </Pressable>
 
               <Pressable
                 onPress={handleDismiss}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
+                style={({ pressed }) => [
+                  styles.closeBtn,
+                  pressed && styles.closeBtnPressed,
+                ]}
               >
                 <X size={17} color={styles.closeIcon.color} strokeWidth={2.4} />
               </Pressable>
@@ -418,104 +453,191 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {/* 1. THEME SEGMENTED SELECTOR */}
+            {/* 1. PREFERENCES INSET GROUP (APPEARANCE & LANGUAGE) */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
-                {t('menuSectionAppearance')}
+                {t("menuSectionPreferences")}
               </Text>
 
-              <View style={[styles.segmentTrack, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              <View style={styles.insetGroup}>
+                {/* THEME (APPEARANCE) ROW */}
                 <Pressable
-                  onPress={() => handleSelectTheme('dark')}
-                  style={[
-                    styles.segmentButton,
-                    theme === 'dark' && styles.segmentButtonActive,
+                  onPress={() =>
+                    handleSelectTheme(theme === "dark" ? "light" : "dark")
+                  }
+                  style={({ pressed }) => [
+                    styles.groupItem,
+                    styles.groupItemBorder,
+                    isNativeRTL && { flexDirection: "row-reverse" },
+                    pressed && styles.itemPressed,
                   ]}
                 >
-                  <Moon
-                    size={15}
-                    color={theme === 'dark' ? '#00D2FF' : styles.mutedText.color}
-                    strokeWidth={2.2}
-                  />
-                  <Text
+                  <View
                     style={[
-                      styles.segmentText,
-                      theme === 'dark' && styles.segmentTextActive,
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
                     ]}
                   >
-                    {isRTL ? 'داكن' : 'Dark'}
-                  </Text>
+                    <View style={styles.itemIconCircle}>
+                      {theme === "dark" ? (
+                        <Moon size={16} color="#00D2FF" strokeWidth={2.2} />
+                      ) : (
+                        <Sun size={16} color="#FF9F0A" strokeWidth={2.2} />
+                      )}
+                    </View>
+                    <View>
+                      <Text
+                        style={[styles.groupItemText, isRTL && styles.rtlText]}
+                      >
+                        {t("menuSectionAppearance")}
+                      </Text>
+                      <Text
+                        style={[styles.groupSubText, isRTL && styles.rtlText]}
+                      >
+                        {theme === "dark"
+                          ? t("menuThemeDark")
+                          : t("menuThemeLight")}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.miniSegmentTrack,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        handleSelectTheme("dark");
+                      }}
+                      style={[
+                        styles.miniSegmentBtn,
+                        theme === "dark" && styles.miniSegmentBtnActive,
+                      ]}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                    >
+                      <Moon
+                        size={13}
+                        color={
+                          theme === "dark" ? "#00D2FF" : styles.mutedText.color
+                        }
+                        strokeWidth={2.2}
+                      />
+                    </Pressable>
+
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        handleSelectTheme("light");
+                      }}
+                      style={[
+                        styles.miniSegmentBtn,
+                        theme === "light" && styles.miniSegmentBtnActive,
+                      ]}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                    >
+                      <Sun
+                        size={13}
+                        color={
+                          theme === "light" ? "#0070D1" : styles.mutedText.color
+                        }
+                        strokeWidth={2.2}
+                      />
+                    </Pressable>
+                  </View>
                 </Pressable>
 
+                {/* LANGUAGE ROW */}
                 <Pressable
-                  onPress={() => handleSelectTheme('light')}
-                  style={[
-                    styles.segmentButton,
-                    theme === 'light' && styles.segmentButtonActive,
+                  onPress={() =>
+                    handleSelectLanguage(language === "en" ? "ar" : "en")
+                  }
+                  style={({ pressed }) => [
+                    styles.groupItem,
+                    isNativeRTL && { flexDirection: "row-reverse" },
+                    pressed && styles.itemPressed,
                   ]}
                 >
-                  <Sun
-                    size={15}
-                    color={theme === 'light' ? '#0070D1' : styles.mutedText.color}
-                    strokeWidth={2.2}
-                  />
-                  <Text
+                  <View
                     style={[
-                      styles.segmentText,
-                      theme === 'light' && styles.segmentTextActive,
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
                     ]}
                   >
-                    {isRTL ? 'فاتح' : 'Light'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
+                    <View style={styles.itemIconCircle}>
+                      <Globe
+                        size={16}
+                        color={colors.accent}
+                        strokeWidth={2.2}
+                      />
+                    </View>
+                    <View>
+                      <Text
+                        style={[styles.groupItemText, isRTL && styles.rtlText]}
+                      >
+                        {t("menuSectionLanguage")}
+                      </Text>
+                      <Text
+                        style={[styles.groupSubText, isRTL && styles.rtlText]}
+                      >
+                        {language === "ar"
+                          ? t("menuLangArabic")
+                          : t("menuLangEnglish")}
+                      </Text>
+                    </View>
+                  </View>
 
-            {/* 2. LANGUAGE SEGMENTED SELECTOR */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
-                {t('menuSectionLanguage')}
-              </Text>
-
-              <View style={[styles.segmentTrack, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                <Pressable
-                  onPress={() => handleSelectLanguage('en')}
-                  style={[
-                    styles.segmentButton,
-                    language === 'en' && styles.segmentButtonActive,
-                  ]}
-                >
-                  <Globe
-                    size={15}
-                    color={language === 'en' ? '#00D2FF' : styles.mutedText.color}
-                    strokeWidth={2.2}
-                  />
-                  <Text
+                  <View
                     style={[
-                      styles.segmentText,
-                      language === 'en' && styles.segmentTextActive,
+                      styles.miniSegmentTrack,
+                      isNativeRTL && { flexDirection: "row-reverse" },
                     ]}
                   >
-                    English
-                  </Text>
-                </Pressable>
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        handleSelectLanguage("en");
+                      }}
+                      style={[
+                        styles.miniSegmentBtn,
+                        language === "en" && styles.miniSegmentBtnActive,
+                      ]}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                    >
+                      <Text
+                        style={[
+                          styles.miniSegmentText,
+                          language === "en" && styles.miniSegmentTextActive,
+                        ]}
+                      >
+                        EN
+                      </Text>
+                    </Pressable>
 
-                <Pressable
-                  onPress={() => handleSelectLanguage('ar')}
-                  style={[
-                    styles.segmentButton,
-                    language === 'ar' && styles.segmentButtonActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      styles.arabicFontAdjust,
-                      language === 'ar' && styles.segmentTextActive,
-                    ]}
-                  >
-                    العربية
-                  </Text>
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        handleSelectLanguage("ar");
+                      }}
+                      style={[
+                        styles.miniSegmentBtn,
+                        language === "ar" && styles.miniSegmentBtnActive,
+                      ]}
+                      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                    >
+                      <Text
+                        style={[
+                          styles.miniSegmentText,
+                          styles.arabicFontAdjust,
+                          language === "ar" && styles.miniSegmentTextActive,
+                        ]}
+                      >
+                        عربي
+                      </Text>
+                    </Pressable>
+                  </View>
                 </Pressable>
               </View>
             </View>
@@ -523,7 +645,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
             {/* 3. SYSTEM & SECURITY INSET GROUP */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, isRTL && styles.rtlText]}>
-                {t('menuSectionSecurity')}
+                {t("menuSectionSecurity")}
               </Text>
 
               <View style={styles.insetGroup}>
@@ -533,46 +655,81 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                   style={({ pressed }) => [
                     styles.groupItem,
                     styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: 'row-reverse' },
+                    isNativeRTL && { flexDirection: "row-reverse" },
                     pressed && styles.itemPressed,
                   ]}
                 >
-                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <View
+                    style={[
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
                     <View style={styles.itemIconCircle}>
-                      <ShieldCheck size={16} color={styles.brandIcon.color} strokeWidth={2.2} />
+                      <ShieldCheck
+                        size={16}
+                        color={styles.brandIcon.color}
+                        strokeWidth={2.2}
+                      />
                     </View>
-                    <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
-                      {t('menuArchitectureBtn')}
+                    <Text
+                      style={[styles.groupItemText, isRTL && styles.rtlText]}
+                    >
+                      {t("menuArchitectureBtn")}
                     </Text>
                   </View>
 
                   {isRTL ? (
-                    <ChevronLeft size={15} color={styles.mutedText.color} strokeWidth={2.4} />
+                    <ChevronLeft
+                      size={15}
+                      color={styles.mutedText.color}
+                      strokeWidth={2.4}
+                    />
                   ) : (
-                    <ChevronRight size={15} color={styles.mutedText.color} strokeWidth={2.4} />
+                    <ChevronRight
+                      size={15}
+                      color={styles.mutedText.color}
+                      strokeWidth={2.4}
+                    />
                   )}
                 </Pressable>
 
                 {/* CLOUD SYNC & AUTH ROW */}
-                <View style={[styles.groupItem, styles.groupItemBorder, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <View
+                  style={[
+                    styles.groupItem,
+                    styles.groupItemBorder,
+                    isNativeRTL && { flexDirection: "row-reverse" },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
                     <View style={styles.itemIconCircle}>
                       <Cloud size={16} color="#00D2FF" strokeWidth={2.2} />
                     </View>
                     <View>
-                      <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
+                      <Text
+                        style={[styles.groupItemText, isRTL && styles.rtlText]}
+                      >
                         {authState.user
-                          ? authState.user.email?.split('@')[0] || (isRTL ? 'المستخدم' : 'Account')
+                          ? authState.user.email?.split("@")[0] ||
+                            (isRTL ? "المستخدم" : "Account")
                           : isRTL
-                          ? 'الخزينة المحلية'
-                          : 'Local Vault'}
+                            ? "الخزينة المحلية"
+                            : "Local Vault"}
                       </Text>
-                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
+                      <Text
+                        style={[styles.groupSubText, isRTL && styles.rtlText]}
+                      >
                         {authState.user
                           ? authState.user.email
                           : isRTL
-                          ? 'مزامنة السحابة غير مفعلة'
-                          : 'Guest Mode (No Cloud)'}
+                            ? "مزامنة السحابة غير مفعلة"
+                            : "Guest Mode (No Cloud)"}
                       </Text>
                     </View>
                   </View>
@@ -581,22 +738,30 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                     <Pressable
                       onPress={async () => {
                         try {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                         } catch {}
                         await authState.signOut();
                       }}
                       style={styles.actionPillDanger}
                     >
-                      <LogOut size={12} color={colors.danger} strokeWidth={2.2} />
+                      <LogOut
+                        size={12}
+                        color={colors.danger}
+                        strokeWidth={2.2}
+                      />
                       <Text style={styles.actionPillDangerText}>
-                        {isRTL ? 'خروج' : 'Sign Out'}
+                        {isRTL ? "خروج" : "Sign Out"}
                       </Text>
                     </Pressable>
                   ) : (
                     <Pressable
                       onPress={() => {
                         try {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
                         } catch {}
                         setAuthModalVisible(true);
                       }}
@@ -604,64 +769,95 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                     >
                       <LogIn size={12} color="#00D2FF" strokeWidth={2.2} />
                       <Text style={styles.actionPillPrimaryText}>
-                        {isRTL ? 'دخول' : 'Sign In'}
+                        {isRTL ? "دخول" : "Sign In"}
                       </Text>
                     </Pressable>
                   )}
                 </View>
 
                 {/* CLOUD SYNC NOW ROW */}
-                <View style={[styles.groupItem, styles.groupItemBorder, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                <View
+                  style={[
+                    styles.groupItem,
+                    styles.groupItemBorder,
+                    isNativeRTL && { flexDirection: "row-reverse" },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
                     <View style={styles.itemIconCircle}>
-                      <RefreshCw size={15} color={colors.accent} strokeWidth={2.2} />
+                      <RefreshCw
+                        size={15}
+                        color={colors.accent}
+                        strokeWidth={2.2}
+                      />
                     </View>
                     <View>
-                      <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 6 }, isNativeRTL && { flexDirection: 'row-reverse' }]}>
-                        <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
-                          {syncState.syncStatus === 'local_only'
+                      <View
+                        style={[
+                          {
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          },
+                          isNativeRTL && { flexDirection: "row-reverse" },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.groupItemText,
+                            isRTL && styles.rtlText,
+                          ]}
+                        >
+                          {syncState.syncStatus === "local_only"
                             ? isRTL
-                              ? 'وضع الخزينة'
-                              : 'Vault Storage'
+                              ? "وضع الخزينة"
+                              : "Vault Storage"
                             : isRTL
-                            ? 'حالة المزامنة'
-                            : 'Cloud Sync'}
+                              ? "حالة المزامنة"
+                              : "Cloud Sync"}
                         </Text>
                         <View
                           style={[
                             styles.syncLiveDot,
-                            syncState.syncStatus === 'synced'
+                            syncState.syncStatus === "synced"
                               ? styles.syncDotSuccess
-                              : syncState.syncStatus === 'syncing'
-                              ? styles.syncDotSyncing
-                              : syncState.syncStatus === 'offline'
-                              ? styles.syncDotOffline
-                              : syncState.syncStatus === 'local_only'
-                              ? styles.syncDotLocal
-                              : styles.syncDotOffline,
+                              : syncState.syncStatus === "syncing"
+                                ? styles.syncDotSyncing
+                                : syncState.syncStatus === "offline"
+                                  ? styles.syncDotOffline
+                                  : syncState.syncStatus === "local_only"
+                                    ? styles.syncDotLocal
+                                    : styles.syncDotOffline,
                           ]}
                         />
                       </View>
-                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
-                        {syncState.syncStatus === 'synced'
+                      <Text
+                        style={[styles.groupSubText, isRTL && styles.rtlText]}
+                      >
+                        {syncState.syncStatus === "synced"
                           ? isRTL
-                            ? 'متزامن بالكامل مع السحابة'
-                            : 'All changes synced with cloud'
-                          : syncState.syncStatus === 'syncing'
-                          ? isRTL
-                            ? 'جاري رفع التغييرات للسحابة...'
-                            : 'Syncing changes to cloud...'
-                          : syncState.syncStatus === 'local_only'
-                          ? !isSupabaseConfigured
+                            ? "متزامن بالكامل مع السحابة"
+                            : "All changes synced with cloud"
+                          : syncState.syncStatus === "syncing"
                             ? isRTL
-                              ? 'غير متصل بالسحابة • الحفظ محلي بالجهاز'
-                              : 'Cloud not connected • Saved locally'
-                            : isRTL
-                            ? 'وضع الضيف • سجّل الدخول لتفعيل المزامنة'
-                            : 'Guest mode • Sign in to sync across devices'
-                          : isRTL
-                          ? `وضع غير متصل (${syncState.pendingCount} معلق)`
-                          : `Offline (${syncState.pendingCount} pending)`}
+                              ? "جاري رفع التغييرات للسحابة..."
+                              : "Syncing changes to cloud..."
+                            : syncState.syncStatus === "local_only"
+                              ? !isSupabaseConfigured
+                                ? isRTL
+                                  ? "غير متصل بالسحابة • الحفظ محلي بالجهاز"
+                                  : "Cloud not connected • Saved locally"
+                                : isRTL
+                                  ? "وضع الضيف • سجّل الدخول لتفعيل المزامنة"
+                                  : "Guest mode • Sign in to sync across devices"
+                              : isRTL
+                                ? `وضع غير متصل (${syncState.pendingCount} معلق)`
+                                : `Offline (${syncState.pendingCount} pending)`}
                       </Text>
                     </View>
                   </View>
@@ -675,17 +871,17 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                   >
                     <RefreshCw size={11} color="#00D2FF" strokeWidth={2.2} />
                     <Text style={styles.actionPillPrimaryText}>
-                      {syncState.syncStatus === 'local_only'
+                      {syncState.syncStatus === "local_only"
                         ? !isSupabaseConfigured
                           ? isRTL
-                            ? 'معلومات'
-                            : 'Info'
+                            ? "معلومات"
+                            : "Info"
                           : isRTL
-                          ? 'تفعيل'
-                          : 'Connect'
+                            ? "تفعيل"
+                            : "Connect"
                         : isRTL
-                        ? 'مزامنة الآن'
-                        : 'Sync Now'}
+                          ? "مزامنة الآن"
+                          : "Sync Now"}
                     </Text>
                   </Pressable>
                 </View>
@@ -693,18 +889,37 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                 {/* BIOMETRIC FACE ID / TOUCH ID TOGGLE */}
                 <Pressable
                   onPress={handleToggleBio}
-                  style={[styles.groupItem, styles.groupItemBorder, isNativeRTL && { flexDirection: 'row-reverse' }]}
+                  style={[
+                    styles.groupItem,
+                    styles.groupItemBorder,
+                    isNativeRTL && { flexDirection: "row-reverse" },
+                  ]}
                 >
-                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <View
+                    style={[
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
                     <View style={styles.itemIconCircle}>
-                      <Fingerprint size={16} color={colors.accent} strokeWidth={2.2} />
+                      <Fingerprint
+                        size={16}
+                        color={colors.accent}
+                        strokeWidth={2.2}
+                      />
                     </View>
                     <View>
-                      <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
-                        {isRTL ? 'قفل الخزينة بالبصمة' : 'Biometric Lock'}
+                      <Text
+                        style={[styles.groupItemText, isRTL && styles.rtlText]}
+                      >
+                        {isRTL ? "قفل الخزينة بالبصمة" : "Biometric Lock"}
                       </Text>
-                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
-                        {isRTL ? 'Face ID / بصمة الإصبع' : 'Require Face ID / Touch ID'}
+                      <Text
+                        style={[styles.groupSubText, isRTL && styles.rtlText]}
+                      >
+                        {isRTL
+                          ? "Face ID / بصمة الإصبع"
+                          : "Require Face ID / Touch ID"}
                       </Text>
                     </View>
                   </View>
@@ -712,14 +927,16 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                   <View
                     style={[
                       styles.toggleTrack,
-                      securityState.isBiometricsEnabled && styles.toggleTrackActive,
-                      isNativeRTL && { flexDirection: 'row-reverse' },
+                      securityState.isBiometricsEnabled &&
+                        styles.toggleTrackActive,
+                      isNativeRTL && { flexDirection: "row-reverse" },
                     ]}
                   >
                     <View
                       style={[
                         styles.toggleThumb,
-                        securityState.isBiometricsEnabled && styles.toggleThumbActive,
+                        securityState.isBiometricsEnabled &&
+                          styles.toggleThumbActive,
                       ]}
                     />
                   </View>
@@ -731,16 +948,27 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                   style={({ pressed }) => [
                     styles.groupItem,
                     styles.groupItemBorder,
-                    isNativeRTL && { flexDirection: 'row-reverse' },
+                    isNativeRTL && { flexDirection: "row-reverse" },
                     pressed && styles.itemPressed,
                   ]}
                 >
-                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <View
+                    style={[
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
                     <View style={styles.itemIconCircle}>
                       <Lock size={15} color={colors.danger} strokeWidth={2.2} />
                     </View>
-                    <Text style={[styles.groupItemText, { color: colors.danger }, isRTL && styles.rtlText]}>
-                      {isRTL ? 'قفل الخزينة الآن' : 'Lock Vault Now'}
+                    <Text
+                      style={[
+                        styles.groupItemText,
+                        { color: colors.danger },
+                        isRTL && styles.rtlText,
+                      ]}
+                    >
+                      {isRTL ? "قفل الخزينة الآن" : "Lock Vault Now"}
                     </Text>
                   </View>
 
@@ -752,25 +980,42 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                   onPress={handleResetVault}
                   style={({ pressed }) => [
                     styles.groupItem,
-                    isNativeRTL && { flexDirection: 'row-reverse' },
+                    isNativeRTL && { flexDirection: "row-reverse" },
                     pressed && styles.itemPressed,
                   ]}
                 >
-                  <View style={[styles.groupItemLeft, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                  <View
+                    style={[
+                      styles.groupItemLeft,
+                      isNativeRTL && { flexDirection: "row-reverse" },
+                    ]}
+                  >
                     <View style={styles.itemIconCircle}>
-                      <RotateCcw size={15} color={colors.textMuted} strokeWidth={2.2} />
+                      <RotateCcw
+                        size={15}
+                        color={colors.textMuted}
+                        strokeWidth={2.2}
+                      />
                     </View>
                     <View>
-                      <Text style={[styles.groupItemText, isRTL && styles.rtlText]}>
-                        {t('menuResetVault')}
+                      <Text
+                        style={[styles.groupItemText, isRTL && styles.rtlText]}
+                      >
+                        {t("menuResetVault")}
                       </Text>
-                      <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
-                        {t('menuResetVaultSub')}
+                      <Text
+                        style={[styles.groupSubText, isRTL && styles.rtlText]}
+                      >
+                        {t("menuResetVaultSub")}
                       </Text>
                     </View>
                   </View>
 
-                  <RotateCcw size={14} color={colors.textMuted} strokeWidth={2} />
+                  <RotateCcw
+                    size={14}
+                    color={colors.textMuted}
+                    strokeWidth={2}
+                  />
                 </Pressable>
               </View>
             </View>
@@ -792,14 +1037,14 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
               onPress={handleOpenLinkedIn}
               style={({ pressed }) => [
                 styles.authorPill,
-                isNativeRTL && { flexDirection: 'row-reverse' },
+                isNativeRTL && { flexDirection: "row-reverse" },
                 pressed && styles.authorPillPressed,
               ]}
               accessibilityRole="link"
               accessibilityLabel="Gamal Haroun LinkedIn profile"
             >
               <Text style={styles.authorText}>
-                {isRTL ? 'صُنع بكل ❤️ بواسطة ' : 'Made with ❤️ by '}
+                {isRTL ? "صُنع بكل ❤️ بواسطة " : "Made with ❤️ by "}
                 <Text style={styles.authorHighlight}>Gamal Haroun</Text>
               </Text>
               <View style={styles.linkedInCircle}>
@@ -819,27 +1064,30 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      position: 'relative',
+      position: "relative",
     },
     backdrop: {
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
     },
     backdropPressable: {
       flex: 1,
     },
     drawer: {
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       bottom: 0,
       width: DRAWER_WIDTH,
       backgroundColor: colors.surface,
       paddingHorizontal: 18,
-      boxShadow: theme === 'dark' ? '-8px 0px 32px rgba(0, 0, 0, 0.6)' : '-8px 0px 32px rgba(0, 0, 0, 0.12)',
+      boxShadow:
+        theme === "dark"
+          ? "-8px 0px 32px rgba(0, 0, 0, 0.6)"
+          : "-8px 0px 32px rgba(0, 0, 0, 0.12)",
       elevation: 20,
     },
     drawerRight: {
@@ -851,20 +1099,23 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       left: 0,
       borderRightWidth: 1,
       borderColor: colors.border,
-      boxShadow: theme === 'dark' ? '8px 0px 32px rgba(0, 0, 0, 0.6)' : '8px 0px 32px rgba(0, 0, 0, 0.12)',
+      boxShadow:
+        theme === "dark"
+          ? "8px 0px 32px rgba(0, 0, 0, 0.6)"
+          : "8px 0px 32px rgba(0, 0, 0, 0.12)",
     },
     headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginBottom: 20,
       paddingBottom: 14,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 10,
       flex: 1,
     },
@@ -872,22 +1123,22 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       width: 36,
       height: 36,
       borderRadius: 12,
-      backgroundColor: 'rgba(0, 112, 209, 0.14)',
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: "rgba(0, 112, 209, 0.14)",
+      alignItems: "center",
+      justifyContent: "center",
       borderWidth: 1,
-      borderColor: 'rgba(0, 210, 255, 0.25)',
+      borderColor: "rgba(0, 210, 255, 0.25)",
     },
     headerTitle: {
       color: colors.text,
       fontSize: 16,
-      fontWeight: '800',
+      fontWeight: "800",
       letterSpacing: -0.2,
     },
     headerSubtitle: {
       color: colors.textSecondary,
       fontSize: 10,
-      fontWeight: '500',
+      fontWeight: "500",
       marginTop: 1,
     },
     closeBtn: {
@@ -895,32 +1146,34 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       height: 32,
       borderRadius: 16,
       backgroundColor: colors.surfaceSubtle,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     closeBtnPressed: {
       opacity: 0.6,
     },
     headerRightGroup: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
     },
     headerSyncBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 5,
       paddingHorizontal: 8,
       paddingVertical: 5,
       borderRadius: 12,
-      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+      backgroundColor:
+        theme === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)",
       borderWidth: 1,
-      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+      borderColor:
+        theme === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
     },
     headerSyncBadgeText: {
       color: colors.textSecondary,
       fontSize: 10,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     syncLiveDot: {
       width: 7,
@@ -928,16 +1181,16 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderRadius: 4,
     },
     syncDotSuccess: {
-      backgroundColor: '#30D158',
+      backgroundColor: "#30D158",
     },
     syncDotSyncing: {
-      backgroundColor: '#00D2FF',
+      backgroundColor: "#00D2FF",
     },
     syncDotOffline: {
-      backgroundColor: '#FF9F0A',
+      backgroundColor: "#FF9F0A",
     },
     syncDotLocal: {
-      backgroundColor: '#64748B',
+      backgroundColor: "#64748B",
     },
     scrollContent: {
       gap: 20,
@@ -949,45 +1202,49 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     sectionTitle: {
       color: colors.textMuted,
       fontSize: 10,
-      fontWeight: '800',
+      fontWeight: "800",
       letterSpacing: 1.1,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       paddingHorizontal: 2,
     },
 
-    /* MODERN SEGMENTED TRACK */
-    segmentTrack: {
-      flexDirection: 'row',
-      backgroundColor: colors.surfaceElevated,
-      borderRadius: 14,
-      padding: 3,
+    /* MINI COMPACT SEGMENTED SWITCH */
+    miniSegmentTrack: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surfaceSubtle,
+      borderRadius: 10,
+      padding: 2.5,
       borderWidth: 1,
       borderColor: colors.border,
+      gap: 3,
     },
-    segmentButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 7,
-      paddingVertical: 9,
-      borderRadius: 11,
+    miniSegmentBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 7,
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: 32,
     },
-    segmentButtonActive: {
-      backgroundColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.16)' : '#FFFFFF',
+    miniSegmentBtnActive: {
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.18)" : "#FFFFFF",
       borderWidth: 1,
-      borderColor: theme === 'dark' ? '#00D2FF' : 'rgba(0, 112, 209, 0.25)',
-      boxShadow: theme === 'dark' ? '0px 2px 6px rgba(0, 0, 0, 0.3)' : '0px 2px 6px rgba(0, 0, 0, 0.08)',
+      borderColor: theme === "dark" ? "#00D2FF" : "rgba(0, 112, 209, 0.25)",
+      boxShadow:
+        theme === "dark"
+          ? "0px 1px 4px rgba(0, 210, 255, 0.2)"
+          : "0px 1px 3px rgba(0, 0, 0, 0.08)",
       elevation: 2,
     },
-    segmentText: {
+    miniSegmentText: {
       color: colors.textSecondary,
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 11,
+      fontWeight: "700",
     },
-    segmentTextActive: {
-      color: theme === 'dark' ? '#00D2FF' : '#0070D1',
-      fontWeight: '800',
+    miniSegmentTextActive: {
+      color: theme === "dark" ? "#00D2FF" : "#0070D1",
+      fontWeight: "900",
     },
     arabicFontAdjust: {
       fontSize: 14,
@@ -999,12 +1256,12 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
     groupItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingVertical: 12,
       paddingHorizontal: 12,
     },
@@ -1016,8 +1273,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       backgroundColor: colors.surfaceSubtle,
     },
     groupItemLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 10,
       flex: 1,
     },
@@ -1026,13 +1283,13 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       height: 30,
       borderRadius: 9,
       backgroundColor: colors.surfaceSubtle,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     groupItemText: {
       color: colors.text,
       fontSize: 13,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     groupSubText: {
       color: colors.textMuted,
@@ -1040,44 +1297,46 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       marginTop: 2,
     },
     actionPillPrimary: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 5,
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 9,
-      backgroundColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.12)' : '#E8F3FC',
+      backgroundColor: theme === "dark" ? "rgba(0, 210, 255, 0.12)" : "#E8F3FC",
       borderWidth: 1,
-      borderColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.3)' : 'rgba(0, 112, 209, 0.25)',
+      borderColor:
+        theme === "dark" ? "rgba(0, 210, 255, 0.3)" : "rgba(0, 112, 209, 0.25)",
     },
     actionPillPrimaryText: {
-      color: theme === 'dark' ? '#00D2FF' : '#0070D1',
+      color: theme === "dark" ? "#00D2FF" : "#0070D1",
       fontSize: 11,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     actionPillDanger: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 5,
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 9,
-      backgroundColor: 'rgba(255, 59, 48, 0.12)',
+      backgroundColor: "rgba(255, 59, 48, 0.12)",
       borderWidth: 1,
-      borderColor: 'rgba(255, 59, 48, 0.25)',
+      borderColor: "rgba(255, 59, 48, 0.25)",
     },
     actionPillDangerText: {
       color: colors.danger,
       fontSize: 11,
-      fontWeight: '800',
+      fontWeight: "800",
     },
     toggleTrack: {
       width: 40,
       height: 22,
       borderRadius: 11,
-      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
+      backgroundColor:
+        theme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)",
       padding: 2,
-      justifyContent: 'center',
+      justifyContent: "center",
     },
     toggleTrackActive: {
       backgroundColor: colors.accent,
@@ -1086,39 +1345,40 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       width: 18,
       height: 18,
       borderRadius: 9,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: "#FFFFFF",
     },
     toggleThumbActive: {
-      alignSelf: 'flex-end',
-      backgroundColor: '#000000',
+      alignSelf: "flex-end",
+      backgroundColor: "#000000",
     },
     statusPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 5,
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 8,
-      backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.12)' : '#ECFDF5',
+      backgroundColor:
+        theme === "dark" ? "rgba(16, 185, 129, 0.12)" : "#ECFDF5",
       borderWidth: 0.5,
-      borderColor: '#10B981',
+      borderColor: "#10B981",
     },
     statusDot: {
       width: 6,
       height: 6,
       borderRadius: 3,
-      backgroundColor: '#10B981',
+      backgroundColor: "#10B981",
     },
     statusPillText: {
-      color: '#10B981',
+      color: "#10B981",
       fontSize: 10,
-      fontWeight: '800',
+      fontWeight: "800",
     },
 
     /* FOOTER */
     footer: {
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       paddingTop: 12,
       paddingBottom: 4,
       borderTopWidth: 1,
@@ -1128,25 +1388,27 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     footerAppName: {
       color: colors.textSecondary,
       fontSize: 11,
-      fontWeight: '700',
+      fontWeight: "700",
       letterSpacing: 0.4,
     },
     footerVersion: {
       color: colors.textMuted,
       fontSize: 10,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     authorPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 5,
       borderRadius: 14,
-      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+      backgroundColor:
+        theme === "dark" ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.03)",
       borderWidth: 1,
-      borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+      borderColor:
+        theme === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
     },
     authorPillPressed: {
       opacity: 0.7,
@@ -1155,19 +1417,20 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     authorText: {
       color: colors.textSecondary,
       fontSize: 10,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     authorHighlight: {
       color: colors.accent,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     linkedInCircle: {
       width: 16,
       height: 16,
       borderRadius: 3,
-      backgroundColor: theme === 'dark' ? 'rgba(10, 102, 194, 0.18)' : '#E8F3FC',
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor:
+        theme === "dark" ? "rgba(10, 102, 194, 0.18)" : "#E8F3FC",
+      alignItems: "center",
+      justifyContent: "center",
     },
 
     /* UTILITIES */
@@ -1181,6 +1444,6 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: colors.textMuted,
     },
     rtlText: {
-      textAlign: 'right',
+      textAlign: "right",
     },
   });

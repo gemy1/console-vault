@@ -190,9 +190,9 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
                     {isRTL ? 'الانتقال لتسجيل الدخول' : 'Proceed to Sign In'}
                   </Text>
                   {isRTL ? (
-                    <ArrowLeft size={16} color="#000000" strokeWidth={2.4} />
+                    <ArrowLeft size={16} color="#FFFFFF" strokeWidth={2.4} />
                   ) : (
-                    <ArrowRight size={16} color="#000000" strokeWidth={2.4} />
+                    <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.4} />
                   )}
                 </View>
               </Pressable>
@@ -314,7 +314,7 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
                   ]}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#000000" size="small" />
+                    <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
                     <View style={[styles.submitBtnContent, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                       <Text style={styles.submitBtnText}>
@@ -327,9 +327,9 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
                           : 'Create & Sync Vault'}
                       </Text>
                       {isRTL ? (
-                        <ArrowLeft size={16} color="#000000" strokeWidth={2.4} />
+                        <ArrowLeft size={16} color="#FFFFFF" strokeWidth={2.4} />
                       ) : (
-                        <ArrowRight size={16} color="#000000" strokeWidth={2.4} />
+                        <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.4} />
                       )}
                     </View>
                   )}
@@ -410,19 +410,24 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     segmentTrack: {
       flexDirection: 'row',
-      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+      backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
       borderRadius: 12,
-      padding: 4,
+      padding: 3,
       marginBottom: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     segmentBtn: {
       flex: 1,
-      paddingVertical: 8,
-      borderRadius: 8,
+      paddingVertical: 9,
+      borderRadius: 9,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     segmentBtnActive: {
       backgroundColor: colors.accent,
+      boxShadow: theme === 'dark' ? '0px 2px 8px rgba(0, 112, 209, 0.4)' : '0px 2px 6px rgba(0, 112, 209, 0.25)',
+      elevation: 2,
     },
     segmentText: {
       fontSize: 13,
@@ -430,7 +435,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: colors.textSecondary,
     },
     segmentTextActive: {
-      color: '#000000',
+      color: '#FFFFFF',
+      fontWeight: '800',
     },
     scrollBody: {
       maxHeight: 400,
@@ -487,6 +493,8 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       justifyContent: 'center',
       marginTop: 8,
       marginBottom: 12,
+      boxShadow: theme === 'dark' ? '0px 4px 14px rgba(0, 112, 209, 0.45)' : '0px 4px 10px rgba(0, 112, 209, 0.25)',
+      elevation: 3,
     },
     submitBtnContent: {
       flexDirection: 'row',
@@ -494,7 +502,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       gap: 8,
     },
     submitBtnText: {
-      color: '#000000',
+      color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '800',
       letterSpacing: 0.3,

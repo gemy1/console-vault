@@ -290,6 +290,7 @@ export const TRANSLATIONS = {
     // Preferences & Menu Drawer
     menuDrawerTitle: 'Vault Menu',
     menuDrawerSubtitle: 'Settings & Preferences',
+    menuSectionPreferences: 'PREFERENCES',
     menuSectionAppearance: 'APPEARANCE',
     menuThemeDark: 'Dark Mode',
     menuThemeDarkSub: 'OLED optimized',
@@ -623,6 +624,7 @@ export const TRANSLATIONS = {
     // Preferences & Menu Drawer
     menuDrawerTitle: 'قائمة الخزينة',
     menuDrawerSubtitle: 'الإعدادات والتفضيلات',
+    menuSectionPreferences: 'التفضيلات',
     menuSectionAppearance: 'المظهر',
     menuThemeDark: 'الوضع الداكن',
     menuThemeDarkSub: 'محسّن لشاشات OLED',
