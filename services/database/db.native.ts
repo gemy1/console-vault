@@ -57,10 +57,33 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
  */
 export async function wipeDatabase(): Promise<void> {
   const db = await getDatabase();
-  await db.withTransactionAsync(async () => {
-    await db.execAsync('DELETE FROM games;');
-    await db.execAsync('DELETE FROM sellers;');
-    await db.execAsync('DELETE FROM sync_queue;');
-    await db.execAsync('DELETE FROM app_metadata;');
-  });
+  await db.execAsync(`
+    DELETE FROM games;
+    DELETE FROM sellers;
+    DELETE FROM sync_queue;
+    DELETE FROM app_metadata;
+  `);
 }
+
+let txLock: Promise<any> = Promise.resolve();
+
+/**
+ * Serializes transactions so concurrent calls to SQLite do not conflict
+ * with "cannot start a transaction within a transaction" on native mobile.
+ */
+export async function runSerializedTransaction<T>(
+  fn: (db: SQLite.SQLiteDatabase) => Promise<T>
+): Promise<T> {
+  const db = await getDatabase();
+  const execute = async () => {
+    let result!: T;
+    await db.withTransactionAsync(async () => {
+      result = await fn(db);
+    });
+    return result;
+  };
+  const current = txLock.then(execute, execute);
+  txLock = current.then(() => {}, () => {});
+  return current;
+}
+

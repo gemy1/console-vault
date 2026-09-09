@@ -4,7 +4,6 @@ import {
   ScrollView,
   Pressable,
   Image,
-  Alert,
   Platform,
   StatusBar as RNStatusBar,
   StyleSheet,
@@ -28,6 +27,7 @@ import { useVaultSync } from "../../context/VaultSyncContext";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
+import { useCustomAlert } from "../../context/AlertContext";
 import {
   ChevronLeft,
   Heart,
@@ -60,6 +60,7 @@ export default function GameDetailsScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
 
   const vaultSync = useVaultSync();
+  const { showAlert } = useCustomAlert();
 
   const { isUnlocked, requestUnlock, lock } = useBiometricGuard(60);
 
@@ -133,10 +134,11 @@ export default function GameDetailsScreen() {
       try {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {}
-      Alert.alert(
-        isRTL ? 'تم التعديل بنجاح' : 'Game Updated',
-        isRTL ? 'تم حفظ تعديلات اللعبة بنجاح في خزينتك.' : 'Game details have been saved successfully to your vault.'
-      );
+      showAlert({
+        title: isRTL ? 'تم التعديل بنجاح' : 'Game Updated',
+        message: isRTL ? 'تم حفظ تعديلات اللعبة بنجاح في خزينتك.' : 'Game details have been saved successfully to your vault.',
+        type: 'success',
+      });
     }
   };
 
@@ -153,10 +155,12 @@ export default function GameDetailsScreen() {
 
     if (updated) {
       setGame(updated);
-      Alert.alert(
-        t('alertCredentialsUpdatedTitle'),
-        t('alertCredentialsUpdatedDesc'),
-      );
+      showAlert({
+        title: t('alertCredentialsUpdatedTitle'),
+        message: t('alertCredentialsUpdatedDesc'),
+        type: 'success',
+        buttons: [{ text: isRTL ? 'حسناً' : 'OK', style: 'default' }],
+      });
     }
   };
 
@@ -166,11 +170,11 @@ export default function GameDetailsScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch {}
 
-    Alert.alert(
-      t('confirmDeleteGameTitle'),
-      t('confirmDeleteGameDesc', { title: game.title }),
-      [
-        { text: t('btnCancel'), style: 'cancel' },
+    showAlert({
+      title: t('confirmDeleteGameTitle'),
+      message: t('confirmDeleteGameDesc', { title: game.title }),
+      type: 'danger',
+      buttons: [
         {
           text: t('btnDelete'),
           style: 'destructive',
@@ -186,8 +190,9 @@ export default function GameDetailsScreen() {
             router.replace('/(tabs)/vault');
           },
         },
-      ]
-    );
+        { text: t('btnCancel'), style: 'cancel' },
+      ],
+    });
   };
 
   const androidStatusBar =

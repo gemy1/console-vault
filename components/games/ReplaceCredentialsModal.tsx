@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Modal, TextInput, Pressable, Alert, StyleSheet } from 'react-native';
+import { View, Modal, TextInput, Pressable, StyleSheet } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCustomAlert } from '../../context/AlertContext';
 
 interface ReplaceCredentialsModalProps {
   visible: boolean;
@@ -18,12 +19,17 @@ export function ReplaceCredentialsModal({
 }: ReplaceCredentialsModalProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const { showAlert } = useCustomAlert();
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   const handleSave = () => {
     if (!newEmail.trim() || !newPassword.trim()) {
-      Alert.alert(t('alertMissingFields'), t('alertProvideBothCredentials'));
+      showAlert({
+        title: t('alertMissingFields'),
+        message: t('alertProvideBothCredentials'),
+        type: 'warning',
+      });
       return;
     }
     onSave(newEmail.trim(), newPassword.trim());

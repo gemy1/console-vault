@@ -7,7 +7,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   StyleSheet,
   Animated,
 } from 'react-native';
@@ -20,6 +19,7 @@ import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCustomAlert } from '../../context/AlertContext';
 
 const PLATFORM_LIST: ContactPlatform[] = [
   'WhatsApp',
@@ -53,6 +53,7 @@ export function SellerFormModal({
 }: SellerFormModalProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const { showAlert } = useCustomAlert();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [name, setName] = useState('');
@@ -99,7 +100,11 @@ export function SellerFormModal({
 
   const handleAddMethod = () => {
     if (!currentValue.trim()) {
-      Alert.alert(t('alertRequiredField'), t('fieldMethodValueLabel', { platform: currentPlatform }));
+      showAlert({
+        title: t('alertRequiredField'),
+        message: t('fieldMethodValueLabel', { platform: currentPlatform }),
+        type: 'warning',
+      });
       return;
     }
 
@@ -129,7 +134,11 @@ export function SellerFormModal({
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert(t('alertRequiredField'), t('alertEnterSellerName'));
+      showAlert({
+        title: t('alertRequiredField'),
+        message: t('alertEnterSellerName'),
+        type: 'warning',
+      });
       return;
     }
 
@@ -144,10 +153,11 @@ export function SellerFormModal({
     }
 
     if (finalMethods.length === 0) {
-      Alert.alert(
-        t('alertRequiredField'),
-        t('alertConnectionMethodRequired')
-      );
+      showAlert({
+        title: t('alertRequiredField'),
+        message: t('alertConnectionMethodRequired'),
+        type: 'warning',
+      });
       return;
     }
 

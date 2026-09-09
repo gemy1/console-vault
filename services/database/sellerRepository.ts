@@ -1,4 +1,4 @@
-import { getDatabase } from './db';
+import { getDatabase, runSerializedTransaction } from './db';
 import { Seller } from '../../types/vault';
 
 interface SQLiteSellerRow {
@@ -136,8 +136,7 @@ export const SellerRepository = {
    */
   bulkUpsert: async (sellers: Seller[]): Promise<void> => {
     if (sellers.length === 0) return;
-    const db = await getDatabase();
-    await db.withTransactionAsync(async () => {
+    await runSerializedTransaction(async () => {
       for (const seller of sellers) {
         await SellerRepository.upsert(seller);
       }

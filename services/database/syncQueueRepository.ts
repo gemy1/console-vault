@@ -1,4 +1,4 @@
-import { getDatabase } from './db';
+import { getDatabase, runSerializedTransaction } from './db';
 import { PendingSyncItem } from '../../types/vault';
 
 interface SQLiteSyncRow {
@@ -37,12 +37,11 @@ export const SyncQueueRepository = {
    * Enqueues an item or updates existing item in queue if action is UPSERT.
    */
   enqueue: async (item: Omit<PendingSyncItem, 'id' | 'timestamp'>): Promise<void> => {
-    const db = await getDatabase();
     const payloadStr = JSON.stringify(item.payload);
     const now = Date.now();
     const id = `sync-${now}-${Math.random().toString(36).substring(2, 7)}`;
 
-    await db.withTransactionAsync(async () => {
+    await runSerializedTransaction(async (db) => {
       // If updating the same entity & ID already pending in queue, remove older version
       if (item.payload?.id && item.action === 'UPSERT') {
         await db.runAsync(

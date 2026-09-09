@@ -7,7 +7,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   StyleSheet,
   Animated,
 } from 'react-native';
@@ -38,6 +37,7 @@ import { SellerFormModal } from '../sellers/SellerFormModal';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCustomAlert } from '../../context/AlertContext';
 import { generateUUID } from '../../utils/uuid';
 
 const WARRANTY_PRESETS = ['3', '6', '12', '24'];
@@ -69,6 +69,7 @@ export function GameFormModal({
 }: GameFormModalProps) {
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
+  const { showAlert } = useCustomAlert();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   const [title, setTitle] = useState('');
@@ -204,11 +205,19 @@ export function GameFormModal({
 
   const handleSubmit = () => {
     if (!title.trim()) {
-      Alert.alert(t('alertRequiredField'), t('alertEnterGameTitle'));
+      showAlert({
+        title: t('alertRequiredField'),
+        message: t('alertEnterGameTitle'),
+        type: 'warning',
+      });
       return;
     }
     if (!psnEmail.trim()) {
-      Alert.alert(t('alertRequiredField'), t('alertEnterPsnEmail'));
+      showAlert({
+        title: t('alertRequiredField'),
+        message: t('alertEnterPsnEmail'),
+        type: 'warning',
+      });
       return;
     }
     // PSN Password is now optional!

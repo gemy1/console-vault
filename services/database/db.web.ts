@@ -243,3 +243,11 @@ export async function wipeDatabase(): Promise<void> {
   await webDbInstance.execAsync('DELETE FROM sellers;');
   await webDbInstance.execAsync('DELETE FROM sync_queue;');
 }
+
+export async function runSerializedTransaction<T>(
+  fn: (db: any) => Promise<T>
+): Promise<T> {
+  const db = await getDatabase();
+  return fn(db);
+}
+

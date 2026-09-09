@@ -164,10 +164,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error.message };
       }
 
-      setSession(data.session);
-      setUser(data.user);
-      if (data.user) {
-        VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.user);
+        if (data.user) {
+          VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
+        }
+      } else {
+        // Email confirmation is required - user is not authenticated yet
+        setSession(null);
+        setUser(null);
+        VaultStorage.removeItem(AUTH_CACHE_USER_KEY);
       }
       return { error: null, needsConfirmation: !data.session };
     } catch (err: any) {

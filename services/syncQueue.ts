@@ -103,7 +103,31 @@ export const SyncQueue = {
       return { success: true, syncedCount: 0 };
     }
 
-    if (!isSupabaseConfigured || !userId) {
+    if (!isSupabaseConfigured) {
+      currentStatus = 'local_only';
+      notifyListeners();
+      return { success: true, syncedCount: 0 };
+    }
+
+    // Verify active authenticated session in Supabase before sending data
+    let authUserId = userId;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) {
+        // No active JWT session. User is either logged out or hasn't confirmed email yet.
+        // Keep pending items safely stored in local queue.
+        currentStatus = 'offline';
+        notifyListeners();
+        return { success: false, syncedCount: 0 };
+      }
+      authUserId = session.user.id;
+    } catch {
+      currentStatus = 'offline';
+      notifyListeners();
+      return { success: false, syncedCount: 0 };
+    }
+
+    if (!authUserId) {
       currentStatus = 'local_only';
       notifyListeners();
       return { success: true, syncedCount: 0 };
@@ -129,7 +153,15 @@ export const SyncQueue = {
     let processedCount = 0;
     const remainingQueue: PendingSyncItem[] = [];
 
-    for (const item of queue) {
+    // CRITICAL: Sort queue so 'seller' records are ALWAYS synced before 'game' records
+    // to satisfy relational foreign key constraints in PostgreSQL
+    const sortedQueue = [...queue].sort((a, b) => {
+      if (a.entity === 'seller' && b.entity !== 'seller') return -1;
+      if (a.entity !== 'seller' && b.entity === 'seller') return 1;
+      return 0;
+    });
+
+    for (const item of sortedQueue) {
       try {
         const table = item.entity === 'game' ? 'games' : 'sellers';
 
@@ -138,19 +170,52 @@ export const SyncQueue = {
           const payloadWithUser = {
             ...item.payload,
             id: safeId,
-            user_id: userId || item.payload.user_id,
+            user_id: authUserId,
             updated_at: new Date().toISOString(),
           };
 
           // Remove client-only joined fields before upserting
           if (item.entity === 'game') {
             delete payloadWithUser.seller;
-            // Clean up seller_id: empty string is invalid in PostgreSQL, ensure valid UUID
+            
+            // Clean up seller_id and ensure parent seller exists in Supabase
             if (payloadWithUser.seller_id) {
-              payloadWithUser.seller_id = toSafeUUID(payloadWithUser.seller_id);
+              const safeSellerId = toSafeUUID(payloadWithUser.seller_id);
+              payloadWithUser.seller_id = safeSellerId;
+
+              // Verify if the referenced seller already exists in Supabase
+              const { data: existingSeller } = await supabase
+                .from('sellers')
+                .select('id')
+                .eq('id', safeSellerId)
+                .maybeSingle();
+
+              if (!existingSeller) {
+                // Find seller locally in OfflineVault and auto-upsert it first
+                const localSeller = OfflineVault.getSellers().find(
+                  (s) => s.id === item.payload.seller_id || toSafeUUID(s.id) === safeSellerId
+                );
+                if (localSeller) {
+                  const sellerPayload = {
+                    ...localSeller,
+                    id: safeSellerId,
+                    user_id: authUserId,
+                    updated_at: new Date().toISOString(),
+                  };
+                  const { error: sErr } = await supabase.from('sellers').upsert(sellerPayload);
+                  if (sErr) {
+                    console.warn('[SyncQueue] Auto-upsert parent seller failed, setting seller_id to null:', sErr.message);
+                    payloadWithUser.seller_id = null;
+                  }
+                } else {
+                  // Referenced seller does not exist in local database either, set null to satisfy FK
+                  payloadWithUser.seller_id = null;
+                }
+              }
             } else {
-              delete payloadWithUser.seller_id;
+              payloadWithUser.seller_id = null;
             }
+
             // Ensure psn_password is never null for Postgres not-null constraint
             if (payloadWithUser.psn_password === undefined || payloadWithUser.psn_password === null) {
               payloadWithUser.psn_password = '';
@@ -169,13 +234,16 @@ export const SyncQueue = {
             remainingQueue.push(item);
           } else {
             processedCount++;
-            if (item.payload.id !== safeId) {
-              if (item.entity === 'game') {
+            // Update local records if ID or user_id changed so they belong to auth user
+            if (item.entity === 'game') {
+              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
                 OfflineVault.deleteGame(item.payload.id);
-                OfflineVault.addGame({ ...item.payload, id: safeId });
-              } else if (item.entity === 'seller') {
+                OfflineVault.addGame({ ...item.payload, id: safeId, user_id: authUserId });
+              }
+            } else if (item.entity === 'seller') {
+              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
                 OfflineVault.deleteSeller(item.payload.id);
-                OfflineVault.addSeller({ ...item.payload, id: safeId });
+                OfflineVault.addSeller({ ...item.payload, id: safeId, user_id: authUserId });
               }
             }
           }
@@ -199,7 +267,7 @@ export const SyncQueue = {
     isSyncing = false;
 
     if (remainingQueue.length === 0) {
-      currentStatus = isSupabaseConfigured && userId ? 'synced' : 'local_only';
+      currentStatus = isSupabaseConfigured && authUserId ? 'synced' : 'local_only';
       SyncQueue.setLastSyncedAt(new Date().toISOString());
     } else {
       currentStatus = SyncQueue.isOnline() ? 'error' : 'offline';

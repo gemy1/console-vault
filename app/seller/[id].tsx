@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, ScrollView, Pressable, StyleSheet, Alert, Platform } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet, Platform } from 'react-native';
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useVaultSync } from '../../context/VaultSyncContext';
+import { useCustomAlert } from '../../context/AlertContext';
 import {
   ShieldCheck,
   Star,
@@ -35,6 +36,7 @@ export default function SellerDetailsScreen() {
   const { t, isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
   const vaultSync = useVaultSync();
+  const { showAlert } = useCustomAlert();
 
   const [seller, setSeller] = useState<Seller | null>(null);
   const [games, setGames] = useState<Game[]>([]);
@@ -110,11 +112,11 @@ export default function SellerDetailsScreen() {
         ? t('confirmDeleteSellerWithGamesWarning', { count: games.length })
         : t('confirmDeleteSellerDesc', { name: seller.name });
 
-    Alert.alert(
-      t('confirmDeleteSellerTitle'),
+    showAlert({
+      title: t('confirmDeleteSellerTitle'),
       message,
-      [
-        { text: t('btnCancel'), style: 'cancel' },
+      type: 'danger',
+      buttons: [
         {
           text: t('btnDelete'),
           style: 'destructive',
@@ -130,8 +132,9 @@ export default function SellerDetailsScreen() {
             router.replace('/(tabs)/sellers');
           },
         },
-      ]
-    );
+        { text: t('btnCancel'), style: 'cancel' },
+      ],
+    });
   };
 
   const lockedGamesCount = games.filter((g) => g.status === 'Locked').length;
@@ -260,7 +263,7 @@ export default function SellerDetailsScreen() {
                   </View>
 
                   <Pressable
-                    onPress={() => openSellerContact(contact.platform, contact.value)}
+                    onPress={() => openSellerContact(contact.platform, contact.value, undefined, { showAlert })}
                     style={({ pressed }) => [
                       styles.openChatBtn,
                       isNativeRTL && { flexDirection: 'row-reverse' },

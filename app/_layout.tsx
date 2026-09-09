@@ -11,6 +11,7 @@ import { VaultThemeProvider, useVaultTheme } from "../context/ThemeContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { SecurityProvider } from "../context/SecurityContext";
 import { VaultSyncProvider } from "../context/VaultSyncContext";
+import { AlertProvider } from "../context/AlertContext";
 import { BiometricLockScreen } from "../components/auth/BiometricLockScreen";
 import { BrandedSplashOverlay } from "../components/common/BrandedSplashOverlay";
 import { VaultStorage } from "../services/storage";
@@ -102,8 +103,10 @@ function VaultAppProviders({ children }: { children: React.ReactNode }) {
       <VaultSyncProvider userId={user?.id}>
         <LanguageProvider>
           <VaultThemeProvider>
-            {children}
-            <BiometricLockScreen />
+            <AlertProvider>
+              {children}
+              <BiometricLockScreen />
+            </AlertProvider>
           </VaultThemeProvider>
         </LanguageProvider>
       </VaultSyncProvider>

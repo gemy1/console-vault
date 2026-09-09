@@ -3,7 +3,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  Alert,
   StyleSheet,
 } from 'react-native';
 import { VaultText as Text } from '../../components/common/VaultText';
@@ -24,6 +23,7 @@ import { getSellerContactList, openSellerContact } from '../../utils/contacts';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCustomAlert } from '../../context/AlertContext';
 
 export default function PadlockProtocolModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -70,10 +70,22 @@ export default function PadlockProtocolModal() {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const { showAlert } = useCustomAlert();
+
   const handleMarkInResolution = () => {
     OfflineVault.updateGame(game.id, { status: 'In Resolution' });
-    Alert.alert(t('alertStatusUpdatedTitle'), t('alertGameInResolution'));
-    router.back();
+    showAlert({
+      title: t('alertStatusUpdatedTitle'),
+      message: t('alertGameInResolution'),
+      type: 'warning',
+      buttons: [
+        {
+          text: t('btnDone'),
+          style: 'primary',
+          onPress: () => router.back(),
+        },
+      ],
+    });
   };
 
   return (
@@ -145,7 +157,7 @@ export default function PadlockProtocolModal() {
               {contacts.map((contact, idx) => (
                 <Pressable
                   key={contact.id || idx}
-                  onPress={() => openSellerContact(contact.platform, contact.value, claimMessage)}
+                  onPress={() => openSellerContact(contact.platform, contact.value, claimMessage, { showAlert })}
                   style={({ pressed }) => [
                     styles.dispatchBtn,
                     pressed && styles.dispatchBtnPressed,

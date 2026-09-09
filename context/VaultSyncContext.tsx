@@ -20,6 +20,7 @@ interface VaultSyncContextType {
   refreshData: () => void;
   pullFromCloud: () => Promise<boolean>;
   clearLocalVault: () => void;
+  clearCloudAndLocalVault: () => Promise<boolean>;
 }
 
 const VaultSyncContext = createContext<VaultSyncContextType | undefined>(undefined);
@@ -222,6 +223,25 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     refreshData();
   }, [refreshData]);
 
+  const clearCloudAndLocalVault = useCallback(async (): Promise<boolean> => {
+    try {
+      if (isSupabaseConfigured && userId) {
+        // Delete all games and sellers belonging to this user in Supabase
+        await Promise.all([
+          supabase.from('games').delete().eq('user_id', userId),
+          supabase.from('sellers').delete().eq('user_id', userId),
+        ]);
+      }
+    } catch (err) {
+      console.warn('[VaultSync] Error deleting cloud data:', err);
+    } finally {
+      OfflineVault.clearVault();
+      SyncQueue.clearQueue();
+      refreshData();
+    }
+    return true;
+  }, [userId, refreshData]);
+
   const value = useMemo(
     () => ({
       games,
@@ -239,6 +259,7 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       refreshData,
       pullFromCloud,
       clearLocalVault,
+      clearCloudAndLocalVault,
     }),
     [
       games,
@@ -256,6 +277,7 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       refreshData,
       pullFromCloud,
       clearLocalVault,
+      clearCloudAndLocalVault,
     ]
   );
 
@@ -278,6 +300,7 @@ const DEFAULT_SYNC_FALLBACK: VaultSyncContextType = {
   refreshData: () => {},
   pullFromCloud: async () => false,
   clearLocalVault: () => {},
+  clearCloudAndLocalVault: async () => false,
 };
 
 export function useVaultSync() {

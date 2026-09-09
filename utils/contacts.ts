@@ -43,6 +43,7 @@ export interface ContactAlertMessages {
   discordDesc?: string;
   contactTitle?: string;
   contactDesc?: string;
+  showAlert?: (config: { title: string; message: string; type?: 'info' | 'success' | 'warning' | 'danger' }) => void;
 }
 
 export async function openSellerContact(
@@ -100,10 +101,13 @@ export async function openSellerContact(
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {}
-        Alert.alert(
-          alertMessages?.discordTitle || 'Discord Handle Copied',
-          alertMessages?.discordDesc || `"${clean}" has been copied to your clipboard. Open Discord to search and message them.`
-        );
+        const discTitle = alertMessages?.discordTitle || 'Discord Handle Copied';
+        const discMsg = alertMessages?.discordDesc || `"${clean}" has been copied to your clipboard. Open Discord to search and message them.`;
+        if (alertMessages?.showAlert) {
+          alertMessages.showAlert({ title: discTitle, message: discMsg, type: 'info' });
+        } else {
+          Alert.alert(discTitle, discMsg);
+        }
       }
       break;
     }
@@ -117,10 +121,13 @@ export async function openSellerContact(
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {}
-        Alert.alert(
-          alertMessages?.contactTitle || 'Contact Info Copied',
-          alertMessages?.contactDesc || `"${clean}" has been copied to your clipboard.`
-        );
+        const otherTitle = alertMessages?.contactTitle || 'Contact Info Copied';
+        const otherMsg = alertMessages?.contactDesc || `"${clean}" has been copied to your clipboard.`;
+        if (alertMessages?.showAlert) {
+          alertMessages.showAlert({ title: otherTitle, message: otherMsg, type: 'info' });
+        } else {
+          Alert.alert(otherTitle, otherMsg);
+        }
       }
       break;
     }

@@ -373,8 +373,6 @@ export const OfflineVault = {
   hydrateVault: (games: Game[], sellers: Seller[]): void => {
     OfflineVault.saveGames(games);
     OfflineVault.saveSellers(sellers);
-    GameRepository.bulkUpsert(games).catch(() => {});
-    SellerRepository.bulkUpsert(sellers).catch(() => {});
   },
 
   clearVault: (): void => {

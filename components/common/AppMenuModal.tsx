@@ -32,6 +32,8 @@ import {
   LogIn,
   Lock,
   RotateCcw,
+  Trash2,
+  HardDrive,
 } from 'lucide-react-native';
 import { useVaultTheme, ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -39,6 +41,7 @@ import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useAuth } from '../../context/AuthContext';
 import { useSecurity } from '../../context/SecurityContext';
 import { useVaultSync } from '../../context/VaultSyncContext';
+import { useCustomAlert } from '../../context/AlertContext';
 import { AuthModal } from '../auth/AuthModal';
 import { isSupabaseConfigured } from '../../services/supabase';
 
@@ -57,6 +60,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   const { language, setLanguage, t, isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
   const styles = useThemedStyles(createStyles);
+  const { showAlert } = useCustomAlert();
 
   const animValue = useRef(new Animated.Value(0)).current;
   const [modalRendered, setModalRendered] = useState(visible);
@@ -87,12 +91,14 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     lastSyncedAt: string | null;
     syncNow: () => Promise<boolean>;
     clearLocalVault: () => void;
+    clearCloudAndLocalVault: () => Promise<boolean>;
   } = {
     syncStatus: isSupabaseConfigured ? 'synced' : 'local_only',
     pendingCount: 0,
     lastSyncedAt: null,
     syncNow: async () => true,
     clearLocalVault: () => {},
+    clearCloudAndLocalVault: async () => true,
   };
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -167,30 +173,33 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     } catch {}
 
     if (!isSupabaseConfigured) {
-      Alert.alert(
-        isRTL ? 'الخزينة المحلية (سوبابيز غير متصل)' : 'Local Vault (Offline Mode)',
-        isRTL
-          ? 'تطبيقك يعمل حالياً كخزينة محلية ذاتية تماماً. لم يتم إعداد مفاتيح Supabase في ملف .env بعد، لذا يتم حفظ وتشفير كافة ألعابك ومبيعاتك بأمان على هذا الجهاز.'
-          : 'Your vault is operating in 100% offline local storage mode. Supabase credentials have not been connected in .env, so all your games and data are safely saved on this device.',
-        [{ text: isRTL ? 'حسناً' : 'Understood' }]
-      );
+      showAlert({
+        title: isRTL ? 'الخزينة المحلية (وضع غير متصل)' : 'Local Vault (Offline Mode)',
+        message: isRTL
+          ? 'تطبيقك يعمل حالياً كخزينة محلية بالكامل، حيث يتم حفظ وتشفير كافة ألعابك ومبيعاتك بأمان على هذا الجهاز.'
+          : 'Your vault is operating in 100% offline local storage mode. All your games and data are safely encrypted and saved on this device.',
+        type: 'info',
+        buttons: [{ text: isRTL ? 'حسناً' : 'Understood', style: 'default' }],
+      });
       return;
     }
 
     if (!authState.user) {
-      Alert.alert(
-        isRTL ? 'تسجيل الدخول للمزامنة السحابية' : 'Sign In Required for Cloud Sync',
-        isRTL
-          ? 'سحابة Supabase متوفرة ولكنك في وضع الضيف. سجّل الدخول الآن لتفعيل المزامنة الفورية عبر الأجهزة.'
-          : 'Supabase is configured, but you are currently in Guest mode. Sign in to sync your vault across devices.',
-        [
-          { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
+      showAlert({
+        title: isRTL ? 'تسجيل الدخول للمزامنة السحابية' : 'Sign In Required for Cloud Sync',
+        message: isRTL
+          ? 'المزامنة السحابية متوفرة ولكنك في وضع الضيف. سجّل الدخول الآن لتفعيل المزامنة الفورية عبر الأجهزة.'
+          : 'Cloud sync is available, but you are currently in Guest mode. Sign in to sync your vault across devices.',
+        type: 'info',
+        buttons: [
           {
             text: isRTL ? 'تسجيل الدخول' : 'Sign In',
+            style: 'default',
             onPress: () => setAuthModalVisible(true),
           },
-        ]
-      );
+          { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
+        ],
+      });
       return;
     }
 
@@ -219,24 +228,71 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
 
-    Alert.alert(
-      t('alertResetTitle'),
-      t('alertResetMessage'),
-      [
-        { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
-        {
-          text: t('alertResetConfirm'),
-          style: 'destructive',
-          onPress: () => {
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch {}
-            syncState.clearLocalVault();
-            handleDismiss();
+    if (authState.user) {
+      // Authenticated User: Offer choice between Local Only vs Local + Cloud
+      showAlert({
+        title: t('alertResetChoiceTitle'),
+        message: t('alertResetChoiceLoggedInMsg'),
+        type: 'danger',
+        buttons: [
+          {
+            text: t('alertResetLocalAndCloud'),
+            subtext: t('alertResetLocalAndCloudSub'),
+            style: 'destructive',
+            icon: Trash2,
+            onPress: async () => {
+              try {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              } catch {}
+              await syncState.clearCloudAndLocalVault();
+              handleDismiss();
+            },
           },
-        },
-      ]
-    );
+          {
+            text: t('alertResetLocalOnly'),
+            subtext: t('alertResetLocalOnlySub'),
+            style: 'secondary',
+            icon: HardDrive,
+            onPress: () => {
+              try {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              } catch {}
+              syncState.clearLocalVault();
+              handleDismiss();
+            },
+          },
+          {
+            text: isRTL ? 'إلغاء' : 'Cancel',
+            style: 'cancel',
+          },
+        ],
+      });
+    } else {
+      // Guest / Offline Mode: Clear local only with explicit disclaimer
+      showAlert({
+        title: t('alertResetTitle'),
+        message: t('alertResetGuestMsg'),
+        type: 'warning',
+        buttons: [
+          {
+            text: t('alertResetConfirmGuest'),
+            style: 'destructive',
+            icon: Trash2,
+            onPress: () => {
+              try {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              } catch {}
+              syncState.clearLocalVault();
+              handleDismiss();
+            },
+          },
+          {
+            text: isRTL ? 'إلغاء' : 'Cancel',
+            style: 'cancel',
+          },
+        ],
+      });
+    }
   };
 
   const handleOpenLinkedIn = () => {
@@ -589,7 +645,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                       <Text style={[styles.groupSubText, isRTL && styles.rtlText]}>
                         {syncState.syncStatus === 'synced'
                           ? isRTL
-                            ? 'متزامن بالكامل مع سحابة Supabase'
+                            ? 'متزامن بالكامل مع السحابة'
                             : 'All changes synced with cloud'
                           : syncState.syncStatus === 'syncing'
                           ? isRTL
@@ -598,8 +654,8 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                           : syncState.syncStatus === 'local_only'
                           ? !isSupabaseConfigured
                             ? isRTL
-                              ? 'Supabase غير متصل • الحفظ محلي بالجهاز'
-                              : 'Supabase not connected • Saved locally'
+                              ? 'غير متصل بالسحابة • الحفظ محلي بالجهاز'
+                              : 'Cloud not connected • Saved locally'
                             : isRTL
                             ? 'وضع الضيف • سجّل الدخول لتفعيل المزامنة'
                             : 'Guest mode • Sign in to sync across devices'
