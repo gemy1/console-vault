@@ -1,6 +1,22 @@
 import { Game, Seller, WarrantyCalculation } from '../types/vault';
 
+export const LIFETIME_WARRANTY_MONTHS = 999;
+
+export function isLifetimeWarranty(warrantyMonths: number): boolean {
+  return warrantyMonths >= 999;
+}
+
 export function calculateWarranty(purchaseDateStr: string, warrantyMonths: number): WarrantyCalculation {
+  if (isLifetimeWarranty(warrantyMonths)) {
+    return {
+      isWarrantyActive: true,
+      isExpiringSoon: false,
+      daysRemaining: 99999,
+      expiryDate: 'Lifetime',
+      isLifetime: true,
+    };
+  }
+
   const purchase = new Date(purchaseDateStr);
   const expiry = new Date(purchase);
   expiry.setMonth(expiry.getMonth() + warrantyMonths);
@@ -17,6 +33,7 @@ export function calculateWarranty(purchaseDateStr: string, warrantyMonths: numbe
     isExpiringSoon: isWarrantyActive && daysRemaining <= 14,
     daysRemaining,
     expiryDate: expiry.toISOString().split('T')[0],
+    isLifetime: false,
   };
 }
 
@@ -24,7 +41,9 @@ export function generateWarrantyClaimMessage(game: Game, seller?: Seller, lang: 
   const warranty = calculateWarranty(game.purchase_date, game.warranty_months);
 
   if (lang === 'ar') {
-    const warrantyStatusStr = warranty.isWarrantyActive
+    const warrantyStatusStr = warranty.isLifetime
+      ? `✅ ساري (ضمان دائم / مدى الحياة)`
+      : warranty.isWarrantyActive
       ? `✅ ساري (متبقي ${warranty.daysRemaining} يوم، ينتهي في ${warranty.expiryDate})`
       : `❌ منتهي في ${warranty.expiryDate}`;
 
@@ -45,7 +64,9 @@ export function generateWarrantyClaimMessage(game: Game, seller?: Seller, lang: 
     ].join('\n');
   }
 
-  const warrantyStatusStr = warranty.isWarrantyActive
+  const warrantyStatusStr = warranty.isLifetime
+    ? `✅ ACTIVE (Lifetime Warranty)`
+    : warranty.isWarrantyActive
     ? `✅ ACTIVE (${warranty.daysRemaining} days remaining, expires ${warranty.expiryDate})`
     : `❌ EXPIRED on ${warranty.expiryDate}`;
 

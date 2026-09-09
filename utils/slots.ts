@@ -39,6 +39,42 @@ export function getGamePotentialSlots(
 }
 
 /**
+ * Returns the slots to display for a game based on current allocations.
+ * Mutual exclusivity rules:
+ * - If 'Full' account is allocated: only 'Full' is displayed (other slots disappear).
+ * - If ANY individual slot is allocated: 'Full' disappears (only individual slots are displayed).
+ * - If no slots are allocated: all potential slots are displayed.
+ *
+ * If excludeAllocationId is provided (e.g. editing an existing allocation),
+ * that allocation is ignored when calculating exclusivity.
+ */
+export function getGameDisplaySlots(
+  game: Game,
+  allocations: ClientAllocation[],
+  excludeAllocationId?: string
+): SlotType[] {
+  const activeAllocs = allocations.filter(
+    (a) => a.game_id === game.id && a.status === 'Active' && (!excludeAllocationId || a.id !== excludeAllocationId)
+  );
+
+  const potentialSlots = getGamePotentialSlots(game.platform, game.account_type);
+
+  // If Full account is sold, only Full exists (other slots disappear)
+  const hasFull = activeAllocs.some((a) => a.slot_type === 'Full');
+  if (hasFull) {
+    return ['Full'];
+  }
+
+  // If any individual slot is sold, Full disappears completely
+  const hasAnyIndividualTaken = activeAllocs.some((a) => a.slot_type !== 'Full');
+  if (hasAnyIndividualTaken) {
+    return potentialSlots.filter((s) => s !== 'Full');
+  }
+
+  return potentialSlots;
+}
+
+/**
  * Returns the currently available (unsold) slots for a given game.
  * - If 'Full' account slot is sold, NO slots are available (0).
  * - If any individual slot is sold (e.g. Primary PS5), the account can no longer be sold as 'Full',
@@ -54,7 +90,7 @@ export function getGameAvailableSlots(
     (a) => a.game_id === game.id && a.status === 'Active' && (!excludeAllocationId || a.id !== excludeAllocationId)
   );
 
-  const potentialSlots = getGamePotentialSlots(game.platform, game.account_type);
+  const displaySlots = getGameDisplaySlots(game, allocations, excludeAllocationId);
 
   // If a Full account sale is already active, entire game is locked
   const hasFull = activeAllocs.some((a) => a.slot_type === 'Full');
@@ -63,17 +99,8 @@ export function getGameAvailableSlots(
   }
 
   const takenTypes = new Set(activeAllocs.map((a) => a.slot_type));
-  const hasAnyIndividualTaken = takenTypes.size > 0;
 
-  return potentialSlots.filter((slot) => {
-    // If already taken, not available
-    if (takenTypes.has(slot)) return false;
-
-    // If any individual slot was sold, 'Full' can no longer be sold
-    if (slot === 'Full' && hasAnyIndividualTaken) return false;
-
-    return true;
-  });
+  return displaySlots.filter((slot) => !takenTypes.has(slot));
 }
 
 /**

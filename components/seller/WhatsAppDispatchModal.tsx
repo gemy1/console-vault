@@ -71,8 +71,13 @@ export function WhatsAppDispatchModal({
     }
   }, [allocation.slot_type, t]);
 
+  const isLifetime = (allocation.warranty_months || 0) >= 999;
+
   // Compute expiry date
   const expiryDate = useMemo(() => {
+    if (isLifetime) {
+      return isRTL ? 'مدى الحياة' : 'Lifetime';
+    }
     try {
       const d = new Date(allocation.sale_date || new Date());
       d.setMonth(d.getMonth() + (allocation.warranty_months || 6));
@@ -80,7 +85,7 @@ export function WhatsAppDispatchModal({
     } catch {
       return 'N/A';
     }
-  }, [allocation.sale_date, allocation.warranty_months]);
+  }, [allocation.sale_date, allocation.warranty_months, isLifetime, isRTL]);
 
   // Activation steps based on slot type
   const activationGuide = useMemo(() => {
@@ -166,7 +171,9 @@ export function WhatsAppDispatchModal({
         `المنصة: ${game.platform === 'BOTH' ? 'PS4 و PS5' : game.platform || 'PS5'}`,
         `نوع السلوت: ${slotName}`,
         `سعر البيع: ${formatCurrency(allocation.sale_price, allocation.currency)}`,
-        `مدة الضمان: ${allocation.warranty_months} شهور (سارٍ حتى ${expiryDate})`,
+        isLifetime
+          ? `مدة الضمان: مدى الحياة (ضمان دائم)`
+          : `مدة الضمان: ${allocation.warranty_months} شهور (سارٍ حتى ${expiryDate})`,
         divider,
         `🔑 بيانات الحساب:`,
         `البريد: ${game.psn_email}`,
@@ -190,7 +197,9 @@ export function WhatsAppDispatchModal({
       `Platform: ${game.platform === 'BOTH' ? 'PS4 • PS5 Cross-Gen' : game.platform || 'PS5'}`,
       `Slot: ${slotName}`,
       `Price Paid: ${formatCurrency(allocation.sale_price, allocation.currency)}`,
-      `Warranty: ${allocation.warranty_months} Months (Valid until ${expiryDate})`,
+      isLifetime
+        ? `Warranty: Lifetime (Permanent Guarantee)`
+        : `Warranty: ${allocation.warranty_months} Months (Valid until ${expiryDate})`,
       divider,
       `🔑 PSN ACCOUNT CREDENTIALS:`,
       `Email: ${game.psn_email}`,

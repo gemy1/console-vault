@@ -204,6 +204,8 @@ export function ClientCard({
                     >
                       {!warranty.isWarrantyActive
                         ? t('warrantyExpired')
+                        : warranty.isLifetime
+                        ? t('warrantyLifetimeBadge')
                         : `${warranty.daysRemaining}d`}
                     </Text>
                   </View>

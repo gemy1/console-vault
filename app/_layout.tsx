@@ -65,6 +65,15 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
+          name="client/[id]"
+          options={{
+            headerShown: false,
+            animation: "slide_from_right",
+            gestureEnabled: true,
+            fullScreenGestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
           name="game/add"
           options={{
             headerShown: false,

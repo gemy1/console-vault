@@ -16,7 +16,7 @@ import * as Haptics from '@/utils/haptics';
 import { OfflineVault } from "../../services/storage";
 import { Game, Seller, GameStatus } from "../../types/vault";
 import { calculateWarranty } from "../../utils/padlock";
-import { getGamePotentialSlots } from "../../utils/slots";
+import { getGamePotentialSlots, getGameDisplaySlots } from "../../utils/slots";
 import { useBiometricGuard } from "../../hooks/useBiometricGuard";
 import { MenuToggleButton } from "../../components/common";
 import {
@@ -130,7 +130,9 @@ export default function GameDetailsScreen() {
 
   // Potential slots gated by BOTH platform AND account_type
   const platform = (game.platform || 'PS5') as ConsolePlatform;
-  const potentialSlots = getGamePotentialSlots(game.platform, game.account_type);
+
+  // Slots to display based on mutual exclusivity (Full disappears if individual sold)
+  const displaySlots = getGameDisplaySlots(game, activeAllocations);
 
   const fullAlloc = activeAllocations.find((a) => a.slot_type === 'Full');
 
@@ -594,14 +596,6 @@ export default function GameDetailsScreen() {
                         : 'Active console allocations, buyer & pricing matrix'}
                     </Text>
                   </View>
-
-                  <Pressable
-                    onPress={() => handleOpenSellSlot()}
-                    style={styles.quickSellBtn}
-                  >
-                    <Plus size={14} color="#FFFFFF" strokeWidth={2.5} />
-                    <Text style={styles.quickSellBtnText}>{t('btnSellSlot')}</Text>
-                  </Pressable>
                 </View>
 
                 <View style={styles.slotsList}>
@@ -622,15 +616,22 @@ export default function GameDetailsScreen() {
                           </View>
                         </View>
 
-                        <View style={[styles.buyerInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                        <Pressable
+                          onPress={() => {
+                            if (fullAlloc.client_id) {
+                              router.push(`/client/${fullAlloc.client_id}`);
+                            }
+                          }}
+                          style={[styles.buyerInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}
+                        >
                           <User size={13} color="#94A3B8" />
-                          <Text style={styles.buyerNameText}>
+                          <Text style={[styles.buyerNameText, { textDecorationLine: 'underline' }]}>
                             {clientsMap[fullAlloc.client_id]?.name || t('selectClient')}
                           </Text>
                           <Text style={styles.buyerPriceText}>
                             • {formatCurrency(fullAlloc.sale_price, fullAlloc.currency || currency)}
                           </Text>
-                        </View>
+                        </Pressable>
                       </View>
 
                       <View style={[styles.slotDetailActions, isNativeRTL && { flexDirection: 'row-reverse' }]}>
@@ -649,7 +650,7 @@ export default function GameDetailsScreen() {
                       </View>
                     </View>
                   ) : (
-                    potentialSlots.map((slot) => {
+                    displaySlots.map((slot: SlotType) => {
                       const alloc = activeAllocations.find((a) => a.slot_type === slot);
                       const isSold = !!alloc;
                       const client = isSold && alloc ? clientsMap[alloc.client_id] : null;
@@ -687,9 +688,16 @@ export default function GameDetailsScreen() {
                             </View>
 
                             {isSold && alloc ? (
-                              <View style={[styles.buyerInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                              <Pressable
+                                onPress={() => {
+                                  if (alloc.client_id) {
+                                    router.push(`/client/${alloc.client_id}`);
+                                  }
+                                }}
+                                style={[styles.buyerInfoRow, isNativeRTL && { flexDirection: 'row-reverse' }]}
+                              >
                                 <User size={13} color="#94A3B8" />
-                                <Text style={styles.buyerNameText}>
+                                <Text style={[styles.buyerNameText, { textDecorationLine: 'underline' }]}>
                                   {client?.name || 'Client'}
                                 </Text>
                                 <Text style={styles.buyerPriceText}>
@@ -711,11 +719,13 @@ export default function GameDetailsScreen() {
                                     >
                                       {!warrantyInfo.isWarrantyActive
                                         ? t('warrantyExpired')
+                                        : warrantyInfo.isLifetime
+                                        ? t('warrantyLifetimeBadge')
                                         : `${warrantyInfo.daysRemaining}d`}
                                     </Text>
                                   </View>
                                 ) : null}
-                              </View>
+                              </Pressable>
                             ) : (
                               <Text style={[styles.freeSlotSubtext, isRTL && styles.rtlText]}>
                                 {isRTL
@@ -884,17 +894,23 @@ export default function GameDetailsScreen() {
                         : styles.statusTextDanger,
                     ]}
                   >
-                    {warranty.isWarrantyActive
+                    {warranty.isLifetime
+                      ? t('warrantyLifetime')
+                      : warranty.isWarrantyActive
                       ? t('daysLeft', { days: warranty.daysRemaining })
                       : t('warrantyExpired')}
                   </Text>
                   <Text style={[styles.warrantyMonthsTotal, isRTL && styles.rtlText]}>
-                    {t('monthsTotal', { months: game.warranty_months })}
+                    {warranty.isLifetime
+                      ? t('warrantyLifetime')
+                      : t('monthsTotal', { months: game.warranty_months })}
                   </Text>
                 </View>
 
                 <Text style={[styles.warrantyExpiresText, isRTL && styles.rtlText]}>
-                  {t('expiresOn', { date: warranty.expiryDate })}
+                  {warranty.isLifetime
+                    ? (isRTL ? 'ضمان دائم مدى الحياة' : 'Permanent Lifetime Guarantee')
+                    : t('expiresOn', { date: warranty.expiryDate })}
                 </Text>
               </View>
             </>
@@ -1955,20 +1971,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       color: colors.textMuted,
       marginTop: 1,
     },
-    quickSellBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 10,
-      backgroundColor: '#0070D1',
-    },
-    quickSellBtnText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: '#FFFFFF',
-    },
+
     slotsList: {
       gap: 10,
     },

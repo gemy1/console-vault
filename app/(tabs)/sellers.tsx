@@ -253,7 +253,7 @@ export default function SellersScreen() {
                   client={client}
                   allocations={allocations}
                   gamesMap={gamesMap}
-                  onPress={() => handleOpenEditClient(client)}
+                  onPress={() => router.push(`/client/${client.id}`)}
                   onEdit={() => handleOpenEditClient(client)}
                   onDelete={() => handleDeleteClient(client)}
                   onDispatchWhatsApp={handleDispatchReceipt}

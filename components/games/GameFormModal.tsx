@@ -51,7 +51,7 @@ import { useCustomAlert } from '../../context/AlertContext';
 import { usePersona } from '../../context/PersonaContext';
 import { generateUUID } from '../../utils/uuid';
 
-const WARRANTY_PRESETS = ['3', '6', '12', '24'];
+const WARRANTY_PRESETS = ['3', '6', '12', '24', '999'];
 
 export interface GameFormData {
   title: string;
@@ -536,7 +536,7 @@ export function GameFormModal({
                           isSelected ? styles.presetTextSelected : styles.presetTextUnselected,
                         ]}
                       >
-                        {preset} {t('warrantyMonthsUnit')}
+                        {preset === '999' ? t('warrantyLifetime') : `${preset} ${t('warrantyMonthsUnit')}`}
                       </Text>
                     </Pressable>
                   );

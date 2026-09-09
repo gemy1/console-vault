@@ -24,18 +24,19 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  Trash2,
 } from 'lucide-react-native';
 import { Game, Client, ClientAllocation, SlotType } from '../../types/vault';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
-import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
+import { ThemeColors, ThemeMode, useVaultTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { usePersona } from '../../context/PersonaContext';
 import { useVaultSync } from '../../context/VaultSyncContext';
 import { useCustomAlert } from '../../context/AlertContext';
 import { generateUUID } from '../../utils/uuid';
-import { getGamePotentialSlots, getGameAvailableSlots } from '../../utils/slots';
+import { getGamePotentialSlots, getGameAvailableSlots, getGameDisplaySlots } from '../../utils/slots';
 
-const WARRANTY_PRESETS = ['3', '6', '12', '24'];
+const WARRANTY_PRESETS = ['3', '6', '12', '24', '999'];
 
 interface SlotAllocationModalProps {
   visible: boolean;
@@ -55,9 +56,10 @@ export function SlotAllocationModal({
   onAllocated,
 }: SlotAllocationModalProps) {
   const styles = useThemedStyles(createStyles);
+  const { colors } = useVaultTheme();
   const { t, isRTL } = useLanguage();
   const { currency } = usePersona();
-  const { clients, allocations, addClient, addAllocation, updateAllocation } = useVaultSync();
+  const { clients, allocations, addClient, addAllocation, updateAllocation, deleteAllocation } = useVaultSync();
   const { showAlert } = useCustomAlert();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
@@ -74,10 +76,10 @@ export function SlotAllocationModal({
   const [clientSearch, setClientSearch] = useState('');
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
 
-  // Compute all potential slots for this game — gated by BOTH platform AND account_type
+  // Compute display slots — if any slot sold, Full disappears; if Full sold, others disappear
   const allPlatformSlots = useMemo<SlotType[]>(() => {
-    return getGamePotentialSlots(game.platform, game.account_type);
-  }, [game.platform, game.account_type]);
+    return getGameDisplaySlots(game, allocations, existingAllocation?.id);
+  }, [game, allocations, existingAllocation]);
 
   // Split slots into pairs of 2 so React Native mobile avoids flexWrap + flexDirection: row-reverse layout bugs
   const slotRows = useMemo(() => {
@@ -101,6 +103,9 @@ export function SlotAllocationModal({
         setSalePrice(String(existingAllocation.sale_price || '0.00'));
         setWarrantyMonths(String(existingAllocation.warranty_months || 6));
         setNotes(existingAllocation.notes || '');
+        setIsCreatingClient(false);
+        setNewClientName('');
+        setNewClientPhone('');
       } else {
         const initial = preselectedSlot && availableSlots.includes(preselectedSlot)
           ? preselectedSlot
@@ -109,17 +114,23 @@ export function SlotAllocationModal({
         setSalePrice(initial.startsWith('Primary') ? '40.00' : initial === 'Full' ? '90.00' : '25.00');
         setWarrantyMonths('6');
         setNotes('');
-        if (clients.length > 0) {
-          setSelectedClientId(clients[0].id);
-        } else {
-          setSelectedClientId('');
-          setIsCreatingClient(true);
-        }
+        setSelectedClientId('');
+        setNewClientName('');
+        setNewClientPhone('');
+        setIsCreatingClient(clients.length === 0);
       }
       setClientDropdownOpen(false);
       setClientSearch('');
+    } else {
+      // Clean up when modal closes so next game modal is completely fresh
+      setNewClientName('');
+      setNewClientPhone('');
+      setSelectedClientId('');
+      setIsCreatingClient(false);
+      setClientDropdownOpen(false);
+      setClientSearch('');
     }
-  }, [visible, existingAllocation, preselectedSlot, availableSlots, clients]);
+  }, [visible, existingAllocation, preselectedSlot, game.id]);
 
   const selectedClient = useMemo(() => {
     return clients.find((c) => c.id === selectedClientId);
@@ -228,9 +239,51 @@ export function SlotAllocationModal({
       onAllocated(created, allocatedClient);
     }
 
+    // Clear client fields so opening another game modal starts completely clean
+    setNewClientName('');
+    setNewClientPhone('');
+    setSelectedClientId('');
+    setIsCreatingClient(false);
+    setClientSearch('');
+    setClientDropdownOpen(false);
+
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
+  };
+
+  const handleReleaseSlot = () => {
+    if (!existingAllocation) return;
+
+    showAlert({
+      title: t('confirmUnsellTitle'),
+      message: t('confirmUnsellMessage'),
+      type: 'danger',
+      icon: Trash2,
+      buttons: [
+        {
+          text: t('btnCancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('btnUnsellSlot'),
+          style: 'destructive',
+          icon: Trash2,
+          onPress: () => {
+            deleteAllocation(existingAllocation.id);
+            try {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            } catch {}
+            closeWithSlide();
+            showAlert({
+              title: t('alertSuccessGameAdded'),
+              message: t('alertSlotReleased'),
+              type: 'success',
+            });
+          },
+        },
+      ],
+    });
   };
 
   const formatSlotTitle = (slot: SlotType) => {
@@ -464,13 +517,14 @@ export function SlotAllocationModal({
                 </View>
               </View>
 
-              <View style={{ flex: 1, marginLeft: 10 }}>
+              <View style={{ flex: 1.35, marginLeft: 10 }}>
                 <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>
                   {t('fieldWarrantyDuration')}
                 </Text>
                 <View style={[styles.presetsMiniRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
                   {WARRANTY_PRESETS.map((p) => {
                     const isPActive = warrantyMonths === p;
+                    const label = p === '999' ? (isRTL ? 'دائم' : 'Life') : `${p}m`;
                     return (
                       <Pressable
                         key={p}
@@ -484,9 +538,11 @@ export function SlotAllocationModal({
                           style={[
                             styles.presetMiniText,
                             isPActive && styles.presetMiniTextActive,
+                            p === '999' && styles.presetMiniTextLife,
                           ]}
+                          numberOfLines={1}
                         >
-                          {p}m
+                          {label}
                         </Text>
                       </Pressable>
                     );
@@ -522,6 +578,21 @@ export function SlotAllocationModal({
                 {existingAllocation ? t('btnSave') : t('btnSellSlot')}
               </Text>
             </Pressable>
+
+            {/* RELEASE / UNSELL BUTTON (When managing an existing allocation) */}
+            {existingAllocation && (
+              <Pressable
+                onPress={handleReleaseSlot}
+                style={({ pressed }) => [
+                  styles.releaseBtn,
+                  isNativeRTL && { flexDirection: 'row-reverse' },
+                  pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <Trash2 size={16} color={colors.danger} strokeWidth={2} />
+                <Text style={styles.releaseBtnText}>{t('btnUnsellSlot')}</Text>
+              </Pressable>
+            )}
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -785,7 +856,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     presetsMiniRow: {
       flexDirection: 'row',
-      gap: 6,
+      gap: 4,
       height: 44,
       alignItems: 'center',
     },
@@ -798,6 +869,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       borderColor: colors.border,
       alignItems: 'center',
       justifyContent: 'center',
+      paddingHorizontal: 2,
     },
     presetMiniBtnActive: {
       borderColor: theme === 'dark' ? '#00D2FF' : '#0070D1',
@@ -805,11 +877,15 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     },
     presetMiniText: {
       color: colors.textSecondary,
-      fontSize: 11,
+      fontSize: 10.5,
       fontWeight: '700',
     },
     presetMiniTextActive: {
       color: theme === 'dark' ? '#00D2FF' : '#0070D1',
+      fontWeight: '800',
+    },
+    presetMiniTextLife: {
+      fontSize: 9.5,
       fontWeight: '800',
     },
     notesInput: {
@@ -835,6 +911,23 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     submitBtnText: {
       color: '#FFFFFF',
       fontSize: 14,
+      fontWeight: '800',
+    },
+    releaseBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: 'rgba(239, 68, 68, 0.35)',
+      paddingVertical: 13,
+      marginTop: 10,
+    },
+    releaseBtnText: {
+      color: colors.danger,
+      fontSize: 13.5,
       fontWeight: '800',
     },
   });

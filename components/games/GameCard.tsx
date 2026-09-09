@@ -149,7 +149,9 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
                     warranty.isExpiringSoon ? styles.warrantyExpiring : styles.warrantyGood,
                   ]}
                 >
-                  {t('warrantyExpiringGood', { days: warranty.daysRemaining })}
+                  {warranty.isLifetime
+                    ? t('warrantyLifetime')
+                    : t('warrantyExpiringGood', { days: warranty.daysRemaining })}
                 </Text>
               </>
             ) : (

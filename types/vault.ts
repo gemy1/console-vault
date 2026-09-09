@@ -98,6 +98,7 @@ export interface WarrantyCalculation {
   isExpiringSoon: boolean; // <= 14 days left
   daysRemaining: number;
   expiryDate: string;
+  isLifetime?: boolean;
 }
 
 // -----------------------------------------------------------------------------

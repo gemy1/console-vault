@@ -14,13 +14,13 @@ import {
   ShieldAlert,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { Game, ClientAllocation, Client, SlotType } from '../../types/vault';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { usePersona } from '../../context/PersonaContext';
-import { calculateWarranty } from '../../utils/padlock';
-import { getGamePotentialSlots } from '../../utils/slots';
+import { getGamePotentialSlots, getGameDisplaySlots } from '../../utils/slots';
 
 interface SellerInventoryCardProps {
   game: Game;
@@ -44,16 +44,19 @@ export function SellerInventoryCard({
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
   const { formatCurrency, currency } = usePersona();
+  const router = useRouter();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
   // Potential slots gated by BOTH platform AND account_type
   const platform = game.platform || 'PS5';
-  const potentialSlots = getGamePotentialSlots(game.platform, game.account_type);
 
   // Active allocations for this game
   const activeAllocations = allocations.filter(
     (a) => a.game_id === game.id && a.status === 'Active'
   );
+
+  // Slots to display based on mutual exclusivity (Full disappears if individual sold)
+  const displaySlots = getGameDisplaySlots(game, activeAllocations);
 
   // Check if a "Full" account allocation exists
   const fullAllocation = activeAllocations.find((a) => a.slot_type === 'Full');
@@ -211,15 +214,23 @@ export function SellerInventoryCard({
                 </View>
               </View>
 
-              <View style={[styles.clientRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (fullAllocation.client_id) {
+                    router.push(`/client/${fullAllocation.client_id}`);
+                  }
+                }}
+                style={[styles.clientRow, isNativeRTL && { flexDirection: 'row-reverse' }]}
+              >
                 <User size={12} color="#94A3B8" />
-                <Text style={styles.clientNameText} numberOfLines={1} ellipsizeMode="tail">
+                <Text style={[styles.clientNameText, { textDecorationLine: 'underline' }]} numberOfLines={1} ellipsizeMode="tail">
                   {clientsMap[fullAllocation.client_id]?.name || t('selectClient')}
                 </Text>
                 <Text style={styles.slotPriceText}>
                   • {formatCurrency(fullAllocation.sale_price, fullAllocation.currency || currency)}
                 </Text>
-              </View>
+              </Pressable>
             </View>
 
             {/* ACTION BUTTONS */}
@@ -245,8 +256,8 @@ export function SellerInventoryCard({
             </View>
           </View>
         ) : (
-          // INDIVIDUAL SLOTS
-          potentialSlots.map((slot) => {
+          // INDIVIDUAL SLOTS (Full has disappeared if any slot was sold)
+          displaySlots.map((slot: SlotType) => {
             const allocation = activeAllocations.find((a) => a.slot_type === slot);
             const isSold = !!allocation;
             const client = isSold && allocation ? clientsMap[allocation.client_id] : null;
@@ -283,15 +294,23 @@ export function SellerInventoryCard({
                   </View>
 
                   {isSold && allocation ? (
-                    <View style={[styles.clientRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        if (allocation.client_id) {
+                          router.push(`/client/${allocation.client_id}`);
+                        }
+                      }}
+                      style={[styles.clientRow, isNativeRTL && { flexDirection: 'row-reverse' }]}
+                    >
                       <User size={12} color="#94A3B8" />
-                      <Text style={styles.clientNameText} numberOfLines={1} ellipsizeMode="tail">
+                      <Text style={[styles.clientNameText, { textDecorationLine: 'underline' }]} numberOfLines={1} ellipsizeMode="tail">
                         {client?.name || 'Client'}
                       </Text>
                       <Text style={styles.slotPriceText}>
                         • {formatCurrency(allocation.sale_price, allocation.currency || currency)}
                       </Text>
-                    </View>
+                    </Pressable>
                   ) : null}
                 </View>
 
