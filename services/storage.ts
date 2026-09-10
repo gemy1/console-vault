@@ -319,6 +319,17 @@ export const OfflineVault = {
     GameRepository.delete(id).catch((err) => {
       console.warn('[SQLite] deleteGame error:', err);
     });
+
+    // Cascade delete any client slot allocations associated with this game locally
+    const allocations = OfflineVault.getAllocations();
+    const remainingAllocs = allocations.filter((a) => a.game_id !== id);
+    if (remainingAllocs.length !== allocations.length) {
+      OfflineVault.saveAllocations(remainingAllocs);
+      AllocationRepository.deleteByGameId(id).catch((err) => {
+        console.warn('[SQLite] deleteAllocationsByGameId error:', err);
+      });
+    }
+
     return true;
   },
 

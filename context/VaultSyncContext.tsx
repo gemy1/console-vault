@@ -179,6 +179,7 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       const success = OfflineVault.deleteGame(id);
       if (success) {
         setGames([...OfflineVault.getGames()]);
+        setAllocations([...OfflineVault.getAllocations()]);
         SyncQueue.enqueue({
           entity: 'game',
           action: 'DELETE',

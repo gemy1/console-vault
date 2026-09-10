@@ -53,6 +53,7 @@ create table if not exists public.games (
     title text not null,
     cover_image_url text,
     account_type account_type not null default 'Primary',
+    platform text not null default 'PS5',
     status game_status not null default 'Active',
     purchase_date date not null default current_date,
     warranty_months integer not null default 6 check (warranty_months >= 0),
@@ -61,6 +62,9 @@ create table if not exists public.games (
     psn_password text,
     backup_codes text[] default '{}'::text[],
     notes text,
+    cost_price numeric(10, 2) default 0.00,
+    currency text default 'USD',
+    is_inventory boolean default false,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -224,8 +228,9 @@ create table if not exists public.client_allocations (
     user_id uuid not null references auth.users(id) on delete cascade,
     game_id text not null references public.games(id) on delete cascade,
     client_id uuid not null references public.clients(id) on delete cascade,
-    slot_type account_type not null default 'Primary',
+    slot_type text not null default 'Primary',
     sale_price numeric(10, 2) default 0.00,
+    currency text not null default 'USD',
     sale_date date not null default current_date,
     warranty_months integer not null default 6,
     status text not null default 'Active' check (status in ('Active', 'Revoked', 'Replaced', 'Expired')),

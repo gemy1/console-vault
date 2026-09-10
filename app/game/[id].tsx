@@ -200,7 +200,9 @@ export default function GameDetailsScreen() {
   };
 
   const toggleGameStatus = (newStatus: GameStatus) => {
-    const updated = OfflineVault.updateGame(game.id, { status: newStatus });
+    const updated = vaultSync
+      ? vaultSync.updateGame(game.id, { status: newStatus })
+      : OfflineVault.updateGame(game.id, { status: newStatus });
     if (updated) {
       setGame(updated);
       try {
@@ -245,11 +247,17 @@ export default function GameDetailsScreen() {
     newPasswordVal: string,
   ) => {
     if (!game) return;
-    const updated = OfflineVault.updateGame(game.id, {
-      psn_email: newEmailVal,
-      psn_password: newPasswordVal,
-      status: "Active",
-    });
+    const updated = vaultSync
+      ? vaultSync.updateGame(game.id, {
+          psn_email: newEmailVal,
+          psn_password: newPasswordVal,
+          status: "Active",
+        })
+      : OfflineVault.updateGame(game.id, {
+          psn_email: newEmailVal,
+          psn_password: newPasswordVal,
+          status: "Active",
+        });
 
     if (updated) {
       setGame(updated);
@@ -268,6 +276,43 @@ export default function GameDetailsScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch {}
 
+    const gameAllocations = (vaultSync?.allocations || OfflineVault.getAllocations()).filter(
+      (a) => a.game_id === game.id
+    );
+    const hasSoldSlots = gameAllocations.length > 0;
+
+    const performDelete = () => {
+      if (vaultSync) {
+        vaultSync.deleteGame(game.id);
+      } else {
+        OfflineVault.deleteGame(game.id);
+      }
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+      router.replace('/(tabs)/vault');
+    };
+
+    if (hasSoldSlots) {
+      showAlert({
+        title: isRTL ? 'تحذير: حساب به مبيعات نشطة!' : 'Warning: Active Client Sales!',
+        message: isRTL
+          ? `هذه اللعبة تحتوي على (${gameAllocations.length}) فتحة مباعة لعملاء مسجلين.\n\nحذف هذه اللعبة سيؤدي إلى حذف بيانات الدخول نهائياً ومسح سجلات الشراء والضمان من ملفات هؤلاء العملاء مباشرة.\n\nهل أنت متأكد من الحذف النهائي؟`
+          : `This game account has ${gameAllocations.length} sold slot(s) assigned to clients.\n\nPermanently deleting this game will remove all PSN credentials and erase the purchase records from those clients' profiles.\n\nAre you sure you want to permanently delete it?`,
+        type: 'danger',
+        buttons: [
+          {
+            text: isRTL ? 'حذف نهائي بكل السجلات' : 'Delete Game (Permanent)',
+            style: 'destructive',
+            onPress: performDelete,
+          },
+          { text: t('btnCancel'), style: 'cancel' },
+        ],
+      });
+      return;
+    }
+
+    // Normal safe delete if no sold slots
     showAlert({
       title: t('confirmDeleteGameTitle'),
       message: t('confirmDeleteGameDesc', { title: game.title }),
@@ -276,17 +321,7 @@ export default function GameDetailsScreen() {
         {
           text: t('btnDelete'),
           style: 'destructive',
-          onPress: () => {
-            if (vaultSync) {
-              vaultSync.deleteGame(game.id);
-            } else {
-              OfflineVault.deleteGame(game.id);
-            }
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch {}
-            router.replace('/(tabs)/vault');
-          },
+          onPress: performDelete,
         },
         { text: t('btnCancel'), style: 'cancel' },
       ],

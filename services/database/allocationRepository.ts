@@ -158,6 +158,15 @@ export const AllocationRepository = {
   },
 
   /**
+   * Cascade deletes all allocations belonging to a specific game.
+   */
+  deleteByGameId: async (gameId: string): Promise<boolean> => {
+    const db = await getDatabase();
+    const result = await db.runAsync(`DELETE FROM client_allocations WHERE game_id = ?;`, [gameId]);
+    return result.changes > 0;
+  },
+
+  /**
    * High-speed bulk transaction for cloud sync.
    */
   bulkUpsert: async (allocations: ClientAllocation[]): Promise<void> => {

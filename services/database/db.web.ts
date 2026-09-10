@@ -320,6 +320,19 @@ class WebDatabaseEngine {
         return { changes: deleted ? 1 : 0, lastInsertRowId: 0 };
       }
     }
+    if (sql.startsWith('DELETE FROM client_allocations WHERE game_id = ?')) {
+      if (bindParams && bindParams[0]) {
+        let count = 0;
+        for (const [key, val] of this.allocations.entries()) {
+          if (val.game_id === bindParams[0]) {
+            this.allocations.delete(key);
+            count++;
+          }
+        }
+        if (count > 0) this.persist('allocations');
+        return { changes: count, lastInsertRowId: 0 };
+      }
+    }
     if (sql.startsWith('DELETE FROM sync_queue WHERE id = ?')) {
       if (bindParams && bindParams[0]) {
         const deleted = this.syncQueue.delete(bindParams[0]);
