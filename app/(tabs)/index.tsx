@@ -9,6 +9,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  Dimensions,
 } from "react-native";
 import { VaultText as Text } from "../../components/common/VaultText";
 import { useRouter } from "expo-router";
@@ -947,9 +948,12 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       paddingHorizontal: 16,
       gap: 8,
       marginBottom: 18,
+      alignItems: 'stretch',
     },
     metricCard: {
-      flex: 1,
+      // Explicit width instead of flex:1 — prevents layout engine from miscalculating
+      // card size after switching between the sellerKpiGrid (width:'48%') and metricsRow layouts.
+      width: Math.floor((Dimensions.get('window').width - 32 - 16) / 3),
       minWidth: 0,
       overflow: 'hidden',
       backgroundColor: colors.surface,

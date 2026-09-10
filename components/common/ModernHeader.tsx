@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { VaultText as Text } from "./VaultText";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets, initialWindowMetrics } from "react-native-safe-area-context";
 import * as Haptics from '@/utils/haptics';
 import { ChevronLeft, ChevronRight, Gamepad2 } from "lucide-react-native";
 import { ThemeColors, ThemeMode } from "../../context/ThemeContext";
@@ -42,10 +42,13 @@ export function ModernHeader({
   const { isRTL } = useLanguage();
   const styles = useThemedStyles(createStyles);
 
-  // Safe area clearance
+  // Safe area clearance — use initialWindowMetrics as the stable immediate value so the
+  // header height never jumps when useSafeAreaInsets() resolves after the first render.
   const androidFallback =
     Platform.OS === "android" ? (RNStatusBar.currentHeight ?? 0) : 0;
-  const safeTop = insets.top > 0 ? insets.top : androidFallback;
+  const stableTop = initialWindowMetrics?.insets?.top ?? 0;
+  const resolvedTop = insets.top > 0 ? insets.top : stableTop > 0 ? stableTop : androidFallback;
+  const safeTop = resolvedTop;
   const headerPaddingTop = safeTop + 12;
 
   // Mount spring animation
