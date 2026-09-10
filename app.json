@@ -7,6 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "consolevault",
     "userInterfaceStyle": "dark",
+    "androidNavigationBar": {
+      "visible": "always",
+      "barStyle": "light-content",
+      "backgroundColor": "#000000"
+    },
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -62,7 +67,8 @@
           "faceIDPermission": "Allow Console Vault to use Face ID to view sensitive PSN credentials."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true

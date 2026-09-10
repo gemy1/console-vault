@@ -57,9 +57,11 @@ export function CustomAlertModal({
 
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const [rendered, setRendered] = React.useState(visible);
 
   useEffect(() => {
     if (visible) {
+      setRendered(true);
       Animated.parallel([
         Animated.timing(opacityAnim, {
           toValue: 1,
@@ -78,12 +80,14 @@ export function CustomAlertModal({
         toValue: 0,
         duration: 120,
         useNativeDriver: true,
-      }).start();
+      }).start(() => {
+        setRendered(false);
+      });
       scaleAnim.setValue(0.92);
     }
   }, [visible]);
 
-  if (!config && !visible) return null;
+  if (!rendered && !visible) return null;
 
   const type = config?.type || 'info';
   const buttons = config?.buttons && config.buttons.length > 0
@@ -145,7 +149,7 @@ export function CustomAlertModal({
 
   return (
     <Modal
-      visible={visible}
+      visible={rendered}
       transparent
       animationType="none"
       statusBarTranslucent
@@ -156,7 +160,7 @@ export function CustomAlertModal({
         }
       }}
     >
-      <View style={styles.backdrop}>
+      <View style={styles.backdrop} pointerEvents={visible ? 'auto' : 'none'}>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={() => {

@@ -5,6 +5,7 @@ import { GameRepository } from './database/gameRepository';
 import { SellerRepository } from './database/sellerRepository';
 import { ClientRepository } from './database/clientRepository';
 import { AllocationRepository } from './database/allocationRepository';
+import { toSafeUUID } from '../utils/uuid';
 
 export * from './database';
 
@@ -78,18 +79,53 @@ const hydrationPromise = (async () => {
       if (sqliteGames.length > 0) {
         rebuildGamesIndex(sqliteGames);
         memoryCache.set(GAMES_STORAGE_KEY, JSON.stringify(sqliteGames));
+      } else {
+        rebuildGamesIndex([]);
+        memoryCache.set(GAMES_STORAGE_KEY, JSON.stringify([]));
       }
+
       if (sqliteSellers.length > 0) {
         rebuildSellersIndex(sqliteSellers);
         memoryCache.set(SELLERS_STORAGE_KEY, JSON.stringify(sqliteSellers));
+      } else {
+        rebuildSellersIndex([]);
+        memoryCache.set(SELLERS_STORAGE_KEY, JSON.stringify([]));
       }
+
       if (sqliteClients.length > 0) {
         rebuildClientsIndex(sqliteClients);
         memoryCache.set(CLIENTS_STORAGE_KEY, JSON.stringify(sqliteClients));
+      } else {
+        rebuildClientsIndex([]);
+        memoryCache.set(CLIENTS_STORAGE_KEY, JSON.stringify([]));
       }
-      if (sqliteAllocations.length > 0) {
-        rebuildAllocationsIndex(sqliteAllocations);
-        memoryCache.set(ALLOCATIONS_STORAGE_KEY, JSON.stringify(sqliteAllocations));
+
+      // Sanitize allocations: purge any orphaned allocations that reference non-existent games
+      const validGameIds = new Set<string>();
+      sqliteGames.forEach((g) => {
+        validGameIds.add(g.id);
+        validGameIds.add(toSafeUUID(g.id));
+      });
+
+      const sanitizedAllocations = sqliteAllocations.filter(
+        (a) => validGameIds.has(a.game_id) || validGameIds.has(toSafeUUID(a.game_id))
+      );
+
+      if (sanitizedAllocations.length !== sqliteAllocations.length) {
+        const orphanIds = sqliteAllocations
+          .filter((a) => !validGameIds.has(a.game_id) && !validGameIds.has(toSafeUUID(a.game_id)))
+          .map((a) => a.id);
+        orphanIds.forEach((oId) => {
+          AllocationRepository.delete(oId).catch(() => {});
+        });
+      }
+
+      if (sanitizedAllocations.length > 0) {
+        rebuildAllocationsIndex(sanitizedAllocations);
+        memoryCache.set(ALLOCATIONS_STORAGE_KEY, JSON.stringify(sanitizedAllocations));
+      } else {
+        rebuildAllocationsIndex([]);
+        memoryCache.set(ALLOCATIONS_STORAGE_KEY, JSON.stringify([]));
       }
     } catch (e) {
       console.warn('[VaultStorage] SQLite init note:', e);
@@ -312,22 +348,29 @@ export const OfflineVault = {
   },
 
   deleteGame: (id: string): boolean => {
+    const safeId = toSafeUUID(id);
     const games = OfflineVault.getGames();
-    const filtered = games.filter((g) => g.id !== id);
+    const filtered = games.filter((g) => g.id !== id && g.id !== safeId);
     OfflineVault.saveGames(filtered);
     // Native SQLite row delete
     GameRepository.delete(id).catch((err) => {
       console.warn('[SQLite] deleteGame error:', err);
     });
+    if (safeId !== id) {
+      GameRepository.delete(safeId).catch(() => {});
+    }
 
     // Cascade delete any client slot allocations associated with this game locally
     const allocations = OfflineVault.getAllocations();
-    const remainingAllocs = allocations.filter((a) => a.game_id !== id);
+    const remainingAllocs = allocations.filter((a) => a.game_id !== id && a.game_id !== safeId);
     if (remainingAllocs.length !== allocations.length) {
       OfflineVault.saveAllocations(remainingAllocs);
       AllocationRepository.deleteByGameId(id).catch((err) => {
         console.warn('[SQLite] deleteAllocationsByGameId error:', err);
       });
+      if (safeId !== id) {
+        AllocationRepository.deleteByGameId(safeId).catch(() => {});
+      }
     }
 
     return true;

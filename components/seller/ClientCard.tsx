@@ -27,6 +27,7 @@ interface ClientCardProps {
 export function ClientCard({
   client,
   allocations,
+  gamesMap,
   onPress,
 }: ClientCardProps) {
   const styles = useThemedStyles(createStyles);
@@ -34,8 +35,10 @@ export function ClientCard({
   const { formatCurrency, currency } = usePersona();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
-  // Allocations for this client
-  const clientAllocations = allocations.filter((a) => a.client_id === client.id);
+  // Allocations for this client (ignoring any orphaned records)
+  const clientAllocations = allocations.filter(
+    (a) => a.client_id === client.id && (!gamesMap || Boolean(gamesMap[a.game_id]))
+  );
   const activeAllocations = clientAllocations.filter((a) => a.status === 'Active');
   const totalSpent = clientAllocations.reduce((sum, a) => sum + (a.sale_price || 0), 0);
   const hasPurchases = totalSpent > 0 || clientAllocations.length > 0;

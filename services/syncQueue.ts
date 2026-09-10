@@ -70,6 +70,66 @@ export const SyncQueue = {
     notifyListeners();
   },
 
+  enqueueLocalVaultIfEmpty: (authUserId: string): void => {
+    const queue = SyncQueue.getQueue();
+    if (queue.length > 0) return;
+
+    const games = OfflineVault.getGames();
+    const sellers = OfflineVault.getSellers();
+    const clients = OfflineVault.getClients();
+    const allocations = OfflineVault.getAllocations();
+
+    if (games.length === 0 && sellers.length === 0 && clients.length === 0 && allocations.length === 0) {
+      return;
+    }
+
+    const newQueue: PendingSyncItem[] = [];
+    const now = Date.now();
+
+    sellers.forEach((s, idx) => {
+      newQueue.push({
+        id: `sync-${now}-s-${idx}`,
+        entity: 'seller',
+        action: 'UPSERT',
+        payload: { ...s, user_id: authUserId },
+        timestamp: now,
+      });
+    });
+
+    clients.forEach((c, idx) => {
+      newQueue.push({
+        id: `sync-${now}-c-${idx}`,
+        entity: 'client',
+        action: 'UPSERT',
+        payload: { ...c, user_id: authUserId },
+        timestamp: now,
+      });
+    });
+
+    games.forEach((g, idx) => {
+      newQueue.push({
+        id: `sync-${now}-g-${idx}`,
+        entity: 'game',
+        action: 'UPSERT',
+        payload: { ...g, user_id: authUserId },
+        timestamp: now,
+      });
+    });
+
+    allocations.forEach((a, idx) => {
+      newQueue.push({
+        id: `sync-${now}-a-${idx}`,
+        entity: 'client_allocation',
+        action: 'UPSERT',
+        payload: { ...a, user_id: authUserId },
+        timestamp: now,
+      });
+    });
+
+    SyncQueue.saveQueue(newQueue);
+    notifyListeners();
+  },
+
   getLastSyncedAt: (): string | null => {
     return VaultStorage.getItem(LAST_SYNCED_KEY);
   },
@@ -114,8 +174,6 @@ export const SyncQueue = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || !session.user) {
-        // No active JWT session. User is either logged out or hasn't confirmed email yet.
-        // Keep pending items safely stored in local queue.
         currentStatus = 'offline';
         notifyListeners();
         return { success: false, syncedCount: 0 };
@@ -165,125 +223,179 @@ export const SyncQueue = {
       return (entityPriority[a.entity] || 99) - (entityPriority[b.entity] || 99);
     });
 
-    for (const item of sortedQueue) {
-      try {
-        let table = 'games';
-        if (item.entity === 'game') table = 'games';
-        else if (item.entity === 'seller') table = 'sellers';
-        else if (item.entity === 'client') table = 'clients';
-        else if (item.entity === 'client_allocation') table = 'client_allocations';
+    const BATCH_SIZE = 50;
+    const chunkArray = <T>(arr: T[], size: number): T[][] => {
+      const chunks: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) {
+        chunks.push(arr.slice(i, i + size));
+      }
+      return chunks;
+    };
 
-        if (item.action === 'UPSERT') {
+    const entityTypes: Array<'seller' | 'client' | 'game' | 'client_allocation'> = [
+      'seller',
+      'client',
+      'game',
+      'client_allocation',
+    ];
+
+    // Pre-cache known sellers from Supabase in 1 fast query to avoid N extra network calls
+    const knownSellerIds = new Set<string>();
+    try {
+      const { data: remoteSellers } = await supabase.from('sellers').select('id');
+      if (remoteSellers) {
+        remoteSellers.forEach((s) => knownSellerIds.add(s.id));
+      }
+    } catch {}
+
+    for (const entityType of entityTypes) {
+      const entityItems = sortedQueue.filter((item) => item.entity === entityType);
+      if (entityItems.length === 0) continue;
+
+      const deleteItems = entityItems.filter((item) => item.action === 'DELETE');
+      const upsertItems = entityItems.filter((item) => item.action === 'UPSERT');
+      const table =
+        entityType === 'game'
+          ? 'games'
+          : entityType === 'seller'
+          ? 'sellers'
+          : entityType === 'client'
+          ? 'clients'
+          : 'client_allocations';
+
+      // ── BATCH DELETES ──
+      if (deleteItems.length > 0) {
+        const deleteChunks = chunkArray(deleteItems, BATCH_SIZE);
+        for (const chunk of deleteChunks) {
+          const rawIds = chunk.map((i) => i.payload.id);
+          const safeIds = rawIds.map((id) => toSafeUUID(id));
+          const allTargetIds = Array.from(new Set([...rawIds, ...safeIds]));
+
+          try {
+            if (entityType === 'game') {
+              // Cascade delete allocations & credentials in Supabase before deleting games
+              await supabase.from('client_allocations').delete().in('game_id', allTargetIds);
+              try {
+                await supabase.from('credential_history').delete().in('game_id', allTargetIds);
+              } catch {}
+            }
+
+            const { error } = await supabase.from(table).delete().in('id', allTargetIds);
+            if (error) {
+              console.warn(`[SyncQueue] Batch delete error on '${table}', falling back to single:`, error.message);
+              for (const item of chunk) {
+                const singleSafeId = toSafeUUID(item.payload.id);
+                const { error: singleErr } = await supabase.from(table).delete().eq('id', singleSafeId);
+                if (singleErr) {
+                  remainingQueue.push(item);
+                } else {
+                  processedCount++;
+                }
+              }
+            } else {
+              processedCount += chunk.length;
+            }
+          } catch (err) {
+            console.error(`[SyncQueue] Delete exception on '${table}':`, err);
+            remainingQueue.push(...chunk);
+          }
+        }
+      }
+
+      // ── BATCH UPSERTS ──
+      if (upsertItems.length > 0) {
+        // Auto-resolve missing sellers for games before batching
+        if (entityType === 'game') {
+          const missingSellerPayloads: any[] = [];
+          for (const item of upsertItems) {
+            if (item.payload.seller_id) {
+              const safeSellerId = toSafeUUID(item.payload.seller_id);
+              if (!knownSellerIds.has(safeSellerId)) {
+                const localSeller = OfflineVault.getSellers().find(
+                  (s) => s.id === item.payload.seller_id || toSafeUUID(s.id) === safeSellerId
+                );
+                if (localSeller) {
+                  missingSellerPayloads.push({
+                    ...localSeller,
+                    id: safeSellerId,
+                    user_id: authUserId,
+                    updated_at: new Date().toISOString(),
+                  });
+                  knownSellerIds.add(safeSellerId);
+                }
+              }
+            }
+          }
+          if (missingSellerPayloads.length > 0) {
+            try {
+              await supabase.from('sellers').upsert(missingSellerPayloads);
+            } catch {}
+          }
+        }
+
+        // Format payloads for the entity
+        const preparedList = upsertItems.map((item) => {
           const safeId = toSafeUUID(item.payload.id);
-          const payloadWithUser = {
+          const payload: any = {
             ...item.payload,
             id: safeId,
             user_id: authUserId,
             updated_at: new Date().toISOString(),
           };
 
-          // Remove client-only joined fields before upserting
-          if (item.entity === 'game') {
-            delete payloadWithUser.seller;
-            delete payloadWithUser.allocations;
-            
-            // Clean up seller_id and ensure parent seller exists in Supabase
-            if (payloadWithUser.seller_id) {
-              const safeSellerId = toSafeUUID(payloadWithUser.seller_id);
-              payloadWithUser.seller_id = safeSellerId;
+          if (entityType === 'game') {
+            delete payload.seller;
+            delete payload.allocations;
+            if (payload.seller_id) {
+              const safeSellerId = toSafeUUID(payload.seller_id);
+              payload.seller_id = knownSellerIds.has(safeSellerId) ? safeSellerId : null;
+            } else {
+              payload.seller_id = null;
+            }
+            if (payload.psn_password === undefined || payload.psn_password === null) {
+              payload.psn_password = '';
+            }
+            if (!payload.notes) payload.notes = '';
+            if (!payload.backup_codes) payload.backup_codes = [];
+          } else if (entityType === 'client_allocation') {
+            delete payload.client;
+            delete payload.game;
+            payload.game_id = toSafeUUID(payload.game_id);
+            payload.client_id = toSafeUUID(payload.client_id);
+          }
 
-              // Verify if the referenced seller already exists in Supabase
-              const { data: existingSeller } = await supabase
-                .from('sellers')
-                .select('id')
-                .eq('id', safeSellerId)
-                .maybeSingle();
+          return { item, payload };
+        });
 
-              if (!existingSeller) {
-                // Find seller locally in OfflineVault and auto-upsert it first
-                const localSeller = OfflineVault.getSellers().find(
-                  (s) => s.id === item.payload.seller_id || toSafeUUID(s.id) === safeSellerId
-                );
-                if (localSeller) {
-                  const sellerPayload = {
-                    ...localSeller,
-                    id: safeSellerId,
-                    user_id: authUserId,
-                    updated_at: new Date().toISOString(),
-                  };
-                  const { error: sErr } = await supabase.from('sellers').upsert(sellerPayload);
-                  if (sErr) {
-                    console.warn('[SyncQueue] Auto-upsert parent seller failed, setting seller_id to null:', sErr.message);
-                    payloadWithUser.seller_id = null;
-                  }
+        // Split into chunks of 50 and upsert in bulk
+        const upsertChunks = chunkArray(preparedList, BATCH_SIZE);
+        for (const chunk of upsertChunks) {
+          const payloads = chunk.map((c) => c.payload);
+          try {
+            const { error } = await supabase.from(table).upsert(payloads);
+            if (error) {
+              console.warn(`[SyncQueue] Batch upsert on '${table}' error:`, error.message, 'Falling back to individual items...');
+              for (const { item, payload } of chunk) {
+                const { error: singleErr } = await supabase.from(table).upsert(payload);
+                if (singleErr) {
+                  console.error(`[SyncQueue] Single upsert error on '${table}':`, singleErr.message);
+                  remainingQueue.push(item);
                 } else {
-                  // Referenced seller does not exist in local database either, set null to satisfy FK
-                  payloadWithUser.seller_id = null;
+                  processedCount++;
+                  if (entityType === 'seller') knownSellerIds.add(payload.id);
                 }
               }
             } else {
-              payloadWithUser.seller_id = null;
-            }
-
-            // Ensure psn_password is never null for Postgres not-null constraint
-            if (payloadWithUser.psn_password === undefined || payloadWithUser.psn_password === null) {
-              payloadWithUser.psn_password = '';
-            }
-            if (!payloadWithUser.notes) {
-              payloadWithUser.notes = '';
-            }
-            if (!payloadWithUser.backup_codes) {
-              payloadWithUser.backup_codes = [];
-            }
-          } else if (item.entity === 'client_allocation') {
-            delete payloadWithUser.client;
-            delete payloadWithUser.game;
-            payloadWithUser.game_id = toSafeUUID(payloadWithUser.game_id);
-            payloadWithUser.client_id = toSafeUUID(payloadWithUser.client_id);
-          }
-
-          const { error } = await supabase.from(table).upsert(payloadWithUser);
-          if (error) {
-            console.error(`[SyncQueue] Upsert error on table '${table}':`, error.message, error.details || '', error.hint || '');
-            remainingQueue.push(item);
-          } else {
-            processedCount++;
-            // Update local records if ID or user_id changed so they belong to auth user
-            if (item.entity === 'game') {
-              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
-                OfflineVault.deleteGame(item.payload.id);
-                OfflineVault.addGame({ ...item.payload, id: safeId, user_id: authUserId });
-              }
-            } else if (item.entity === 'seller') {
-              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
-                OfflineVault.deleteSeller(item.payload.id);
-                OfflineVault.addSeller({ ...item.payload, id: safeId, user_id: authUserId });
-              }
-            } else if (item.entity === 'client') {
-              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
-                OfflineVault.deleteClient(item.payload.id);
-                OfflineVault.addClient({ ...item.payload, id: safeId, user_id: authUserId });
-              }
-            } else if (item.entity === 'client_allocation') {
-              if (item.payload.id !== safeId || item.payload.user_id !== authUserId) {
-                OfflineVault.deleteAllocation(item.payload.id);
-                OfflineVault.addAllocation({ ...item.payload, id: safeId, user_id: authUserId });
+              processedCount += chunk.length;
+              if (entityType === 'seller') {
+                payloads.forEach((p) => knownSellerIds.add(p.id));
               }
             }
-          }
-        } else if (item.action === 'DELETE') {
-          const safeId = toSafeUUID(item.payload.id);
-          const { error } = await supabase.from(table).delete().eq('id', safeId);
-          if (error) {
-            console.error(`[SyncQueue] Delete error on table '${table}':`, error.message);
-            remainingQueue.push(item);
-          } else {
-            processedCount++;
+          } catch (err) {
+            console.error(`[SyncQueue] Exception on bulk upsert '${table}':`, err);
+            remainingQueue.push(...chunk.map((c) => c.item));
           }
         }
-      } catch (err) {
-        console.error('[SyncQueue] Exception during sync:', err);
-        remainingQueue.push(item);
       }
     }
 

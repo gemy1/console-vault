@@ -3,11 +3,11 @@ import {
   View,
   ScrollView,
   Pressable,
-  Image,
   Platform,
   StatusBar as RNStatusBar,
   StyleSheet,
 } from "react-native";
+import { Image } from "expo-image";
 import { VaultText as Text } from "../../components/common/VaultText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -344,7 +344,9 @@ export default function GameDetailsScreen() {
           <Image
             source={{ uri: game.cover_image_url }}
             style={styles.heroCoverImage}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={300}
+            cachePolicy="memory-disk"
           />
         ) : (
           <View style={styles.heroCoverPlaceholder}>

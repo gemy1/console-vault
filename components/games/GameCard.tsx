@@ -1,4 +1,5 @@
-import { View, Pressable, Image, StyleSheet, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { VaultText as Text } from '../common/VaultText';
 import { Gamepad2, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { Game } from '../../types/vault';
@@ -35,7 +36,13 @@ export function GameCard({ game, sellerName, onPress, onSellerPress }: GameCardP
     >
       {/* THUMBNAIL */}
       {game.cover_image_url ? (
-        <Image source={{ uri: game.cover_image_url }} style={styles.coverImage} />
+        <Image
+          source={{ uri: game.cover_image_url }}
+          style={styles.coverImage}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+        />
       ) : (
         <View style={styles.coverPlaceholder}>
           <Gamepad2 size={24} color={styles.placeholderIcon.color} strokeWidth={1.8} />

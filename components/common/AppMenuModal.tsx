@@ -51,7 +51,7 @@ import { useVaultSync } from "../../context/VaultSyncContext";
 import { useCustomAlert } from "../../context/AlertContext";
 import { usePersona, SUPPORTED_CURRENCIES } from "../../context/PersonaContext";
 import { SupportedCurrency } from "../../types/vault";
-import { AuthModal } from "../auth/AuthModal";
+import { useAuthModal } from "../../context/AuthModalContext";
 import { isSupabaseConfigured } from "../../services/supabase";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -71,11 +71,11 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
   const isNativeRTL = Platform.OS !== "web" && isRTL;
   const styles = useThemedStyles(createStyles);
   const { showAlert } = useCustomAlert();
+  const { openAuthModal } = useAuthModal();
   const { persona, setPersona, currency, setCurrency, currencyConfig } = usePersona();
 
   const animValue = useRef(new Animated.Value(0)).current;
   const [modalRendered, setModalRendered] = useState(visible);
-  const [authModalVisible, setAuthModalVisible] = useState(false);
 
   const handleCycleTheme = () => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
@@ -155,7 +155,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     }
   }, [visible]);
 
-  const handleDismiss = () => {
+  const handleDismiss = (onComplete?: () => void) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
@@ -165,7 +165,11 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
       easing: Easing.in(Easing.cubic),
       useNativeDriver: Platform.OS !== "web",
     }).start(() => {
+      setModalRendered(false);
       onClose();
+      if (typeof onComplete === "function") {
+        setTimeout(onComplete, Platform.OS === "ios" ? 260 : 60);
+      }
     });
   };
 
@@ -189,10 +193,9 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
-    handleDismiss();
-    setTimeout(() => {
+    handleDismiss(() => {
       router.push("/modal");
-    }, 120);
+    });
   };
 
   const handleSyncPress = async () => {
@@ -201,36 +204,44 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     } catch {}
 
     if (!isSupabaseConfigured) {
-      showAlert({
-        title: isRTL
-          ? "الخزينة المحلية (وضع غير متصل)"
-          : "Local Vault (Offline Mode)",
-        message: isRTL
-          ? "تطبيقك يعمل حالياً كخزينة محلية بالكامل، حيث يتم حفظ وتشفير كافة ألعابك ومبيعاتك بأمان على هذا الجهاز."
-          : "Your vault is operating in 100% offline local storage mode. All your games and data are safely encrypted and saved on this device.",
-        type: "info",
-        buttons: [{ text: isRTL ? "حسناً" : "Understood", style: "default" }],
+      handleDismiss(() => {
+        showAlert({
+          title: isRTL
+            ? "الخزينة المحلية (وضع غير متصل)"
+            : "Local Vault (Offline Mode)",
+          message: isRTL
+            ? "تطبيقك يعمل حالياً كخزينة محلية بالكامل، حيث يتم حفظ وتشفير كافة ألعابك ومبيعاتك بأمان على هذا الجهاز."
+            : "Your vault is operating in 100% offline local storage mode. All your games and data are safely encrypted and saved on this device.",
+          type: "info",
+          buttons: [{ text: isRTL ? "حسناً" : "Understood", style: "default" }],
+        });
       });
       return;
     }
 
     if (!authState.user) {
-      showAlert({
-        title: isRTL
-          ? "تسجيل الدخول للمزامنة السحابية"
-          : "Sign In Required for Cloud Sync",
-        message: isRTL
-          ? "المزامنة السحابية متوفرة ولكنك في وضع الضيف. سجّل الدخول الآن لتفعيل المزامنة الفورية عبر الأجهزة."
-          : "Cloud sync is available, but you are currently in Guest mode. Sign in to sync your vault across devices.",
-        type: "info",
-        buttons: [
-          {
-            text: isRTL ? "تسجيل الدخول" : "Sign In",
-            style: "default",
-            onPress: () => setAuthModalVisible(true),
-          },
-          { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
-        ],
+      handleDismiss(() => {
+        showAlert({
+          title: isRTL
+            ? "تسجيل الدخول للمزامنة السحابية"
+            : "Sign In Required for Cloud Sync",
+          message: isRTL
+            ? "المزامنة السحابية متوفرة ولكنك في وضع الضيف. سجّل الدخول الآن لتفعيل المزامنة الفورية عبر الأجهزة."
+            : "Cloud sync is available, but you are currently in Guest mode. Sign in to sync your vault across devices.",
+          type: "info",
+          buttons: [
+            {
+              text: isRTL ? "تسجيل الدخول" : "Sign In",
+              style: "default",
+              onPress: () => {
+                setTimeout(() => {
+                  openAuthModal();
+                }, Platform.OS === 'ios' ? 250 : 60);
+              },
+            },
+            { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
+          ],
+        });
       });
       return;
     }
@@ -249,10 +260,9 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
-    handleDismiss();
-    setTimeout(() => {
+    handleDismiss(() => {
       securityState.lockVault();
-    }, 220);
+    });
   };
 
   const handleResetVault = () => {
@@ -260,77 +270,76 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
 
-    if (authState.user) {
-      // Authenticated User: Offer choice between Local Only vs Local + Cloud
-      showAlert({
-        title: t("alertResetChoiceTitle"),
-        message: t("alertResetChoiceLoggedInMsg"),
-        type: "danger",
-        buttons: [
-          {
-            text: t("alertResetLocalAndCloud"),
-            subtext: t("alertResetLocalAndCloudSub"),
-            style: "destructive",
-            icon: Trash2,
-            onPress: async () => {
-              try {
-                Haptics.notificationAsync(
-                  Haptics.NotificationFeedbackType.Success,
-                );
-              } catch {}
-              await syncState.clearCloudAndLocalVault();
-              handleDismiss();
+    handleDismiss(() => {
+      if (authState.user) {
+        // Authenticated User: Offer choice between Local Only vs Local + Cloud
+        showAlert({
+          title: t("alertResetChoiceTitle"),
+          message: t("alertResetChoiceLoggedInMsg"),
+          type: "danger",
+          buttons: [
+            {
+              text: t("alertResetLocalAndCloud"),
+              subtext: t("alertResetLocalAndCloudSub"),
+              style: "destructive",
+              icon: Trash2,
+              onPress: async () => {
+                try {
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success,
+                  );
+                } catch {}
+                await syncState.clearCloudAndLocalVault();
+              },
             },
-          },
-          {
-            text: t("alertResetLocalOnly"),
-            subtext: t("alertResetLocalOnlySub"),
-            style: "secondary",
-            icon: HardDrive,
-            onPress: () => {
-              try {
-                Haptics.notificationAsync(
-                  Haptics.NotificationFeedbackType.Success,
-                );
-              } catch {}
-              syncState.clearLocalVault();
-              handleDismiss();
+            {
+              text: t("alertResetLocalOnly"),
+              subtext: t("alertResetLocalOnlySub"),
+              style: "secondary",
+              icon: HardDrive,
+              onPress: () => {
+                try {
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success,
+                  );
+                } catch {}
+                syncState.clearLocalVault();
+              },
             },
-          },
-          {
-            text: isRTL ? "إلغاء" : "Cancel",
-            style: "cancel",
-          },
-        ],
-      });
-    } else {
-      // Guest / Offline Mode: Clear local only with explicit disclaimer
-      showAlert({
-        title: t("alertResetTitle"),
-        message: t("alertResetGuestMsg"),
-        type: "warning",
-        buttons: [
-          {
-            text: t("alertResetConfirmGuest"),
-            style: "destructive",
-            icon: Trash2,
-            onPress: () => {
-              try {
-                Haptics.notificationAsync(
-                  Haptics.NotificationFeedbackType.Success,
-                );
-              } catch {}
-              syncState.clearLocalVault();
-              handleDismiss();
+            {
+              text: isRTL ? "إلغاء" : "Cancel",
+              style: "cancel",
             },
-          },
-          {
-            text: isRTL ? "إلغاء" : "Cancel",
-            style: "cancel",
-          },
-        ],
-      });
-    }
+          ],
+        });
+      } else {
+        // Guest / Offline Mode: Clear local only with explicit disclaimer
+        showAlert({
+          title: t("alertResetTitle"),
+          message: t("alertResetGuestMsg"),
+          type: "warning",
+          buttons: [
+            {
+              text: t("alertResetConfirmGuest"),
+              style: "destructive",
+              icon: Trash2,
+              onPress: () => {
+                try {
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success,
+                  );
+                } catch {}
+                syncState.clearLocalVault();
+              },
+            },
+            {
+              text: isRTL ? "إلغاء" : "Cancel",
+              style: "cancel",
+            },
+          ],
+        });
+      }
+    });
   };
 
   const handleOpenLinkedIn = () => {
@@ -374,12 +383,12 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
       visible={modalRendered}
       transparent={true}
       animationType="none"
-      onRequestClose={handleDismiss}
+      onRequestClose={() => handleDismiss()}
     >
       <View style={styles.container}>
         {/* BACKDROP */}
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-          <Pressable style={styles.backdropPressable} onPress={handleDismiss} />
+          <Pressable style={styles.backdropPressable} onPress={() => handleDismiss()} />
         </Animated.View>
 
         {/* DRAWER */}
@@ -407,7 +416,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
               </View>
             </View>
             <Pressable
-              onPress={handleDismiss}
+              onPress={() => handleDismiss()}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
             >
@@ -552,7 +561,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                       <Text style={styles.dangerPillText}>{isRTL ? "خروج" : "Sign Out"}</Text>
                     </Pressable>
                   ) : (
-                    <Pressable onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} setAuthModalVisible(true); }} style={styles.primaryPill}>
+                    <Pressable onPress={() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {} handleDismiss(() => openAuthModal()); }} style={styles.primaryPill}>
                       <LogIn size={12} color="#00D2FF" strokeWidth={2.2} />
                       <Text style={styles.primaryPillText}>{isRTL ? "دخول" : "Sign In"}</Text>
                     </Pressable>
@@ -640,9 +649,6 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
               </View>
             </View>
           </ScrollView>
-
-          {/* AUTH MODAL */}
-          <AuthModal visible={authModalVisible} onClose={() => setAuthModalVisible(false)} />
 
           {/* ── FOOTER ── */}
           <View style={styles.footer}>

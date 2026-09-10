@@ -3,7 +3,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  Image,
   RefreshControl,
   Linking,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   Platform,
   Dimensions,
 } from "react-native";
+import { Image } from "expo-image";
 import { VaultText as Text } from "../../components/common/VaultText";
 import { useRouter } from "expo-router";
 import * as Haptics from '@/utils/haptics';
@@ -144,7 +144,10 @@ export default function DashboardScreen() {
   });
 
   // Seller KPI calculations
-  const activeSellerAllocs = allocations.filter((a) => a.status === 'Active');
+  const activeSellerAllocs = useMemo(
+    () => allocations.filter((a) => a.status === 'Active' && Boolean(gamesMap[a.game_id])),
+    [allocations, gamesMap]
+  );
   const totalSalesRevenue = activeSellerAllocs.reduce((sum, a) => sum + (a.sale_price || 0), 0);
   const totalInventoryCost = games.reduce((sum, g) => sum + (g.cost_price || 0), 0);
   const netSellerProfit = totalSalesRevenue - totalInventoryCost;
@@ -549,7 +552,13 @@ export default function DashboardScreen() {
                   >
                     {/* GAME COVER */}
                     {game?.cover_image_url ? (
-                      <Image source={{ uri: game.cover_image_url }} style={styles.recentSaleImage} />
+                      <Image
+                        source={{ uri: game.cover_image_url }}
+                        style={styles.recentSaleImage}
+                        contentFit="cover"
+                        transition={200}
+                        cachePolicy="memory-disk"
+                      />
                     ) : (
                       <View style={styles.recentSalePlaceholder}>
                         <Gamepad2 size={20} color={styles.mutedColor.color} />
@@ -647,6 +656,9 @@ export default function DashboardScreen() {
                           <Image
                             source={{ uri: game.cover_image_url }}
                             style={styles.lockedCoverImage}
+                            contentFit="cover"
+                            transition={200}
+                            cachePolicy="memory-disk"
                           />
                         ) : (
                           <View style={styles.lockedCoverPlaceholder}>

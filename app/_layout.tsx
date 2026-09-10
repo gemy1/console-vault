@@ -105,6 +105,7 @@ function RootNavigator() {
 }
 
 import { PersonaProvider } from "../context/PersonaContext";
+import { AuthModalProvider } from "../context/AuthModalContext";
 
 function VaultAppProviders({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -116,8 +117,10 @@ function VaultAppProviders({ children }: { children: React.ReactNode }) {
           <VaultThemeProvider>
             <PersonaProvider>
               <AlertProvider>
-                {children}
-                <BiometricLockScreen />
+                <AuthModalProvider>
+                  {children}
+                  <BiometricLockScreen />
+                </AuthModalProvider>
               </AlertProvider>
             </PersonaProvider>
           </VaultThemeProvider>

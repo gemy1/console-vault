@@ -9,8 +9,8 @@ import {
   Platform,
   StyleSheet,
   Animated,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
 import { useSwipeDownModal } from '../../hooks/useSwipeDownModal';
@@ -90,6 +90,7 @@ export function GameFormModal({
 
   const [title, setTitle] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
+  const [coverImageError, setCoverImageError] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>('Primary');
   const [platform, setPlatform] = useState<ConsolePlatform>('PS5');
   const [costPrice, setCostPrice] = useState('0');
@@ -378,17 +379,23 @@ export function GameFormModal({
                   placeholder={t('fieldCoverUrlPlaceholder')}
                   placeholderTextColor={styles.placeholder.color}
                   value={coverUrl}
-                  onChangeText={setCoverUrl}
+                  onChangeText={(val) => {
+                    setCoverUrl(val);
+                    setCoverImageError(false);
+                  }}
                   autoCapitalize="none"
                   style={[styles.inCardInput, styles.coverInput, isRTL && styles.rtlText]}
                 />
-                {/* Thumbnail — same height as input via alignSelf stretch */}
+                {/* Fixed-size Thumbnail */}
                 <View style={styles.coverThumbContainer}>
-                  {isValidCoverUrl ? (
+                  {isValidCoverUrl && !coverImageError ? (
                     <Image
                       source={{ uri: coverUrl.trim() }}
                       style={styles.coverThumb}
-                      resizeMode="cover"
+                      contentFit="cover"
+                      transition={150}
+                      cachePolicy="memory-disk"
+                      onError={() => setCoverImageError(true)}
                     />
                   ) : (
                     <View style={styles.coverThumbPlaceholder}>
@@ -927,30 +934,34 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     coverArtRow: {
       flexDirection: 'row',
       gap: 10,
-      alignItems: 'stretch',
-      marginBottom: 4,
+      alignItems: 'center',
+      marginBottom: 12,
     },
     coverThumbContainer: {
-      width: 46,
-      alignSelf: 'stretch',
+      width: 48,
+      height: 48,
       borderRadius: 12,
       overflow: 'hidden',
       borderWidth: 1,
       borderColor: colors.border,
+      backgroundColor: colors.surface,
       flexShrink: 0,
     },
     coverThumb: {
-      width: '100%',
-      height: '100%',
+      width: 48,
+      height: 48,
+      borderRadius: 11,
     },
     coverThumbPlaceholder: {
-      flex: 1,
+      width: 48,
+      height: 48,
       backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },
     coverInput: {
       flex: 1,
+      height: 48,
       marginBottom: 0,
     },
 

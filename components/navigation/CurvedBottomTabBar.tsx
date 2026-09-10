@@ -174,12 +174,12 @@ export function CurvedBottomTabBar({
             <LinearGradient id="waveBarGrad" x1="0" y1="0" x2="0" y2="1">
               <Stop
                 offset="0%"
-                stopColor={colors.isDark ? "#111B30" : "#FFFFFF"}
+                stopColor={colors.isDark ? "#000000" : "#FFFFFF"}
                 stopOpacity={1}
               />
               <Stop
                 offset="100%"
-                stopColor={colors.isDark ? "#080E1A" : "#F1F5F9"}
+                stopColor={colors.isDark ? "#000000" : "#F1F5F9"}
                 stopOpacity={1}
               />
             </LinearGradient>

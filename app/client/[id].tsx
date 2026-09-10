@@ -6,8 +6,8 @@ import {
   StyleSheet,
   Platform,
   Linking,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { VaultText as Text } from '../../components/common/VaultText';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,10 +75,6 @@ export default function ClientDetailsScreen() {
     return clients.find((c) => c.id === id) || null;
   }, [clients, id]);
 
-  const allocations = useMemo(() => {
-    return syncAllocations.filter((a) => a.client_id === id);
-  }, [syncAllocations, id]);
-
   const gamesMap = useMemo(() => {
     const map: Record<string, Game> = {};
     games.forEach((g) => {
@@ -86,6 +82,10 @@ export default function ClientDetailsScreen() {
     });
     return map;
   }, [games]);
+
+  const allocations = useMemo(() => {
+    return syncAllocations.filter((a) => a.client_id === id && Boolean(gamesMap[a.game_id]));
+  }, [syncAllocations, id, gamesMap]);
 
   if (!client) {
     return (
@@ -411,6 +411,9 @@ export default function ClientDetailsScreen() {
                         <Image
                           source={{ uri: game.cover_image_url }}
                           style={styles.gameCoverImg}
+                          contentFit="cover"
+                          transition={200}
+                          cachePolicy="memory-disk"
                         />
                       ) : (
                         <View style={styles.gameCoverPlaceholder}>

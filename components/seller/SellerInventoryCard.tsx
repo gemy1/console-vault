@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Pressable, Image, StyleSheet, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { VaultText as Text } from '../common/VaultText';
 import {
   Gamepad2,
@@ -70,7 +71,13 @@ export function SellerInventoryCard({
 
         {/* COVER */}
         {game.cover_image_url ? (
-          <Image source={{ uri: game.cover_image_url }} style={styles.cover} />
+          <Image
+            source={{ uri: game.cover_image_url }}
+            style={styles.cover}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={styles.coverPlaceholder}>
             <Gamepad2 size={22} color={styles.placeholderIcon.color} strokeWidth={1.8} />

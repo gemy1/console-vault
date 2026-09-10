@@ -3,6 +3,7 @@ import { Game, Seller, Client, ClientAllocation, SyncStatus } from '../types/vau
 import { OfflineVault, VaultStorage } from '../services/storage';
 import { SyncQueue } from '../services/syncQueue';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { toSafeUUID } from '../utils/uuid';
 
 interface VaultSyncContextType {
   games: Game[];
@@ -89,17 +90,41 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       ]);
 
       if (gamesRes.data && sellersRes.data) {
+        const cloudGames = gamesRes.data as Game[];
         const cloudClients = (clientsRes.data || []) as Client[];
-        const cloudAllocations = (allocationsRes.data || []) as ClientAllocation[];
+        const rawCloudAllocations = (allocationsRes.data || []) as ClientAllocation[];
+
+        // Filter out any orphaned allocations that point to deleted/non-existent games
+        const validGameIdSet = new Set<string>();
+        cloudGames.forEach((g) => {
+          validGameIdSet.add(g.id);
+          validGameIdSet.add(toSafeUUID(g.id));
+        });
+
+        const cloudAllocations: ClientAllocation[] = [];
+        const orphanAllocIds: string[] = [];
+
+        rawCloudAllocations.forEach((alloc) => {
+          if (validGameIdSet.has(alloc.game_id) || validGameIdSet.has(toSafeUUID(alloc.game_id))) {
+            cloudAllocations.push(alloc);
+          } else {
+            orphanAllocIds.push(alloc.id);
+          }
+        });
+
+        // Clean up orphaned allocations from Supabase in background
+        if (orphanAllocIds.length > 0) {
+          Promise.resolve(supabase.from('client_allocations').delete().in('id', orphanAllocIds)).catch(() => {});
+        }
 
         if (
-          gamesRes.data.length > 0 ||
+          cloudGames.length > 0 ||
           sellersRes.data.length > 0 ||
           cloudClients.length > 0 ||
           cloudAllocations.length > 0
         ) {
           OfflineVault.hydrateVault(
-            gamesRes.data as Game[],
+            cloudGames,
             sellersRes.data as Seller[],
             cloudClients,
             cloudAllocations
@@ -122,6 +147,9 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       setSyncStatus('local_only');
       return false;
     }
+    // Safeguard: If user has local vault items but queue was empty, enqueue them for upload
+    SyncQueue.enqueueLocalVaultIfEmpty(userId);
+
     const result = await SyncQueue.flush(userId);
     if (result.success && isSupabaseConfigured && userId) {
       await pullFromCloud();
@@ -176,15 +204,33 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
 
   const deleteGame = useCallback(
     (id: string): boolean => {
+      const safeId = toSafeUUID(id);
+      const currentAllocs = OfflineVault.getAllocations();
+      const gameAllocs = currentAllocs.filter(
+        (a) => a.game_id === id || a.game_id === safeId || toSafeUUID(a.game_id) === safeId
+      );
+
       const success = OfflineVault.deleteGame(id);
       if (success) {
         setGames([...OfflineVault.getGames()]);
         setAllocations([...OfflineVault.getAllocations()]);
+
+        // Enqueue deletion for all associated allocations in cloud
+        for (const alloc of gameAllocs) {
+          SyncQueue.enqueue({
+            entity: 'client_allocation',
+            action: 'DELETE',
+            payload: { id: alloc.id },
+          });
+        }
+
+        // Enqueue deletion for the game itself
         SyncQueue.enqueue({
           entity: 'game',
           action: 'DELETE',
           payload: { id },
         });
+
         SyncQueue.flush(userId).catch(() => {});
       }
       return success;
