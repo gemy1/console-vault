@@ -387,12 +387,14 @@ export default function SellerDetailsScreen() {
       </ScrollView>
 
       {/* REUSABLE SELLER FORM MODAL */}
-      <SellerFormModal
-        visible={editModalVisible}
-        initialSeller={seller}
-        onClose={() => setEditModalVisible(false)}
-        onSave={handleSaveSeller}
-      />
+      {editModalVisible && (
+        <SellerFormModal
+          visible={editModalVisible}
+          initialSeller={seller}
+          onClose={() => setEditModalVisible(false)}
+          onSave={handleSaveSeller}
+        />
+      )}
     </View>
   );
 }

@@ -178,10 +178,13 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     return result.success;
   }, [userId, pullFromCloud, refreshData]);
 
-  // When user logs in with a valid userId, automatically flush pending items and pull latest
+  // When user logs in with a valid userId, defer sync slightly so initial UI mount & transitions stay at 60 FPS
   useEffect(() => {
     if (isSupabaseConfigured && userId) {
-      syncNow();
+      const timer = setTimeout(() => {
+        syncNow();
+      }, 1200);
+      return () => clearTimeout(timer);
     }
   }, [userId, syncNow]);
 

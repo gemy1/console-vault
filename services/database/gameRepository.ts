@@ -69,6 +69,52 @@ export const GameRepository = {
   },
 
   /**
+   * Fast projection query for list feeds (Dashboard, Vault, Sellers).
+   * Omits heavy credentials and notes to drastically reduce SQLite deserialization
+   * time and memory footprint during scrolling.
+   */
+  getSummaries: async (): Promise<Game[]> => {
+    const db = await getDatabase();
+    const rows = await db.getAllAsync<SQLiteGameRow>(
+      `SELECT id, user_id, seller_id, title, cover_image_url, account_type,
+              platform, status, purchase_date, warranty_months, psn_email,
+              NULL as psn_password, NULL as backup_codes, NULL as notes,
+              cost_price, currency, is_inventory, created_at, updated_at
+       FROM games ORDER BY created_at DESC;`
+    );
+    return rows.map(mapRowToGame);
+  },
+
+  /**
+   * Paginated summary query with limit and offset.
+   */
+  getPaginatedSummaries: async (options: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+  } = {}): Promise<Game[]> => {
+    const { limit = 20, offset = 0, status } = options;
+    const db = await getDatabase();
+    let query = `
+      SELECT id, user_id, seller_id, title, cover_image_url, account_type,
+             platform, status, purchase_date, warranty_months, psn_email,
+             NULL as psn_password, NULL as backup_codes, NULL as notes,
+             cost_price, currency, is_inventory, created_at, updated_at
+      FROM games
+    `;
+    const params: (string | number)[] = [];
+    if (status && status !== 'All') {
+      query += ` WHERE status = ?`;
+      params.push(status);
+    }
+    query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?;`;
+    params.push(limit, offset);
+
+    const rows = await db.getAllAsync<SQLiteGameRow>(query, params);
+    return rows.map(mapRowToGame);
+  },
+
+  /**
    * Fast O(1) primary key lookup.
    */
   getById: async (id: string): Promise<Game | null> => {

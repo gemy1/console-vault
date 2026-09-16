@@ -78,55 +78,45 @@ const hydrationPromise = (async () => {
 
       if (sqliteGames.length > 0) {
         rebuildGamesIndex(sqliteGames);
-        memoryCache.set(GAMES_STORAGE_KEY, JSON.stringify(sqliteGames));
       } else {
         rebuildGamesIndex([]);
-        memoryCache.set(GAMES_STORAGE_KEY, JSON.stringify([]));
       }
 
       if (sqliteSellers.length > 0) {
         rebuildSellersIndex(sqliteSellers);
-        memoryCache.set(SELLERS_STORAGE_KEY, JSON.stringify(sqliteSellers));
       } else {
         rebuildSellersIndex([]);
-        memoryCache.set(SELLERS_STORAGE_KEY, JSON.stringify([]));
       }
 
       if (sqliteClients.length > 0) {
         rebuildClientsIndex(sqliteClients);
-        memoryCache.set(CLIENTS_STORAGE_KEY, JSON.stringify(sqliteClients));
       } else {
         rebuildClientsIndex([]);
-        memoryCache.set(CLIENTS_STORAGE_KEY, JSON.stringify([]));
       }
 
-      // Sanitize allocations: purge any orphaned allocations that reference non-existent games
-      const validGameIds = new Set<string>();
-      sqliteGames.forEach((g) => {
-        validGameIds.add(g.id);
-        validGameIds.add(toSafeUUID(g.id));
-      });
+      if (sqliteAllocations.length > 0) {
+        rebuildAllocationsIndex(sqliteAllocations);
+      } else {
+        rebuildAllocationsIndex([]);
+      }
 
-      const sanitizedAllocations = sqliteAllocations.filter(
-        (a) => validGameIds.has(a.game_id) || validGameIds.has(toSafeUUID(a.game_id))
-      );
+      // Sanitize allocations in background: purge orphaned allocations after cold start
+      setTimeout(() => {
+        const validGameIds = new Set<string>();
+        sqliteGames.forEach((g) => {
+          validGameIds.add(g.id);
+          validGameIds.add(toSafeUUID(g.id));
+        });
 
-      if (sanitizedAllocations.length !== sqliteAllocations.length) {
         const orphanIds = sqliteAllocations
           .filter((a) => !validGameIds.has(a.game_id) && !validGameIds.has(toSafeUUID(a.game_id)))
           .map((a) => a.id);
-        orphanIds.forEach((oId) => {
-          AllocationRepository.delete(oId).catch(() => {});
-        });
-      }
-
-      if (sanitizedAllocations.length > 0) {
-        rebuildAllocationsIndex(sanitizedAllocations);
-        memoryCache.set(ALLOCATIONS_STORAGE_KEY, JSON.stringify(sanitizedAllocations));
-      } else {
-        rebuildAllocationsIndex([]);
-        memoryCache.set(ALLOCATIONS_STORAGE_KEY, JSON.stringify([]));
-      }
+        if (orphanIds.length > 0) {
+          orphanIds.forEach((oId) => {
+            AllocationRepository.delete(oId).catch(() => {});
+          });
+        }
+      }, 600);
     } catch (e) {
       console.warn('[VaultStorage] SQLite init note:', e);
     }

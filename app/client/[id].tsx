@@ -564,12 +564,14 @@ export default function ClientDetailsScreen() {
       </ScrollView>
 
       {/* EDIT CLIENT MODAL */}
-      <ClientFormModal
-        visible={editClientModalVisible}
-        onClose={() => setEditClientModalVisible(false)}
-        onSave={handleSaveClient}
-        initialClient={client}
-      />
+      {editClientModalVisible && (
+        <ClientFormModal
+          visible={editClientModalVisible}
+          onClose={() => setEditClientModalVisible(false)}
+          onSave={handleSaveClient}
+          initialClient={client}
+        />
+      )}
 
       {/* WHATSAPP DISPATCH MODAL */}
       {dispatchGame && dispatchAllocation && (

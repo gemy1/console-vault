@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   View,
   ScrollView,
+  FlatList,
   Pressable,
   RefreshControl,
   Linking,
@@ -66,6 +67,7 @@ export default function DashboardScreen() {
   const [selectedCategory, setSelectedCategory] = useState<
     "All" | "Active" | "Locked"
   >("All");
+  const [dashboardGamesLimit, setDashboardGamesLimit] = useState(10);
   const [sellerModalVisible, setSellerModalVisible] = useState(false);
   const [gameModalVisible, setGameModalVisible] = useState(false);
   const [clientModalVisible, setClientModalVisible] = useState(false);
@@ -194,6 +196,10 @@ export default function DashboardScreen() {
     if (selectedCategory === "Locked") return g.status === "Locked";
     return true;
   });
+
+  const visibleGames = useMemo(() => {
+    return displayedGames.slice(0, dashboardGamesLimit);
+  }, [displayedGames, dashboardGamesLimit]);
 
   const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     const newClient: Client = {
@@ -825,27 +831,60 @@ export default function DashboardScreen() {
                   )}
                 </View>
               ) : (
-                displayedGames.map((game) => {
-                  const seller = game.seller_id
-                    ? sellerMap.get(game.seller_id)
-                    : undefined;
-                  return (
-                    <GameCard
-                      key={game.id}
-                      game={game}
-                      sellerName={seller?.name}
-                      onPress={() => {
-                        try {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        } catch {}
-                        router.push(`/game/${game.id}`);
-                      }}
-                      onSellerPress={
-                        seller ? () => router.push(`/seller/${seller.id}`) : undefined
-                      }
-                    />
-                  );
-                })
+                <>
+                  {visibleGames.map((game) => {
+                    const seller = game.seller_id
+                      ? sellerMap.get(game.seller_id)
+                      : undefined;
+                    return (
+                      <GameCard
+                        key={game.id}
+                        game={game}
+                        sellerName={seller?.name}
+                        onPress={() => {
+                          try {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          } catch {}
+                          router.push(`/game/${game.id}`);
+                        }}
+                        onSellerPress={
+                          seller ? () => router.push(`/seller/${seller.id}`) : undefined
+                        }
+                      />
+                    );
+                  })}
+
+                  {displayedGames.length > dashboardGamesLimit && (
+                    <View style={styles.loadMoreRow}>
+                      <Pressable
+                        onPress={() => {
+                          try {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          } catch {}
+                          setDashboardGamesLimit((prev) => prev + 15);
+                        }}
+                        style={({ pressed }) => [
+                          styles.loadMoreBtn,
+                          pressed && styles.loadMoreBtnPressed,
+                        ]}
+                      >
+                        <Text style={styles.loadMoreBtnText}>
+                          {isRTL
+                            ? `عرض المزيد (${visibleGames.length} من ${displayedGames.length})`
+                            : `Show More (${visibleGames.length} of ${displayedGames.length})`}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => router.push('/(tabs)/vault')}
+                        style={styles.viewAllVaultLink}
+                      >
+                        <Text style={styles.viewAllVaultLinkText}>
+                          {isRTL ? 'فتح الخزينة بالكامل ←' : 'Open Full Vault →'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </>
               )}
             </View>
           </>
@@ -853,28 +892,34 @@ export default function DashboardScreen() {
       </ScrollView>
 
       {/* QUICK SELLER REGISTRATION MODAL */}
-      <SellerFormModal
-        visible={sellerModalVisible}
-        onClose={() => setSellerModalVisible(false)}
-        onSave={handleSaveSeller}
-      />
+      {sellerModalVisible && (
+        <SellerFormModal
+          visible={sellerModalVisible}
+          onClose={() => setSellerModalVisible(false)}
+          onSave={handleSaveSeller}
+        />
+      )}
 
       {/* QUICK GAME REGISTRATION MODAL */}
-      <GameFormModal
-        visible={gameModalVisible}
-        onClose={() => setGameModalVisible(false)}
-        onSave={handleSaveGame}
-      />
+      {gameModalVisible && (
+        <GameFormModal
+          visible={gameModalVisible}
+          onClose={() => setGameModalVisible(false)}
+          onSave={handleSaveGame}
+        />
+      )}
 
       {/* QUICK CLIENT REGISTRATION MODAL */}
-      <ClientFormModal
-        visible={clientModalVisible}
-        onClose={() => setClientModalVisible(false)}
-        onSave={handleSaveClient}
-      />
+      {clientModalVisible && (
+        <ClientFormModal
+          visible={clientModalVisible}
+          onClose={() => setClientModalVisible(false)}
+          onSave={handleSaveClient}
+        />
+      )}
 
       {/* 1-TAP WHATSAPP DISPATCH MODAL */}
-      {dispatchAllocation && gamesMap[dispatchAllocation.game_id] && (
+      {dispatchModalVisible && dispatchAllocation && gamesMap[dispatchAllocation.game_id] && (
         <WhatsAppDispatchModal
           visible={dispatchModalVisible}
           game={gamesMap[dispatchAllocation.game_id]}
@@ -1370,5 +1415,39 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       backgroundColor: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7',
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    loadMoreRow: {
+      marginTop: 14,
+      marginBottom: 8,
+      alignItems: 'center',
+      gap: 10,
+    },
+    loadMoreBtn: {
+      backgroundColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.12)' : 'rgba(0, 112, 209, 0.08)',
+      paddingVertical: 12,
+      paddingHorizontal: 22,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(0, 210, 255, 0.3)' : 'rgba(0, 112, 209, 0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadMoreBtnPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.98 }],
+    },
+    loadMoreBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.accent,
+    },
+    viewAllVaultLink: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+    },
+    viewAllVaultLinkText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
     },
   });

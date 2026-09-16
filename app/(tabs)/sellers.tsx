@@ -2,8 +2,10 @@ import { useState, useMemo } from 'react';
 import {
   View,
   ScrollView,
+  FlatList,
   RefreshControl,
   StyleSheet,
+  Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -200,112 +202,143 @@ export default function SellersScreen() {
         subtitle={isSeller ? t('clientsSubtitle') : t('headerSellersSubtitle')}
       />
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        stickyHeaderIndices={[0]}
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={handleScroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={styles.accentIcon.color}
-          />
-        }
-      >
-        {/* STICKY QUICK REGISTER TOP WIDGET */}
-        <View style={[styles.stickyContainer, isSticky && styles.stickyContainerActive]}>
-          <QuickAddWidget
-            actions={[
-              {
-                label: isSeller ? t('quickAddClient') : t('quickRegisterNewSeller'),
-                sublabel: isSeller
-                  ? (isRTL ? 'تسجيل مشترٍ جديد ورقم الواتساب' : 'Add new customer & WhatsApp details')
-                  : t('quickRegisterNewSellerSub'),
-                icon: 'seller',
-                onPress: handleOpenAdd,
-              },
-            ]}
-          />
-        </View>
-
-        {/* LIST SECTION */}
-        <View style={styles.listContainer}>
-          {isSeller ? (
-            // SELLER MODE: CLIENT DIRECTORY
-            clients.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Users
-                  size={48}
-                  color={styles.emptyIcon.color}
-                  strokeWidth={1.5}
-                  style={styles.emptyIconStyle}
-                />
-                <Text style={styles.emptyTitle}>{t('clientNotFound')}</Text>
-                <Text style={styles.emptySubtitle}>{t('noClientsSub')}</Text>
-              </View>
-            ) : (
-              clients.map((client) => (
-                <ClientCard
-                  key={client.id}
-                  client={client}
-                  allocations={allocations}
-                  gamesMap={gamesMap}
-                  onPress={() => router.push(`/client/${client.id}`)}
-                  onEdit={() => handleOpenEditClient(client)}
-                  onDelete={() => handleDeleteClient(client)}
-                  onDispatchWhatsApp={handleDispatchReceipt}
-                />
-              ))
-            )
-          ) : (
-            // GAMER MODE: DIGITAL SELLERS DIRECTORY
-            sellers.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <ShieldCheck
-                  size={48}
-                  color={styles.emptyIcon.color}
-                  strokeWidth={1.5}
-                  style={styles.emptyIconStyle}
-                />
-                <Text style={styles.emptyTitle}>{t('noSellersFound')}</Text>
-                <Text style={styles.emptySubtitle}>{t('noSellersFoundSub')}</Text>
-              </View>
-            ) : (
-              sellers.map((seller) => (
-                <SellerCard
-                  key={seller.id}
-                  seller={seller}
-                  gamesCount={getSellerGamesCount(seller.id)}
-                  onPress={() => router.push(`/seller/${seller.id}`)}
-                  onEdit={() => handleOpenEdit(seller)}
-                />
-              ))
-            )
+      {isSeller ? (
+        <FlatList
+          data={clients}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item: client }) => (
+            <ClientCard
+              key={client.id}
+              client={client}
+              allocations={allocations}
+              gamesMap={gamesMap}
+              onPress={() => router.push(`/client/${client.id}`)}
+              onEdit={() => handleOpenEditClient(client)}
+              onDelete={() => handleDeleteClient(client)}
+              onDispatchWhatsApp={handleDispatchReceipt}
+            />
           )}
-        </View>
-      </ScrollView>
+          ListHeaderComponent={
+            <View style={[styles.stickyContainer, isSticky && styles.stickyContainerActive]}>
+              <QuickAddWidget
+                actions={[
+                  {
+                    label: t('quickAddClient'),
+                    sublabel: isRTL ? 'تسجيل مشترٍ جديد ورقم الواتساب' : 'Add new customer & WhatsApp details',
+                    icon: 'seller',
+                    onPress: handleOpenAdd,
+                  },
+                ]}
+              />
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Users
+                size={48}
+                color={styles.emptyIcon.color}
+                strokeWidth={1.5}
+                style={styles.emptyIconStyle}
+              />
+              <Text style={styles.emptyTitle}>{t('clientNotFound')}</Text>
+              <Text style={styles.emptySubtitle}>{t('noClientsSub')}</Text>
+            </View>
+          }
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={styles.accentIcon.color}
+            />
+          }
+        />
+      ) : (
+        <FlatList
+          data={sellers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item: seller }) => (
+            <SellerCard
+              key={seller.id}
+              seller={seller}
+              gamesCount={getSellerGamesCount(seller.id)}
+              onPress={() => router.push(`/seller/${seller.id}`)}
+              onEdit={() => handleOpenEdit(seller)}
+            />
+          )}
+          ListHeaderComponent={
+            <View style={[styles.stickyContainer, isSticky && styles.stickyContainerActive]}>
+              <QuickAddWidget
+                actions={[
+                  {
+                    label: t('quickRegisterNewSeller'),
+                    sublabel: t('quickRegisterNewSellerSub'),
+                    icon: 'seller',
+                    onPress: handleOpenAdd,
+                  },
+                ]}
+              />
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <ShieldCheck
+                size={48}
+                color={styles.emptyIcon.color}
+                strokeWidth={1.5}
+                style={styles.emptyIconStyle}
+              />
+              <Text style={styles.emptyTitle}>{t('noSellersFound')}</Text>
+              <Text style={styles.emptySubtitle}>{t('noSellersFoundSub')}</Text>
+            </View>
+          }
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={styles.accentIcon.color}
+            />
+          }
+        />
+      )}
 
       {/* GAMER: SELLER FORM MODAL */}
-      <SellerFormModal
-        visible={modalVisible}
-        initialSeller={editingSeller}
-        onClose={() => setModalVisible(false)}
-        onSave={handleSaveSeller}
-      />
+      {modalVisible && (
+        <SellerFormModal
+          visible={modalVisible}
+          initialSeller={editingSeller}
+          onClose={() => setModalVisible(false)}
+          onSave={handleSaveSeller}
+        />
+      )}
 
       {/* SELLER: CLIENT FORM MODAL */}
-      <ClientFormModal
-        visible={clientModalVisible}
-        initialClient={editingClient}
-        onClose={() => setClientModalVisible(false)}
-        onSave={handleSaveClient}
-      />
+      {clientModalVisible && (
+        <ClientFormModal
+          visible={clientModalVisible}
+          initialClient={editingClient}
+          onClose={() => setClientModalVisible(false)}
+          onSave={handleSaveClient}
+        />
+      )}
 
       {/* 1-TAP WHATSAPP DISPATCH MODAL */}
-      {dispatchAllocation && gamesMap[dispatchAllocation.game_id] && (
+      {dispatchModalVisible && dispatchAllocation && gamesMap[dispatchAllocation.game_id] && (
         <WhatsAppDispatchModal
           visible={dispatchModalVisible}
           game={gamesMap[dispatchAllocation.game_id]}

@@ -41,7 +41,7 @@ export function MenuToggleButton({ size = 46, onPress }: MenuToggleButtonProps) 
         <Menu size={Math.round(size * 0.46)} color={styles.icon.color} strokeWidth={2.3} />
       </Pressable>
 
-      {!onPress && (
+      {!onPress && modalVisible && (
         <AppMenuModal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}

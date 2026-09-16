@@ -1267,32 +1267,38 @@ export default function GameDetailsScreen() {
       </ScrollView>
 
       {/* CREDENTIAL REPLACEMENT MODAL */}
-      <ReplaceCredentialsModal
-        visible={replaceModalVisible}
-        onClose={() => setReplaceModalVisible(false)}
-        onSave={handleCredentialReplacement}
-      />
+      {replaceModalVisible && (
+        <ReplaceCredentialsModal
+          visible={replaceModalVisible}
+          onClose={() => setReplaceModalVisible(false)}
+          onSave={handleCredentialReplacement}
+        />
+      )}
 
       {/* EDIT GAME DETAILS MODAL */}
-      <GameFormModal
-        visible={editModalVisible}
-        initialGame={game}
-        onClose={() => setEditModalVisible(false)}
-        onSave={handleSaveEditedGame}
-      />
+      {editModalVisible && (
+        <GameFormModal
+          visible={editModalVisible}
+          initialGame={game}
+          onClose={() => setEditModalVisible(false)}
+          onSave={handleSaveEditedGame}
+        />
+      )}
 
       {/* SELLER HUB: SLOT ALLOCATION MODAL */}
-      <SlotAllocationModal
-        visible={slotModalVisible}
-        game={game}
-        preselectedSlot={selectedSlotForAllocation}
-        existingAllocation={editingAllocation}
-        onClose={() => setSlotModalVisible(false)}
-        onAllocated={handleSlotAllocated}
-      />
+      {slotModalVisible && (
+        <SlotAllocationModal
+          visible={slotModalVisible}
+          game={game}
+          preselectedSlot={selectedSlotForAllocation}
+          existingAllocation={editingAllocation}
+          onClose={() => setSlotModalVisible(false)}
+          onAllocated={handleSlotAllocated}
+        />
+      )}
 
       {/* SELLER HUB: 1-TAP WHATSAPP DISPATCH MODAL */}
-      {selectedDispatchAllocation && (
+      {dispatchModalVisible && selectedDispatchAllocation && (
         <WhatsAppDispatchModal
           visible={dispatchModalVisible}
           game={game}

@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   View,
   TextInput,
   ScrollView,
+  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -263,18 +264,47 @@ export default function VaultScreen() {
       </View>
 
       {/* GAMES / INVENTORY LIST */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={styles.accentTint.color}
-          />
-        }
-      >
-        {filteredGames.length === 0 ? (
+      <FlatList
+        data={filteredGames}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: game }) => {
+          if (isSeller) {
+            return (
+              <SellerInventoryCard
+                key={`seller-${game.id}`}
+                game={game}
+                allocations={allocations}
+                clientsMap={clientsMap}
+                onPress={() => {
+                  try {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  } catch {}
+                  router.push(`/game/${game.id}`);
+                }}
+                onSellSlot={handleOpenSellSlot}
+                onManageSlot={handleOpenManageSlot}
+                onDispatchWhatsApp={handleOpenDispatchWhatsApp}
+              />
+            );
+          }
+
+          const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
+          return (
+            <GameCard
+              key={`buyer-${game.id}`}
+              game={game}
+              sellerName={seller?.name}
+              onPress={() => {
+                try {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                } catch {}
+                router.push(`/game/${game.id}`);
+              }}
+              onSellerPress={seller ? () => router.push(`/seller/${seller.id}`) : undefined}
+            />
+          );
+        }}
+        ListEmptyComponent={
           <View style={styles.emptyContainer}>
             {isSeller ? (
               <Package size={48} color={styles.searchIcon.color} strokeWidth={1.5} style={styles.emptyIconMargin} />
@@ -292,56 +322,33 @@ export default function VaultScreen() {
                 : t('vaultEmptySub')}
             </Text>
           </View>
-        ) : (
-          filteredGames.map((game) => {
-            if (isSeller) {
-              return (
-                <SellerInventoryCard
-                  key={`seller-${game.id}`}
-                  game={game}
-                  allocations={allocations}
-                  clientsMap={clientsMap}
-                  onPress={() => {
-                    try {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    } catch {}
-                    router.push(`/game/${game.id}`);
-                  }}
-                  onSellSlot={handleOpenSellSlot}
-                  onManageSlot={handleOpenManageSlot}
-                  onDispatchWhatsApp={handleOpenDispatchWhatsApp}
-                />
-              );
-            }
-
-            const seller = game.seller_id ? sellerMap.get(game.seller_id) : undefined;
-            return (
-              <GameCard
-                key={`buyer-${game.id}`}
-                game={game}
-                sellerName={seller?.name}
-                onPress={() => {
-                  try {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  } catch {}
-                  router.push(`/game/${game.id}`);
-                }}
-                onSellerPress={seller ? () => router.push(`/seller/${seller.id}`) : undefined}
-              />
-            );
-          })
-        )}
-      </ScrollView>
-
-      {/* QUICK GAME / INVENTORY REGISTRATION MODAL */}
-      <GameFormModal
-        visible={gameModalVisible}
-        onClose={() => setGameModalVisible(false)}
-        onSave={handleSaveGame}
+        }
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={styles.accentTint.color}
+          />
+        }
       />
 
+      {/* QUICK GAME / INVENTORY REGISTRATION MODAL */}
+      {gameModalVisible && (
+        <GameFormModal
+          visible={gameModalVisible}
+          onClose={() => setGameModalVisible(false)}
+          onSave={handleSaveGame}
+        />
+      )}
+
       {/* SLOT ALLOCATION MODAL */}
-      {selectedGameForSlot && (
+      {slotModalVisible && selectedGameForSlot && (
         <SlotAllocationModal
           visible={slotModalVisible}
           game={selectedGameForSlot}
@@ -356,7 +363,7 @@ export default function VaultScreen() {
       )}
 
       {/* 1-TAP WHATSAPP DISPATCH MODAL */}
-      {dispatchGame && dispatchAllocation && (
+      {dispatchModalVisible && dispatchGame && dispatchAllocation && (
         <WhatsAppDispatchModal
           visible={dispatchModalVisible}
           game={dispatchGame}
