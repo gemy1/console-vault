@@ -29,6 +29,8 @@ import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { usePersona } from '../../context/PersonaContext';
+import { VaultKeyManager } from '../../services/crypto/vaultKeyManager';
+import { isEncrypted, decryptString } from '../../services/crypto/encryptionService';
 
 interface WhatsAppDispatchModalProps {
   visible: boolean;
@@ -155,12 +157,35 @@ export function WhatsAppDispatchModal({
     ].join('\n');
   }, [allocation.slot_type, isRTL]);
 
-  const backupCode = game.backup_codes && game.backup_codes.length > 0 ? game.backup_codes[0] : 'N/A';
+  const rawBackupCode = game.backup_codes && game.backup_codes.length > 0 ? game.backup_codes[0] : 'N/A';
 
   // The generated text
   const messageBody = useMemo(() => {
     const divider = '───────────────────────────────';
     const clientGreeting = client?.name ? (isRTL ? `مرحباً ${client.name}،` : `Hello ${client.name},`) : '';
+
+    const activeKey = VaultKeyManager.getActiveKey();
+    let plainPassword = game.psn_password || '••••••••';
+    if (game.psn_password && isEncrypted(game.psn_password)) {
+      if (activeKey) {
+        try {
+          plainPassword = decryptString(game.psn_password, activeKey);
+        } catch {
+          plainPassword = '••••••••';
+        }
+      } else {
+        plainPassword = '••••••••';
+      }
+    }
+
+    let plainBackupCode = rawBackupCode;
+    if (rawBackupCode && isEncrypted(rawBackupCode)) {
+      if (activeKey) {
+        try {
+          plainBackupCode = decryptString(rawBackupCode, activeKey);
+        } catch {}
+      }
+    }
 
     if (isRTL) {
       return [
@@ -177,8 +202,8 @@ export function WhatsAppDispatchModal({
         divider,
         `🔑 بيانات الحساب:`,
         `البريد: ${game.psn_email}`,
-        `كلمة المرور: ${game.psn_password || '••••••••'}`,
-        `رمز 2FA الاحتياطي: ${backupCode}`,
+        `كلمة المرور: ${plainPassword}`,
+        `رمز 2FA الاحتياطي: ${plainBackupCode}`,
         divider,
         `📌 خطوات التفعيل والاستخدام:`,
         activationGuide,
@@ -203,8 +228,8 @@ export function WhatsAppDispatchModal({
       divider,
       `🔑 PSN ACCOUNT CREDENTIALS:`,
       `Email: ${game.psn_email}`,
-      `Password: ${game.psn_password || '••••••••'}`,
-      `2FA Backup Code: ${backupCode}`,
+      `Password: ${plainPassword}`,
+      `2FA Backup Code: ${plainBackupCode}`,
       divider,
       `📌 ACTIVATION & SETUP INSTRUCTIONS:`,
       activationGuide,
@@ -213,7 +238,7 @@ export function WhatsAppDispatchModal({
     ]
       .filter(Boolean)
       .join('\n');
-  }, [game, allocation, client, slotName, expiryDate, backupCode, activationGuide, isRTL, formatCurrency]);
+  }, [game, allocation, client, slotName, expiryDate, rawBackupCode, activationGuide, isRTL, formatCurrency]);
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(messageBody);

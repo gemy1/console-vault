@@ -2,9 +2,11 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo, t
 import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { VaultStorage } from '../services/storage';
+import { VaultKeyManager } from '../services/crypto/vaultKeyManager';
 
 const BIOMETRICS_ENABLED_KEY = 'vault_security_biometrics_enabled_v1';
 const MASTER_PIN_KEY = 'vault_security_master_pin_v1';
+const AUTH_CACHE_USER_KEY = 'vault_cached_auth_user_v1';
 
 interface SecurityContextType {
   isVaultUnlocked: boolean;
@@ -50,10 +52,23 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     checkHardware();
   }, []);
 
+  const restoreActiveKeyIfCached = () => {
+    const cachedUser = VaultStorage.getItem(AUTH_CACHE_USER_KEY);
+    if (cachedUser) {
+      try {
+        const parsed = JSON.parse(cachedUser);
+        if (parsed?.id && !VaultKeyManager.hasActiveKey()) {
+          VaultKeyManager.loadKeyFromSecureStore(parsed.id).catch(() => {});
+        }
+      } catch {}
+    }
+  };
+
   const unlockWithBiometrics = useCallback(async (): Promise<boolean> => {
     try {
       if (!isBiometricsAvailable && Platform.OS === 'web') {
         setIsVaultUnlocked(true);
+        restoreActiveKeyIfCached();
         return true;
       }
       const result = await LocalAuthentication.authenticateAsync({
@@ -65,12 +80,14 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
 
       if (result.success) {
         setIsVaultUnlocked(true);
+        restoreActiveKeyIfCached();
         return true;
       }
       return false;
     } catch {
       if (Platform.OS === 'web') {
         setIsVaultUnlocked(true);
+        restoreActiveKeyIfCached();
         return true;
       }
       return false;
@@ -81,6 +98,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     const saved = VaultStorage.getItem(MASTER_PIN_KEY);
     if (saved && saved === pin) {
       setIsVaultUnlocked(true);
+      restoreActiveKeyIfCached();
       return true;
     }
     return false;

@@ -4,6 +4,8 @@ import { OfflineVault, VaultStorage } from '../services/storage';
 import { SyncQueue } from '../services/syncQueue';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { toSafeUUID } from '../utils/uuid';
+import { VaultMigration } from '../services/crypto/vaultMigration';
+import { VaultKeyManager } from '../services/crypto/vaultKeyManager';
 
 interface VaultSyncContextType {
   games: Game[];
@@ -147,6 +149,25 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       setSyncStatus('local_only');
       return false;
     }
+
+    // Zero-Knowledge Security Gatekeeper:
+    // If unencrypted games exist, encrypt them locally before any cloud upload occurs
+    if (VaultMigration.hasUnencryptedGames()) {
+      const activeKey = VaultKeyManager.getActiveKey();
+      if (activeKey) {
+        SyncQueue.pauseSync();
+        try {
+          await VaultMigration.migrateLocalGames(activeKey);
+          refreshData();
+        } finally {
+          SyncQueue.resumeSync();
+        }
+      } else {
+        console.warn('[VaultSyncContext] Unencrypted games exist but encryption key is locked. Skipping cloud push until key is unlocked.');
+        return false;
+      }
+    }
+
     // Safeguard: If user has local vault items but queue was empty, enqueue them for upload
     SyncQueue.enqueueLocalVaultIfEmpty(userId);
 
@@ -155,7 +176,7 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
       await pullFromCloud();
     }
     return result.success;
-  }, [userId, pullFromCloud]);
+  }, [userId, pullFromCloud, refreshData]);
 
   // When user logs in with a valid userId, automatically flush pending items and pull latest
   useEffect(() => {

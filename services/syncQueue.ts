@@ -12,6 +12,7 @@ const listeners = new Set<SyncListener>();
 
 let currentStatus: SyncStatus = isSupabaseConfigured ? 'synced' : 'local_only';
 let isSyncing = false;
+let isSyncPaused = false;
 
 function notifyListeners() {
   const pending = SyncQueue.getQueue().length;
@@ -23,6 +24,17 @@ function notifyListeners() {
 }
 
 export const SyncQueue = {
+  pauseSync: (): void => {
+    isSyncPaused = true;
+  },
+
+  resumeSync: (): void => {
+    isSyncPaused = false;
+  },
+
+  isPaused: (): boolean => {
+    return isSyncPaused;
+  },
   getQueue: (): PendingSyncItem[] => {
     try {
       const raw = VaultStorage.getItem(SYNC_QUEUE_KEY);
@@ -198,6 +210,11 @@ export const SyncQueue = {
       return { success: true, syncedCount: 0 };
     }
 
+    if (isSyncPaused) {
+      console.log('[SyncQueue] Sync is paused during cryptographic migration. Skipping flush.');
+      return { success: false, syncedCount: 0 };
+    }
+
     if (!SyncQueue.isOnline()) {
       currentStatus = 'offline';
       notifyListeners();
@@ -354,6 +371,11 @@ export const SyncQueue = {
             }
             if (payload.psn_password === undefined || payload.psn_password === null) {
               payload.psn_password = '';
+            }
+            // Strict Zero-Knowledge Assertion Barrier: Never leak plaintext passwords to Supabase
+            if (payload.psn_password && !payload.psn_password.startsWith('enc:v1:')) {
+              console.error('[SyncQueue] SECURITY VIOLATION: Blocked attempt to upload unencrypted password for game:', payload.title);
+              throw new Error(`Security Violation: Unencrypted password detected on game "${payload.title}". Cloud upload blocked.`);
             }
             if (!payload.notes) payload.notes = '';
             if (!payload.backup_codes) payload.backup_codes = [];

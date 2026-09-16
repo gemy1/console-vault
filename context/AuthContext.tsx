@@ -3,6 +3,8 @@ import * as Linking from 'expo-linking';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { VaultStorage } from '../services/storage';
+import { deriveMasterKey } from '../services/crypto/encryptionService';
+import { VaultKeyManager } from '../services/crypto/vaultKeyManager';
 
 const AUTH_CACHE_USER_KEY = 'vault_cached_auth_user_v1';
 
@@ -11,9 +13,11 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isConfigured: boolean;
+  hasVaultKey: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation?: boolean }>;
   signOut: () => Promise<void>;
+  restoreVaultKey: (password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasVaultKey, setHasVaultKey] = useState<boolean>(() => VaultKeyManager.hasActiveKey());
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -42,6 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(session.user));
+        VaultKeyManager.loadKeyFromSecureStore(session.user.id)
+          .then((k) => setHasVaultKey(Boolean(k)))
+          .catch(() => setHasVaultKey(false));
       }
       setIsLoading(false);
     }).catch(() => {
@@ -54,8 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(session.user));
+        VaultKeyManager.loadKeyFromSecureStore(session.user.id)
+          .then((k) => setHasVaultKey(Boolean(k)))
+          .catch(() => setHasVaultKey(false));
       } else {
         VaultStorage.removeItem(AUTH_CACHE_USER_KEY);
+        setHasVaultKey(false);
       }
       setIsLoading(false);
     });
@@ -65,42 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!url) return;
       try {
         const parsed = Linking.parse(url);
-        const code = parsed.queryParams?.code;
-        if (typeof code === 'string') {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (!error && data.session) {
-            setSession(data.session);
-            setUser(data.user);
-            if (data.user) {
-              VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
-            }
-          }
-        } else if (url.includes('access_token=') && url.includes('refresh_token=')) {
-          const matchAccess = url.match(/access_token=([^&]+)/);
-          const matchRefresh = url.match(/refresh_token=([^&]+)/);
-          if (matchAccess && matchRefresh) {
-            const access_token = decodeURIComponent(matchAccess[1]);
-            const refresh_token = decodeURIComponent(matchRefresh[1]);
-            const { data, error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-            if (!error && data.session) {
-              setSession(data.session);
-              setUser(data.user);
-              if (data.user) {
-                VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
-              }
-            }
+        if (parsed.queryParams?.error_description) {
+          console.warn('[AuthContext] Deep link auth error:', parsed.queryParams.error_description);
+          return;
+        }
+        if (url.includes('access_token') || url.includes('refresh_token')) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            setSession(session);
+            setUser(session.user);
+            VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(session.user));
           }
         }
-      } catch (err) {
-        console.warn('[AuthContext] Deep link handler error:', err);
+      } catch (e) {
+        console.warn('[AuthContext] Error handling deep link:', e);
       }
     };
 
     Linking.getInitialURL().then(handleDeepLink);
-    const linkingSub = Linking.addEventListener('url', (event) => handleDeepLink(event.url));
+    const linkingSub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
 
     return () => {
       subscription.unsubscribe();
@@ -121,6 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       setUser(mockUser);
       VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(mockUser));
+      const key = deriveMasterKey(password, email);
+      await VaultKeyManager.saveKeyToSecureStore(mockUser.id, key);
+      setHasVaultKey(true);
       return { error: null };
     }
 
@@ -138,6 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       if (data.user) {
         VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
+        const key = deriveMasterKey(password, email);
+        await VaultKeyManager.saveKeyToSecureStore(data.user.id, key);
+        setHasVaultKey(true);
       }
       return { error: null };
     } catch (err: any) {
@@ -169,6 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
         if (data.user) {
           VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
+          const key = deriveMasterKey(password, email);
+          await VaultKeyManager.saveKeyToSecureStore(data.user.id, key);
+          setHasVaultKey(true);
         }
       } else {
         // Email confirmation is required - user is not authenticated yet
@@ -182,12 +186,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const restoreVaultKey = async (password: string): Promise<boolean> => {
+    const targetEmail = user?.email;
+    const targetUserId = user?.id;
+    if (!targetEmail || !targetUserId) return false;
+
+    try {
+      const key = deriveMasterKey(password, targetEmail);
+      await VaultKeyManager.saveKeyToSecureStore(targetUserId, key);
+      setHasVaultKey(true);
+      return true;
+    } catch (err) {
+      console.warn('[AuthContext] restoreVaultKey error:', err);
+      return false;
+    }
+  };
+
   const signOut = async (): Promise<void> => {
+    const currentUserId = user?.id;
     try {
       if (isSupabaseConfigured) {
         await supabase.auth.signOut();
       }
     } finally {
+      if (currentUserId) {
+        await VaultKeyManager.clearKey(currentUserId);
+      }
+      setHasVaultKey(false);
       setUser(null);
       setSession(null);
       VaultStorage.removeItem(AUTH_CACHE_USER_KEY);
@@ -200,11 +225,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isConfigured: isSupabaseConfigured,
+      hasVaultKey,
       signIn,
       signUp,
       signOut,
+      restoreVaultKey,
     }),
-    [user, session, isLoading]
+    [user, session, isLoading, hasVaultKey]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

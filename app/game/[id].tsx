@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -25,6 +25,8 @@ import {
   GameFormModal,
 } from "../../components/games";
 import { useVaultSync } from "../../context/VaultSyncContext";
+import { VaultKeyManager } from "../../services/crypto/vaultKeyManager";
+import { decryptString, encryptString, isEncrypted } from "../../services/crypto/encryptionService";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { useVaultTheme, ThemeColors, ThemeMode } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
@@ -81,6 +83,40 @@ export default function GameDetailsScreen() {
   const [selectedDispatchClient, setSelectedDispatchClient] = useState<Client | null>(null);
 
   const { isUnlocked, requestUnlock, lock } = useBiometricGuard(60);
+
+  const decryptedPassword = useMemo(() => {
+    if (!game?.psn_password) return '';
+    if (isEncrypted(game.psn_password)) {
+      const activeKey = VaultKeyManager.getActiveKey();
+      if (activeKey) {
+        try {
+          return decryptString(game.psn_password, activeKey);
+        } catch {
+          return '••••••••';
+        }
+      }
+      return '••••••••';
+    }
+    return game.psn_password;
+  }, [game?.psn_password, isUnlocked]);
+
+  const decryptedBackupCodes = useMemo(() => {
+    if (!game?.backup_codes) return [];
+    const activeKey = VaultKeyManager.getActiveKey();
+    return game.backup_codes.map((code) => {
+      if (isEncrypted(code)) {
+        if (activeKey) {
+          try {
+            return decryptString(code, activeKey);
+          } catch {
+            return '••••••••';
+          }
+        }
+        return '••••••••';
+      }
+      return code;
+    });
+  }, [game?.backup_codes, isUnlocked]);
 
   useEffect(() => {
     if (!id) return;
@@ -247,15 +283,18 @@ export default function GameDetailsScreen() {
     newPasswordVal: string,
   ) => {
     if (!game) return;
+    const activeKey = VaultKeyManager.getActiveKey();
+    const finalPassword = (activeKey && newPasswordVal.trim()) ? encryptString(newPasswordVal.trim(), activeKey) : newPasswordVal;
+
     const updated = vaultSync
       ? vaultSync.updateGame(game.id, {
           psn_email: newEmailVal,
-          psn_password: newPasswordVal,
+          psn_password: finalPassword,
           status: "Active",
         })
       : OfflineVault.updateGame(game.id, {
           psn_email: newEmailVal,
-          psn_password: newPasswordVal,
+          psn_password: finalPassword,
           status: "Active",
         });
 
@@ -1047,12 +1086,12 @@ export default function GameDetailsScreen() {
                   <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldPsnPassword')}</Text>
                   <View style={styles.credentialRow}>
                     <Text style={styles.credentialValue}>
-                      {game.psn_password || '—'}
+                      {decryptedPassword || '—'}
                     </Text>
-                    {game.psn_password ? (
+                    {decryptedPassword ? (
                       <Pressable
                         onPress={() =>
-                          copyToClipboard(game.psn_password || '', "password")
+                          copyToClipboard(decryptedPassword || '', "password")
                         }
                         style={styles.copyRow}
                       >
@@ -1083,16 +1122,16 @@ export default function GameDetailsScreen() {
                 </View>
 
                 {/* 2FA Backup Codes */}
-                {game.backup_codes && game.backup_codes.length > 0 && (
+                {decryptedBackupCodes && decryptedBackupCodes.length > 0 && (
                   <View style={styles.fieldSection}>
                     <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldBackupCodes')}</Text>
                     <View style={styles.codesBox}>
-                      {game.backup_codes.map((code, index) => (
+                      {decryptedBackupCodes.map((code, index) => (
                         <View
                           key={index}
                           style={[
                             styles.codeRow,
-                            index < game.backup_codes!.length - 1 &&
+                            index < decryptedBackupCodes.length - 1 &&
                               styles.codeRowDivider,
                           ]}
                         >

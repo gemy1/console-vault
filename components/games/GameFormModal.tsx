@@ -50,6 +50,10 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useCustomAlert } from '../../context/AlertContext';
 import { usePersona } from '../../context/PersonaContext';
 import { generateUUID } from '../../utils/uuid';
+import { useAuth } from '../../context/AuthContext';
+import { VaultKeyManager } from '../../services/crypto/vaultKeyManager';
+import { encryptString, decryptString, isEncrypted, encryptBackupCodes } from '../../services/crypto/encryptionService';
+import { VaultUnlockModal } from '../auth/VaultUnlockModal';
 
 const WARRANTY_PRESETS = ['3', '6', '12', '24', '999'];
 
@@ -86,8 +90,10 @@ export function GameFormModal({
   const { t, isRTL } = useLanguage();
   const { showAlert } = useCustomAlert();
   const { isSeller, currency } = usePersona();
+  const { user } = useAuth();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
 
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [title, setTitle] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [coverImageError, setCoverImageError] = useState(false);
@@ -139,9 +145,30 @@ export function GameFormModal({
           setSellerId('');
         }
 
+        let rawPassword = initialGame.psn_password || '';
+        let rawCodes = initialGame.backup_codes || [];
+        const activeKey = VaultKeyManager.getActiveKey();
+        if (activeKey) {
+          if (isEncrypted(rawPassword)) {
+            try {
+              rawPassword = decryptString(rawPassword, activeKey);
+            } catch {}
+          }
+          rawCodes = rawCodes.map((c) => {
+            if (isEncrypted(c)) {
+              try {
+                return decryptString(c, activeKey);
+              } catch {
+                return c;
+              }
+            }
+            return c;
+          });
+        }
+
         setPsnEmail(initialGame.psn_email || '');
-        setPsnPassword(initialGame.psn_password || '');
-        setBackupCodesStr(initialGame.backup_codes ? initialGame.backup_codes.join(', ') : '');
+        setPsnPassword(rawPassword);
+        setBackupCodesStr(rawCodes.length > 0 ? rawCodes.join(', ') : '');
         setNotes(initialGame.notes || '');
       } else {
         setTitle('');
@@ -256,6 +283,24 @@ export function GameFormModal({
     const parsedCost = parseFloat(costPrice);
     const validCost = !isNaN(parsedCost) && parsedCost > 0 ? parsedCost : undefined;
 
+    const activeKey = VaultKeyManager.getActiveKey();
+    if (user && !activeKey && (psnPassword.trim() || backupCodes.length > 0)) {
+      setShowUnlockModal(true);
+      return;
+    }
+
+    let finalPassword = psnPassword.trim() || undefined;
+    let finalCodes = backupCodes.length > 0 ? backupCodes : undefined;
+
+    if (activeKey) {
+      if (finalPassword) {
+        finalPassword = encryptString(finalPassword, activeKey);
+      }
+      if (finalCodes) {
+        finalCodes = encryptBackupCodes(finalCodes, activeKey);
+      }
+    }
+
     onSave({
       title: title.trim(),
       cover_image_url: coverUrl.trim() || undefined,
@@ -264,8 +309,8 @@ export function GameFormModal({
       warranty_months: validWarranty,
       seller_id: sellerMode === 'seller' && sellerId ? sellerId : undefined,
       psn_email: psnEmail.trim(),
-      psn_password: psnPassword.trim() || undefined,
-      backup_codes: backupCodes.length > 0 ? backupCodes : undefined,
+      psn_password: finalPassword,
+      backup_codes: finalCodes,
       notes: notes.trim() || undefined,
       cost_price: validCost,
       currency: validCost !== undefined ? (initialGame?.currency || currency) : undefined,
@@ -877,6 +922,14 @@ export function GameFormModal({
         visible={quickAddSellerVisible}
         onClose={() => setQuickAddSellerVisible(false)}
         onSave={handleSaveQuickSeller}
+      />
+
+      {/* NESTED VAULT UNLOCK MODAL (CASE B: Missing key while logged in) */}
+      <VaultUnlockModal
+        visible={showUnlockModal}
+        userEmail={user?.email}
+        onClose={() => setShowUnlockModal(false)}
+        onSuccess={() => handleSubmit()}
       />
     </Modal>
   );
