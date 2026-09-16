@@ -18,6 +18,7 @@ import { Game, Seller, GameStatus } from "../../types/vault";
 import { calculateWarranty } from "../../utils/padlock";
 import { getGamePotentialSlots, getGameDisplaySlots } from "../../utils/slots";
 import { useBiometricGuard } from "../../hooks/useBiometricGuard";
+import { AuditLogService } from "../../services/security/auditLogService";
 import { MenuToggleButton } from "../../components/common";
 import {
   PulsingPadlockBadge,
@@ -233,6 +234,14 @@ export default function GameDetailsScreen() {
     } catch {}
     setCopiedField(fieldKey);
     setTimeout(() => setCopiedField(null), 2000);
+
+    // Record in security audit log
+    if (fieldKey === 'password' || fieldKey.startsWith('backup_')) {
+      AuditLogService.logEvent(
+        'CREDENTIAL_COPIED',
+        `Copied ${fieldKey} for "${game?.title || id}"`
+      );
+    }
   };
 
   const toggleGameStatus = (newStatus: GameStatus) => {
@@ -1027,13 +1036,19 @@ export default function GameDetailsScreen() {
                 </Text>
 
                 <Pressable
-                  onPress={() =>
-                    requestUnlock({
+                  onPress={async () => {
+                    const unlocked = await requestUnlock({
                       promptMessage: t('biometricPromptMessage'),
                       fallbackLabel: t('biometricFallbackLabel'),
                       cancelLabel: t('biometricCancelLabel'),
-                    })
-                  }
+                    });
+                    if (unlocked) {
+                      AuditLogService.logEvent(
+                        'CREDENTIAL_VIEWED',
+                        `Revealed credentials for "${game?.title || id}"`
+                      );
+                    }
+                  }}
                   style={({ pressed }) => [
                     styles.unlockBtn,
                     pressed && styles.unlockBtnPressed,

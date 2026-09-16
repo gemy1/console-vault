@@ -37,7 +37,10 @@ import {
   Store,
   Coins,
   CheckCircle2,
+  Database,
 } from "lucide-react-native";
+import { MasterBackupModal } from "../backup/MasterBackupModal";
+import { SecurityAuditModal } from "../security/SecurityAuditModal";
 import {
   useVaultTheme,
   ThemeColors,
@@ -76,6 +79,18 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
 
   const animValue = useRef(new Animated.Value(0)).current;
   const [modalRendered, setModalRendered] = useState(visible);
+  const [backupModalVisible, setBackupModalVisible] = useState(false);
+  const [auditModalVisible, setAuditModalVisible] = useState(false);
+
+  const handleOpenBackup = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    setBackupModalVisible(true);
+  };
+
+  const handleOpenAudit = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    setAuditModalVisible(true);
+  };
 
   const handleCycleTheme = () => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
@@ -349,7 +364,7 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     } catch {}
   };
 
-  if (!modalRendered && !visible) {
+  if (!modalRendered && !visible && !backupModalVisible && !auditModalVisible) {
     return null;
   }
 
@@ -379,12 +394,13 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     : (isRTL ? `معلق (${syncState.pendingCount})` : `Offline`);
 
   return (
-    <Modal
-      visible={modalRendered}
-      transparent={true}
-      animationType="none"
-      onRequestClose={() => handleDismiss()}
-    >
+    <>
+      <Modal
+        visible={modalRendered && !backupModalVisible && !auditModalVisible}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => handleDismiss()}
+      >
       <View style={styles.container}>
         {/* BACKDROP */}
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
@@ -630,6 +646,48 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
                   {isRTL ? <ChevronLeft size={16} color="#FF3B30" strokeWidth={2.2} /> : <ChevronRight size={16} color="#FF3B30" strokeWidth={2.2} />}
                 </Pressable>
 
+                {/* MASTER BACKUP */}
+                <Pressable
+                  onPress={handleOpenBackup}
+                  style={({ pressed }) => [styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
+                >
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <Database size={18} color="#00D2FF" strokeWidth={2} />
+                    </View>
+                    <View>
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>
+                        {isRTL ? "النسخ الاحتياطي الشامل (.vault)" : "Master Backup & Restore"}
+                      </Text>
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>
+                        {isRTL ? "تصدير/استعادة ملف شامل وإكسيل" : "All-in-one (.vault) & Excel"}
+                      </Text>
+                    </View>
+                  </View>
+                  {isRTL ? <ChevronLeft size={16} color={styles.chevron.color} strokeWidth={2.2} /> : <ChevronRight size={16} color={styles.chevron.color} strokeWidth={2.2} />}
+                </Pressable>
+
+                {/* SECURITY AUDIT */}
+                <Pressable
+                  onPress={handleOpenAudit}
+                  style={({ pressed }) => [styles.row, styles.rowBorder, isNativeRTL && { flexDirection: "row-reverse" }, pressed && styles.rowPressed]}
+                >
+                  <View style={[styles.rowLeft, isNativeRTL && { flexDirection: "row-reverse" }]}>
+                    <View style={styles.rowIcon}>
+                      <ShieldCheck size={18} color="#00D2FF" strokeWidth={2} />
+                    </View>
+                    <View>
+                      <Text style={[styles.rowTitle, isRTL && styles.rtlText]}>
+                        {isRTL ? "سجل الأمان الحساس" : "Security Audit Log"}
+                      </Text>
+                      <Text style={[styles.rowSub, isRTL && styles.rtlText]}>
+                        {isRTL ? "سجل كشف ونسخ كلمات المرور" : "Credential reveals & copies history"}
+                      </Text>
+                    </View>
+                  </View>
+                  {isRTL ? <ChevronLeft size={16} color={styles.chevron.color} strokeWidth={2.2} /> : <ChevronRight size={16} color={styles.chevron.color} strokeWidth={2.2} />}
+                </Pressable>
+
                 {/* RESET */}
                 <Pressable
                   onPress={handleResetVault}
@@ -675,6 +733,27 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
         </Animated.View>
       </View>
     </Modal>
+
+    {backupModalVisible && (
+      <MasterBackupModal
+        visible={backupModalVisible}
+        onClose={() => {
+          setBackupModalVisible(false);
+          onClose();
+        }}
+      />
+    )}
+
+    {auditModalVisible && (
+      <SecurityAuditModal
+        visible={auditModalVisible}
+        onClose={() => {
+          setAuditModalVisible(false);
+          onClose();
+        }}
+      />
+    )}
+  </>
   );
 }
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
