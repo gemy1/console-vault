@@ -3,6 +3,8 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { PendingSyncItem, SyncStatus } from '../types/vault';
 import { Platform } from 'react-native';
 import { toSafeUUID } from '../utils/uuid';
+import { VaultKeyManager } from './crypto/vaultKeyManager';
+import { encryptString, encryptBackupCodes } from './crypto/encryptionService';
 
 const SYNC_QUEUE_KEY = 'vault_pending_sync_queue_v1';
 const LAST_SYNCED_KEY = 'vault_last_synced_timestamp_v1';
@@ -351,7 +353,10 @@ export const SyncQueue = {
         }
 
         // Format payloads for the entity
-        const preparedList = upsertItems.map((item) => {
+        const preparedList: Array<{ item: PendingSyncItem; payload: any }> = [];
+        const activeKey = VaultKeyManager.getActiveKey();
+
+        for (const item of upsertItems) {
           const safeId = toSafeUUID(item.payload.id);
           const payload: any = {
             ...item.payload,
@@ -372,11 +377,28 @@ export const SyncQueue = {
             if (payload.psn_password === undefined || payload.psn_password === null) {
               payload.psn_password = '';
             }
-            // Strict Zero-Knowledge Assertion Barrier: Never leak plaintext passwords to Supabase
+
+            // Zero-Knowledge Encryption on the fly or safe deferral:
             if (payload.psn_password && !payload.psn_password.startsWith('enc:v1:')) {
-              console.error('[SyncQueue] SECURITY VIOLATION: Blocked attempt to upload unencrypted password for game:', payload.title);
-              throw new Error(`Security Violation: Unencrypted password detected on game "${payload.title}". Cloud upload blocked.`);
+              if (activeKey) {
+                payload.psn_password = encryptString(payload.psn_password, activeKey);
+                // Keep local storage synchronized with the encrypted password
+                OfflineVault.updateGame(item.payload.id, { psn_password: payload.psn_password });
+              } else {
+                // Key is locked / missing: DO NOT leak unencrypted password to Supabase,
+                // and DO NOT throw/crash! Safely defer item in queue until vault is unlocked.
+                console.warn(`[SyncQueue] Deferred cloud upload for "${payload.title}": Password is unencrypted and vault key is locked.`);
+                remainingQueue.push(item);
+                continue;
+              }
             }
+
+            if (payload.backup_codes && payload.backup_codes.length > 0) {
+              if (activeKey) {
+                payload.backup_codes = encryptBackupCodes(payload.backup_codes, activeKey);
+              }
+            }
+
             if (!payload.notes) payload.notes = '';
             if (!payload.backup_codes) payload.backup_codes = [];
           } else if (entityType === 'client_allocation') {
@@ -386,8 +408,8 @@ export const SyncQueue = {
             payload.client_id = toSafeUUID(payload.client_id);
           }
 
-          return { item, payload };
-        });
+          preparedList.push({ item, payload });
+        }
 
         // Split into chunks of 50 and upsert in bulk
         const upsertChunks = chunkArray(preparedList, BATCH_SIZE);
