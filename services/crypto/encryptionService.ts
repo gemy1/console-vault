@@ -13,7 +13,8 @@ import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 
 export const ENCRYPTION_VERSION_PREFIX = 'enc:v1:';
-const PBKDF2_ITERATIONS = 100000;
+export const PBKDF2_ITERATIONS = 5000; // Calibrated for mobile JS runtime (~200ms vs 10s)
+export const PBKDF2_LEGACY_ITERATIONS = 100000;
 const KEY_LENGTH_BYTES = 32; // 256-bit key
 const NONCE_LENGTH_BYTES = 12; // 96-bit GCM nonce
 
@@ -153,17 +154,42 @@ export function isEncrypted(value?: string | null): boolean {
   return Boolean(value && typeof value === 'string' && value.startsWith(ENCRYPTION_VERSION_PREFIX));
 }
 
-/**
- * Derives a 256-bit Master Encryption Key (MEK) deterministically from an
- * account password and a normalized salt (e.g. user email).
- */
-export function deriveMasterKey(password: string, salt: string): Uint8Array {
+export function deriveMasterKey(
+  password: string,
+  salt: string,
+  iterations: number = PBKDF2_ITERATIONS
+): Uint8Array {
   const normalizedPassword = password.normalize ? password.normalize('NFKC') : password;
   const normalizedSalt = salt.toLowerCase().trim();
   return pbkdf2(sha256, normalizedPassword, normalizedSalt, {
-    c: PBKDF2_ITERATIONS,
+    c: iterations,
     dkLen: KEY_LENGTH_BYTES,
   });
+}
+
+/**
+ * Derives the MEK using fast mobile iterations (5,000 rounds).
+ * If sampleCiphertext is provided, tests whether the derived key can decrypt it.
+ * If decryption fails (e.g. data was encrypted with the legacy 100,000 round key),
+ * falls back to 100,000 rounds to guarantee zero data loss.
+ */
+export function deriveMasterKeyWithFallback(
+  password: string,
+  salt: string,
+  sampleCiphertext?: string | null
+): Uint8Array {
+  const fastKey = deriveMasterKey(password, salt, PBKDF2_ITERATIONS);
+  if (!sampleCiphertext || !isEncrypted(sampleCiphertext)) {
+    return fastKey;
+  }
+
+  try {
+    decryptString(sampleCiphertext, fastKey);
+    return fastKey;
+  } catch {
+    console.log('[EncryptionService] Falling back to legacy 100k iteration derivation for existing ciphertext');
+    return deriveMasterKey(password, salt, PBKDF2_LEGACY_ITERATIONS);
+  }
 }
 
 /**

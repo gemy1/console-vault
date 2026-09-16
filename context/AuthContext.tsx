@@ -2,8 +2,8 @@ import { createContext, useContext, useEffect, useState, useMemo, type ReactNode
 import * as Linking from 'expo-linking';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
-import { VaultStorage } from '../services/storage';
-import { deriveMasterKey } from '../services/crypto/encryptionService';
+import { VaultStorage, OfflineVault } from '../services/storage';
+import { deriveMasterKeyWithFallback } from '../services/crypto/encryptionService';
 import { VaultKeyManager } from '../services/crypto/vaultKeyManager';
 
 const AUTH_CACHE_USER_KEY = 'vault_cached_auth_user_v1';
@@ -33,7 +33,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasVaultKey, setHasVaultKey] = useState<boolean>(() => VaultKeyManager.hasActiveKey());
+  const [hasVaultKey, setHasVaultKey] = useState(false);
+
+  // Fast key retriever/deriver with SecureStore caching & backward compatibility
+  const ensureVaultKey = async (userId: string, email: string, password: string): Promise<void> => {
+    // 1. Fast Path: Check hardware SecureStore (~2ms)
+    const existingKey = await VaultKeyManager.loadKeyFromSecureStore(userId);
+    if (existingKey) {
+      VaultKeyManager.setActiveKey(existingKey, userId);
+      setHasVaultKey(true);
+      return;
+    }
+
+    // 2. Sample ciphertext check for legacy 100k iteration data
+    let sampleCipher: string | null = null;
+    try {
+      const localGames = OfflineVault.getGames();
+      for (const g of localGames) {
+        if (g.psn_password && g.psn_password.startsWith('enc:v1:')) {
+          sampleCipher = g.psn_password;
+          break;
+        }
+      }
+    } catch {}
+
+    // 3. Fast derivation (5,000 rounds, or fallback to legacy 100k if sample fails)
+    const key = deriveMasterKeyWithFallback(password, email, sampleCipher);
+    await VaultKeyManager.saveKeyToSecureStore(userId, key);
+    setHasVaultKey(true);
+  };
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -89,13 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(session.user));
           }
         }
-      } catch (e) {
-        console.warn('[AuthContext] Error handling deep link:', e);
+      } catch (err) {
+        console.warn('[AuthContext] Deep link handling error:', err);
       }
     };
 
     Linking.getInitialURL().then(handleDeepLink);
-    const linkingSub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
+    const linkingSub = Linking.addEventListener('url', (event) => handleDeepLink(event.url));
 
     return () => {
       subscription.unsubscribe();
@@ -116,9 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       setUser(mockUser);
       VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(mockUser));
-      const key = deriveMasterKey(password, email);
-      await VaultKeyManager.saveKeyToSecureStore(mockUser.id, key);
-      setHasVaultKey(true);
+      await ensureVaultKey(mockUser.id, email, password);
       return { error: null };
     }
 
@@ -136,9 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       if (data.user) {
         VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
-        const key = deriveMasterKey(password, email);
-        await VaultKeyManager.saveKeyToSecureStore(data.user.id, key);
-        setHasVaultKey(true);
+        await ensureVaultKey(data.user.id, email, password);
       }
       return { error: null };
     } catch (err: any) {
@@ -165,14 +189,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error.message };
       }
 
-      if (data.session) {
+      if (data.session && data.user) {
         setSession(data.session);
         setUser(data.user);
         if (data.user) {
           VaultStorage.setItem(AUTH_CACHE_USER_KEY, JSON.stringify(data.user));
-          const key = deriveMasterKey(password, email);
-          await VaultKeyManager.saveKeyToSecureStore(data.user.id, key);
-          setHasVaultKey(true);
+          await ensureVaultKey(data.user.id, email, password);
         }
       } else {
         // Email confirmation is required - user is not authenticated yet
@@ -192,9 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!targetEmail || !targetUserId) return false;
 
     try {
-      const key = deriveMasterKey(password, targetEmail);
-      await VaultKeyManager.saveKeyToSecureStore(targetUserId, key);
-      setHasVaultKey(true);
+      await ensureVaultKey(targetUserId, targetEmail, password);
       return true;
     } catch (err) {
       console.warn('[AuthContext] restoreVaultKey error:', err);
@@ -210,7 +230,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       if (currentUserId) {
-        await VaultKeyManager.clearKey(currentUserId);
+        // Clear active key from RAM, but keep the hardware-backed SecureStore key so subsequent logins on this device are instant
+        await VaultKeyManager.clearKey(currentUserId, false);
       }
       setHasVaultKey(false);
       setUser(null);

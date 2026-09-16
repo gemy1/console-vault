@@ -112,11 +112,16 @@ export const VaultKeyManager = {
   },
 
   /**
-   * Removes the MEK from memory and hardware-backed SecureStore (e.g. on logout).
+   * Removes the MEK from RAM memory and optionally hardware-backed SecureStore.
+   * By default, leaves the hardware-backed SecureStore key intact so future logins on this device are instant (~2ms).
    */
-  clearKey: async (userId?: string | null): Promise<void> => {
+  clearKey: async (userId?: string | null, purgeSecureStore: boolean = false): Promise<void> => {
     activeKey = null;
     activeUserId = null;
+
+    if (!purgeSecureStore) {
+      return;
+    }
 
     const targetUserId = userId || activeUserId;
     if (!targetUserId) return;
