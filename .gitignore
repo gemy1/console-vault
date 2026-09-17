@@ -46,3 +46,7 @@ android/build/
 
 expo-env.d.ts
 # @end expo-cli
+
+# Native generated folders (Expo CNG)
+/android/
+/ios/

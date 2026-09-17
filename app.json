@@ -7,11 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "consolevault",
     "userInterfaceStyle": "dark",
-    "androidNavigationBar": {
-      "visible": "always",
-      "barStyle": "light-content",
-      "backgroundColor": "#000000"
-    },
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -72,7 +67,13 @@
       "expo-sqlite",
       "expo-image",
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-navigation-bar",
+        {
+          "backgroundColor": "#000000"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
