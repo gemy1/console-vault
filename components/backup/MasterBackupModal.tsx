@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   X,
   ShieldCheck,
@@ -48,6 +49,8 @@ export function MasterBackupModal({ visible, onClose }: MasterBackupModalProps) 
   const { t, isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
   const vaultSync = useVaultSync();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16);
 
   const [activeTab, setActiveTab] = useState<TabType>('export');
   const [loadingAction, setLoadingAction] = useState<LoadingAction>(null);
@@ -318,7 +321,7 @@ export function MasterBackupModal({ visible, onClose }: MasterBackupModalProps) 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { paddingBottom: bottomInset + 16 }]}>
           {/* Header */}
           <View style={[styles.header, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <View style={[styles.headerTitleRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
@@ -381,7 +384,10 @@ export function MasterBackupModal({ visible, onClose }: MasterBackupModalProps) 
             </Pressable>
           </View>
 
-          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={[styles.bodyContent, { paddingBottom: bottomInset + 32 }]}
+          >
             {/* Inline Notifications */}
             {errorMessage ? (
               <View style={[styles.errorBox, isNativeRTL && { flexDirection: 'row-reverse' }]}>

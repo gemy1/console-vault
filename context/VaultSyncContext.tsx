@@ -15,7 +15,7 @@ interface VaultSyncContextType {
   syncStatus: SyncStatus;
   pendingCount: number;
   lastSyncedAt: string | null;
-  syncNow: () => Promise<boolean>;
+  syncNow: () => Promise<{ success: boolean; syncedCount: number; error?: string | null }>;
   addGame: (game: Game) => Game;
   updateGame: (id: string, partial: Partial<Game>) => Game | null;
   deleteGame: (id: string) => boolean;
@@ -144,16 +144,27 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
   }, [userId, refreshData]);
 
   // Flush pending changes and pull latest
-  const syncNow = useCallback(async (): Promise<boolean> => {
+  const syncNow = useCallback(async (): Promise<{ success: boolean; syncedCount: number; error?: string | null }> => {
     if (!isSupabaseConfigured || !userId) {
       setSyncStatus('local_only');
-      return false;
+      return {
+        success: false,
+        syncedCount: 0,
+        error: !isSupabaseConfigured
+          ? 'Cloud service is not configured.'
+          : 'You are currently in Guest mode. Please sign in or confirm your email to activate cloud sync.',
+      };
     }
 
     // Zero-Knowledge Security Gatekeeper:
     // If unencrypted games exist, encrypt them locally before any cloud upload occurs
     if (VaultMigration.hasUnencryptedGames()) {
-      const activeKey = VaultKeyManager.getActiveKey();
+      let activeKey = VaultKeyManager.getActiveKey();
+      if (!activeKey && userId) {
+        try {
+          activeKey = await VaultKeyManager.loadKeyFromSecureStore(userId);
+        } catch {}
+      }
       if (activeKey) {
         SyncQueue.pauseSync();
         try {
@@ -163,8 +174,12 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
           SyncQueue.resumeSync();
         }
       } else {
-        console.warn('[VaultSyncContext] Unencrypted games exist but encryption key is locked. Skipping cloud push until key is unlocked.');
-        return false;
+        console.warn('[VaultSyncContext] Unencrypted games exist but encryption key is locked.');
+        return {
+          success: false,
+          syncedCount: 0,
+          error: 'Vault key is locked. Please unlock your vault with your password to sync credentials.',
+        };
       }
     }
 
@@ -175,7 +190,7 @@ export function VaultSyncProvider({ children, userId }: { children: ReactNode; u
     if (result.success && isSupabaseConfigured && userId) {
       await pullFromCloud();
     }
-    return result.success;
+    return result;
   }, [userId, pullFromCloud, refreshData]);
 
   // When user logs in with a valid userId, defer sync slightly so initial UI mount & transitions stay at 60 FPS
@@ -515,7 +530,7 @@ const DEFAULT_SYNC_FALLBACK: VaultSyncContextType = {
   syncStatus: 'local_only',
   pendingCount: 0,
   lastSyncedAt: null,
-  syncNow: async () => false,
+  syncNow: async () => ({ success: false, syncedCount: 0, error: 'Context not initialized' }),
   addGame: (g) => g,
   updateGame: () => null,
   deleteGame: () => false,

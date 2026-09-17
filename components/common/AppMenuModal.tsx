@@ -132,14 +132,14 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
     syncStatus: import("../../types/vault").SyncStatus;
     pendingCount: number;
     lastSyncedAt: string | null;
-    syncNow: () => Promise<boolean>;
+    syncNow: () => Promise<{ success: boolean; syncedCount: number; error?: string | null }>;
     clearLocalVault: () => void;
     clearCloudAndLocalVault: () => Promise<boolean>;
   } = {
     syncStatus: isSupabaseConfigured ? "synced" : "local_only",
     pendingCount: 0,
     lastSyncedAt: null,
-    syncNow: async () => true,
+    syncNow: async () => ({ success: true, syncedCount: 0 }),
     clearLocalVault: () => {},
     clearCloudAndLocalVault: async () => true,
   };
@@ -261,7 +261,36 @@ export function AppMenuModal({ visible, onClose }: AppMenuModalProps) {
       return;
     }
 
-    await syncState.syncNow();
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+
+    const result = await syncState.syncNow();
+    if (result.success) {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+      showAlert({
+        title: isRTL ? "اكتملت المزامنة" : "Sync Complete",
+        message: isRTL
+          ? (result.syncedCount > 0
+              ? `تمت مزامنة ${result.syncedCount} عنصر مع السحابة بنجاح!`
+              : "الخزينة متزامنة بالكامل مع السحابة.")
+          : (result.syncedCount > 0
+              ? `Successfully synced ${result.syncedCount} item(s) to the cloud!`
+              : "Your vault is fully synchronized with the cloud."),
+        type: "success",
+      });
+    } else {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } catch {}
+      showAlert({
+        title: isRTL ? "تعذر إتمام المزامنة" : "Sync Failed",
+        message: result.error || (isRTL ? "تعذر الاتصال بالسحابة. تحقق من اتصالك أو تسجيل الدخول." : "Could not complete cloud sync. Check your internet connection or sign-in state."),
+        type: "warning",
+      });
+    }
   };
 
   const handleToggleBio = async () => {

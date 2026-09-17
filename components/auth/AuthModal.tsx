@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Shield, Mail, Lock, Eye, EyeOff, X, ArrowRight, ArrowLeft, CircleCheck } from 'lucide-react-native';
 import * as Haptics from '@/utils/haptics';
 import { VaultText as Text } from '../common/VaultText';
@@ -26,6 +28,7 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
   const { theme, colors } = useVaultTheme();
   const { isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const insets = useSafeAreaInsets();
   const styles = createStyles(colors, theme);
   const { signIn, signUp } = useAuth();
 
@@ -101,9 +104,24 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
-          {/* HEADER */}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.modalScrollContainer,
+            {
+              paddingTop: Math.max(insets.top, 24),
+              paddingBottom: Math.max(insets.bottom, 24),
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <View style={styles.modalCard}>
+            {/* HEADER */}
           <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <View style={[styles.headerTitleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View style={[styles.headerIconCircle, signUpSuccess && styles.headerIconCircleSuccess]}>
@@ -249,7 +267,7 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
                 </Pressable>
               </View>
 
-              <ScrollView style={styles.scrollBody} keyboardShouldPersistTaps="handled">
+              <View style={styles.scrollBody}>
                 {/* ERROR BANNER */}
                 {errorMessage && (
                   <View style={styles.errorBanner}>
@@ -341,20 +359,24 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
                     {isRTL ? 'المتابعة كزائر (خزينة محلية فقط)' : 'Continue as Guest (Local Vault Only)'}
                   </Text>
                 </Pressable>
-              </ScrollView>
+              </View>
             </>
           )}
-        </View>
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
   StyleSheet.create({
-    modalBackdrop: {
+    keyboardAvoid: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    modalScrollContainer: {
+      flexGrow: 1,
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 20,
@@ -439,7 +461,7 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
       fontWeight: '800',
     },
     scrollBody: {
-      maxHeight: 400,
+      width: '100%',
     },
     errorBanner: {
       backgroundColor: 'rgba(255, 59, 48, 0.15)',

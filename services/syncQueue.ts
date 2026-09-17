@@ -15,6 +15,7 @@ const listeners = new Set<SyncListener>();
 let currentStatus: SyncStatus = isSupabaseConfigured ? 'synced' : 'local_only';
 let isSyncing = false;
 let isSyncPaused = false;
+let lastSyncError: string | null = null;
 
 function notifyListeners() {
   const pending = SyncQueue.getQueue().length;
@@ -37,6 +38,15 @@ export const SyncQueue = {
   isPaused: (): boolean => {
     return isSyncPaused;
   },
+
+  getLastError: (): string | null => {
+    return lastSyncError;
+  },
+
+  clearLastError: (): void => {
+    lastSyncError = null;
+  },
+
   getQueue: (): PendingSyncItem[] => {
     try {
       const raw = VaultStorage.getItem(SYNC_QUEUE_KEY);
@@ -172,15 +182,15 @@ export const SyncQueue = {
     return true; // Native assumes online unless fetch fails
   },
 
-  flush: async (userId?: string): Promise<{ success: boolean; syncedCount: number }> => {
+  flush: async (userId?: string): Promise<{ success: boolean; syncedCount: number; error?: string | null }> => {
     if (isSyncing) {
-      return { success: true, syncedCount: 0 };
+      return { success: true, syncedCount: 0, error: null };
     }
 
     if (!isSupabaseConfigured) {
       currentStatus = 'local_only';
       notifyListeners();
-      return { success: true, syncedCount: 0 };
+      return { success: true, syncedCount: 0, error: null };
     }
 
     // Verify active authenticated session in Supabase before sending data
@@ -189,20 +199,22 @@ export const SyncQueue = {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || !session.user) {
         currentStatus = 'offline';
+        lastSyncError = 'No active cloud session. Please confirm your email or sign in to sync with the cloud.';
         notifyListeners();
-        return { success: false, syncedCount: 0 };
+        return { success: false, syncedCount: 0, error: lastSyncError };
       }
       authUserId = session.user.id;
-    } catch {
+    } catch (err: any) {
       currentStatus = 'offline';
+      lastSyncError = err?.message || 'Network error connecting to cloud server.';
       notifyListeners();
-      return { success: false, syncedCount: 0 };
+      return { success: false, syncedCount: 0, error: lastSyncError };
     }
 
     if (!authUserId) {
       currentStatus = 'local_only';
       notifyListeners();
-      return { success: true, syncedCount: 0 };
+      return { success: true, syncedCount: 0, error: null };
     }
 
     const queue = SyncQueue.getQueue();
@@ -380,22 +392,32 @@ export const SyncQueue = {
 
             // Zero-Knowledge Encryption on the fly or safe deferral:
             if (payload.psn_password && !payload.psn_password.startsWith('enc:v1:')) {
-              if (activeKey) {
-                payload.psn_password = encryptString(payload.psn_password, activeKey);
-                // Keep local storage synchronized with the encrypted password
+              let keyToUse = activeKey;
+              if (!keyToUse && authUserId) {
+                try {
+                  keyToUse = await VaultKeyManager.loadKeyFromSecureStore(authUserId);
+                } catch {}
+              }
+              if (keyToUse) {
+                payload.psn_password = encryptString(payload.psn_password, keyToUse);
                 OfflineVault.updateGame(item.payload.id, { psn_password: payload.psn_password });
               } else {
-                // Key is locked / missing: DO NOT leak unencrypted password to Supabase,
-                // and DO NOT throw/crash! Safely defer item in queue until vault is unlocked.
                 console.warn(`[SyncQueue] Deferred cloud upload for "${payload.title}": Password is unencrypted and vault key is locked.`);
+                lastSyncError = `Vault key is locked. Unlock your vault to encrypt credentials for "${payload.title}".`;
                 remainingQueue.push(item);
                 continue;
               }
             }
 
             if (payload.backup_codes && payload.backup_codes.length > 0) {
-              if (activeKey) {
-                payload.backup_codes = encryptBackupCodes(payload.backup_codes, activeKey);
+              let keyToUse = activeKey;
+              if (!keyToUse && authUserId) {
+                try {
+                  keyToUse = await VaultKeyManager.loadKeyFromSecureStore(authUserId);
+                } catch {}
+              }
+              if (keyToUse) {
+                payload.backup_codes = encryptBackupCodes(payload.backup_codes, keyToUse);
               }
             }
 
@@ -419,10 +441,25 @@ export const SyncQueue = {
             const { error } = await supabase.from(table).upsert(payloads);
             if (error) {
               console.warn(`[SyncQueue] Batch upsert on '${table}' error:`, error.message, 'Falling back to individual items...');
+              lastSyncError = error.message;
               for (const { item, payload } of chunk) {
-                const { error: singleErr } = await supabase.from(table).upsert(payload);
+                let currentPayload = { ...payload };
+                let { error: singleErr } = await supabase.from(table).upsert(currentPayload);
+
+                // Schema resilience: If user hasn't executed migration_patch.sql, retry without optional columns
+                if (singleErr && singleErr.message && singleErr.message.includes('column') && singleErr.message.includes('does not exist')) {
+                  delete currentPayload.is_inventory;
+                  delete currentPayload.cost_price;
+                  delete currentPayload.currency;
+                  delete currentPayload.platform;
+                  delete currentPayload.contact_methods;
+                  const retry = await supabase.from(table).upsert(currentPayload);
+                  singleErr = retry.error;
+                }
+
                 if (singleErr) {
                   console.error(`[SyncQueue] Single upsert error on '${table}':`, singleErr.message);
+                  lastSyncError = singleErr.message;
                   remainingQueue.push(item);
                 } else {
                   processedCount++;
@@ -435,8 +472,9 @@ export const SyncQueue = {
                 payloads.forEach((p) => knownSellerIds.add(p.id));
               }
             }
-          } catch (err) {
+          } catch (err: any) {
             console.error(`[SyncQueue] Exception on bulk upsert '${table}':`, err);
+            lastSyncError = err?.message || 'Database connection error';
             remainingQueue.push(...chunk.map((c) => c.item));
           }
         }
@@ -447,6 +485,7 @@ export const SyncQueue = {
     isSyncing = false;
 
     if (remainingQueue.length === 0) {
+      lastSyncError = null;
       currentStatus = isSupabaseConfigured && authUserId ? 'synced' : 'local_only';
       SyncQueue.setLastSyncedAt(new Date().toISOString());
     } else {
@@ -454,7 +493,7 @@ export const SyncQueue = {
     }
 
     notifyListeners();
-    return { success: remainingQueue.length === 0, syncedCount: processedCount };
+    return { success: remainingQueue.length === 0, syncedCount: processedCount, error: lastSyncError };
   },
 };
 

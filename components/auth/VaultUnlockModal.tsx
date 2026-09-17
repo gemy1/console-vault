@@ -7,7 +7,10 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Shield, Lock, Eye, EyeOff, X, KeyRound, Fingerprint } from 'lucide-react-native';
 import * as Haptics from '@/utils/haptics';
 import { VaultText as Text } from '../common/VaultText';
@@ -27,6 +30,7 @@ export function VaultUnlockModal({ visible, onClose, onSuccess, userEmail }: Vau
   const { theme, colors } = useVaultTheme();
   const { isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const insets = useSafeAreaInsets();
   const styles = createStyles(colors, theme);
   const { restoreVaultKey, user } = useAuth();
   const { isBiometricsAvailable, unlockWithBiometrics } = useSecurity();
@@ -91,8 +95,23 @@ export function VaultUnlockModal({ visible, onClose, onSuccess, userEmail }: Vau
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContainer,
+            {
+              paddingTop: Math.max(insets.top, 20),
+              paddingBottom: Math.max(insets.bottom, 20),
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <View style={styles.modalCard}>
           {/* HEADER */}
           <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <View style={styles.badgeIconWrap}>
@@ -185,8 +204,9 @@ export function VaultUnlockModal({ visible, onClose, onSuccess, userEmail }: Vau
               </Text>
             </Pressable>
           )}
-        </View>
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -195,12 +215,15 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) => {
   const isDark = theme === 'dark';
 
   return StyleSheet.create({
-    overlay: {
+    keyboardAvoid: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    scrollContainer: {
+      flexGrow: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 20,
+      paddingHorizontal: 20,
     },
     modalCard: {
       width: '100%',
