@@ -434,7 +434,7 @@ export default function GameDetailsScreen() {
             )}
           </Pressable>
 
-          <View style={[styles.headerRightActions, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+          <View style={styles.headerRightActions}>
             <MenuToggleButton size={48} />
             <Pressable
               onPress={() => {
