@@ -79,7 +79,30 @@ function sanitizePayload(entityType: string, payload: any): any {
 
   return p;
 }
+
+/**
+ * Returns true for Postgres errors that will NEVER succeed on retry.
+ * Items with these errors should be dropped from the queue, not re-queued.
+ *
+ * Common non-recoverable codes:
+ *   22P02 — invalid_text_representation (enum value not in the type)
+ *   22001 — string_data_right_truncation
+ *   23502 — not_null_violation
+ *   23514 — check_violation (e.g. reputation_score out of range)
+ *   42703 — undefined_column (schema mismatch)
+ */
+function isNonRecoverableError(err: any): boolean {
+  const code: string = err?.code ?? '';
+  return (
+    code === '22P02' || // invalid enum value
+    code === '22001' || // value too long
+    code === '23502' || // not null violation
+    code === '23514' || // check constraint violation
+    code === '42703'    // undefined column
+  );
+}
 // ---------------------------------------------------------------------------
+
 
 type SyncListener = (status: SyncStatus, pendingCount: number) => void;
 const listeners = new Set<SyncListener>();
@@ -134,10 +157,6 @@ export const SyncQueue = {
 
   enqueue: (item: Omit<PendingSyncItem, 'id' | 'timestamp'>): void => {
     const queue = SyncQueue.getQueue();
-    // If updating same item already in queue, coalesce to latest payload
-    const existingIndex = queue.findIndex(
-      (q) => q.entity === item.entity && q.payload?.id === item.payload?.id
-    );
 
     const newItem: PendingSyncItem = {
       ...item,
@@ -145,13 +164,27 @@ export const SyncQueue = {
       timestamp: Date.now(),
     };
 
-    if (existingIndex >= 0 && item.action === 'UPSERT') {
-      queue[existingIndex] = newItem;
+    if (item.action === 'DELETE') {
+      // DELETE wins over everything: remove ALL existing entries for this entity+id
+      // (clears any stuck UPSERT so deleted items don't stay pending forever)
+      const filtered = queue.filter(
+        (q) => !(q.entity === item.entity && q.payload?.id === item.payload?.id)
+      );
+      filtered.push(newItem);
+      SyncQueue.saveQueue(filtered);
     } else {
-      queue.push(newItem);
+      // UPSERT: coalesce with existing UPSERT for same entity+id
+      const existingIndex = queue.findIndex(
+        (q) => q.entity === item.entity && q.payload?.id === item.payload?.id
+      );
+      if (existingIndex >= 0) {
+        queue[existingIndex] = newItem;
+      } else {
+        queue.push(newItem);
+      }
+      SyncQueue.saveQueue(queue);
     }
 
-    SyncQueue.saveQueue(queue);
     if (!isSupabaseConfigured) {
       currentStatus = 'local_only';
     } else {
@@ -552,9 +585,19 @@ export const SyncQueue = {
                 }
 
                 if (singleErr) {
-                  console.error(`[SyncQueue] Single upsert error on '${table}':`, singleErr.message);
-                  lastSyncError = singleErr.message;
-                  remainingQueue.push(item);
+                  // Non-recoverable Postgres errors: drop the item permanently
+                  // (invalid enum 22P02, not-null 23502, check violation 23514)
+                  // Retrying these forever will only keep them stuck in the queue.
+                  if (isNonRecoverableError(singleErr)) {
+                    console.warn(
+                      `[SyncQueue] Dropping non-recoverable item on '${table}' (${singleErr.code}): ${singleErr.message}`
+                    );
+                    // Do NOT push to remainingQueue — item is permanently dropped
+                  } else {
+                    console.error(`[SyncQueue] Single upsert error on '${table}':`, singleErr.message);
+                    lastSyncError = singleErr.message;
+                    remainingQueue.push(item);
+                  }
                 } else {
                   processedCount++;
                   if (entityType === 'seller') knownSellerIds.add(payload.id);
