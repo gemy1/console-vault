@@ -9,6 +9,78 @@ import { encryptString, encryptBackupCodes } from './crypto/encryptionService';
 const SYNC_QUEUE_KEY = 'vault_pending_sync_queue_v1';
 const LAST_SYNCED_KEY = 'vault_last_synced_timestamp_v1';
 
+// ---------------------------------------------------------------------------
+// ENUM GUARD — prevents invalid enum values from reaching Supabase
+// Any value not in the allowed set is replaced with the safe default.
+// This protects against corrupted local data, old backup restores, or typos.
+// ---------------------------------------------------------------------------
+const VALID_CONTACT_PLATFORMS = new Set(['WhatsApp', 'Telegram', 'Discord', 'Facebook', 'Other']);
+const VALID_GAME_STATUSES = new Set(['Active', 'Locked', 'In Resolution', 'Archived', 'Dead Loss']);
+const VALID_ACCOUNT_TYPES = new Set(['Primary', 'Secondary', 'Full']);
+const VALID_SLOT_TYPES = new Set([
+  'Primary_PS5', 'Primary_PS4',
+  'Secondary_PS5', 'Secondary_PS4',
+  'Secondary', 'Full',
+]);
+const VALID_ALLOCATION_STATUSES = new Set(['Active', 'Revoked', 'Replaced', 'Expired']);
+
+function sanitizePayload(entityType: string, payload: any): any {
+  const p = { ...payload };
+
+  if (entityType === 'seller' || entityType === 'client') {
+    // Validate contact_platform enum
+    if (!VALID_CONTACT_PLATFORMS.has(p.contact_platform)) {
+      console.warn(
+        `[SyncQueue] Invalid contact_platform "${p.contact_platform}" on ${entityType} ${p.id} — defaulting to 'WhatsApp'`
+      );
+      p.contact_platform = 'WhatsApp';
+    }
+  }
+
+  if (entityType === 'seller' && Array.isArray(p.contact_methods)) {
+    // Validate each entry inside the contact_methods JSONB array
+    p.contact_methods = p.contact_methods.map((m: any) => {
+      if (!VALID_CONTACT_PLATFORMS.has(m?.platform)) {
+        return { ...m, platform: 'Other' };
+      }
+      return m;
+    });
+  }
+
+  if (entityType === 'game') {
+    if (!VALID_GAME_STATUSES.has(p.status)) {
+      console.warn(
+        `[SyncQueue] Invalid game_status "${p.status}" on game ${p.id} — defaulting to 'Active'`
+      );
+      p.status = 'Active';
+    }
+    if (!VALID_ACCOUNT_TYPES.has(p.account_type)) {
+      console.warn(
+        `[SyncQueue] Invalid account_type "${p.account_type}" on game ${p.id} — defaulting to 'Primary'`
+      );
+      p.account_type = 'Primary';
+    }
+  }
+
+  if (entityType === 'client_allocation') {
+    if (!VALID_SLOT_TYPES.has(p.slot_type)) {
+      console.warn(
+        `[SyncQueue] Invalid slot_type "${p.slot_type}" on allocation ${p.id} — defaulting to 'Secondary'`
+      );
+      p.slot_type = 'Secondary';
+    }
+    if (!VALID_ALLOCATION_STATUSES.has(p.status)) {
+      console.warn(
+        `[SyncQueue] Invalid allocation_status "${p.status}" on allocation ${p.id} — defaulting to 'Active'`
+      );
+      p.status = 'Active';
+    }
+  }
+
+  return p;
+}
+// ---------------------------------------------------------------------------
+
 type SyncListener = (status: SyncStatus, pendingCount: number) => void;
 const listeners = new Set<SyncListener>();
 
@@ -346,12 +418,13 @@ export const SyncQueue = {
                   (s) => s.id === item.payload.seller_id || toSafeUUID(s.id) === safeSellerId
                 );
                 if (localSeller) {
-                  missingSellerPayloads.push({
+                  const rawSellerPayload = {
                     ...localSeller,
                     id: safeSellerId,
                     user_id: authUserId,
                     updated_at: new Date().toISOString(),
-                  });
+                  };
+                  missingSellerPayloads.push(sanitizePayload('seller', rawSellerPayload));
                 }
               }
             }
@@ -388,12 +461,15 @@ export const SyncQueue = {
 
         for (const item of upsertItems) {
           const safeId = toSafeUUID(item.payload.id);
-          const payload: any = {
+          let payload: any = {
             ...item.payload,
             id: safeId,
             user_id: authUserId,
             updated_at: new Date().toISOString(),
           };
+
+          // ── ENUM SANITIZATION — must run before any column-specific logic ──
+          payload = sanitizePayload(entityType, payload);
 
           if (entityType === 'game') {
             delete payload.seller;

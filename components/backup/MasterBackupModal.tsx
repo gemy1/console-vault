@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
@@ -320,7 +321,10 @@ export function MasterBackupModal({ visible, onClose }: MasterBackupModalProps) 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={[styles.modalContent, { paddingBottom: bottomInset + 16 }]}>
           {/* Header */}
           <View style={[styles.header, isNativeRTL && { flexDirection: 'row-reverse' }]}>
@@ -643,7 +647,7 @@ export function MasterBackupModal({ visible, onClose }: MasterBackupModalProps) 
             )}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
