@@ -308,7 +308,7 @@ export function SlotAllocationModal({
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={closeWithSlide}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardContainer}
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={closeWithSlide} />

@@ -369,7 +369,7 @@ export function GameFormModal({
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={closeWithSlide}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardContainer}
       >
         {/* BACKDROP DISMISS ON TAP */}
