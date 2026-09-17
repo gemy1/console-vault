@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeDownModal } from '../../hooks/useSwipeDownModal';
 import {
   X,
@@ -62,6 +63,8 @@ export function SlotAllocationModal({
   const { clients, allocations, addClient, addAllocation, updateAllocation, deleteAllocation } = useVaultSync();
   const { showAlert } = useCustomAlert();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16);
 
   const [selectedSlot, setSelectedSlot] = useState<SlotType>('Primary_PS5');
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -308,7 +311,7 @@ export function SlotAllocationModal({
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={closeWithSlide}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardContainer}
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={closeWithSlide} />
@@ -336,7 +339,7 @@ export function SlotAllocationModal({
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
             keyboardShouldPersistTaps="handled"
           >
             {/* 1. SELECT SLOT TYPE */}

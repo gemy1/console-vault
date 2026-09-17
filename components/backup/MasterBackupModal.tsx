@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
@@ -321,8 +322,12 @@ export function MasterBackupModal({ visible, onClose }: MasterBackupModalProps) 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.modalContent, { paddingBottom: bottomInset + 16 }]}>
-          {/* Header */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoid}
+        >
+          <View style={[styles.modalContent, { paddingBottom: bottomInset + 16 }]}>
+            {/* Header */}
           <View style={[styles.header, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <View style={[styles.headerTitleRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View style={styles.iconCircle}>
@@ -642,7 +647,8 @@ export function MasterBackupModal({ visible, onClose }: MasterBackupModalProps) 
               </View>
             )}
           </ScrollView>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -653,6 +659,10 @@ const createStyles = (colors: ThemeColors, theme: ThemeMode) =>
     overlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      justifyContent: 'flex-end',
+    },
+    keyboardAvoid: {
+      width: '100%',
       justifyContent: 'flex-end',
     },
     modalContent: {

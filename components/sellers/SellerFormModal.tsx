@@ -13,6 +13,7 @@ import {
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
 import { useSwipeDownModal } from '../../hooks/useSwipeDownModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShieldCheck, Star, Plus, X, Trash2, FileText, Pencil } from 'lucide-react-native';
 import { Seller, ContactPlatform, SellerContactMethod } from '../../types/vault';
 import { PlatformIcon, PLATFORM_CONFIG } from '../common/PlatformIcon';
@@ -55,6 +56,8 @@ export function SellerFormModal({
   const { t, isRTL } = useLanguage();
   const { showAlert } = useCustomAlert();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16);
 
   const [name, setName] = useState('');
   const [reputationScore, setReputationScore] = useState('5.0');
@@ -180,7 +183,7 @@ export function SellerFormModal({
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={closeWithSlide}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardContainer}
       >
         {/* BACKDROP DISMISS ON TAP */}
@@ -192,7 +195,10 @@ export function SellerFormModal({
             <View style={styles.sheetHandle} />
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: bottomInset + 32 }}
+          >
             {/* HEADER */}
             <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View style={[styles.titleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
