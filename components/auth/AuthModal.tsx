@@ -106,7 +106,7 @@ export function AuthModal({ visible, onClose, onSuccess }: AuthModalProps) {
     >
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           contentContainerStyle={[

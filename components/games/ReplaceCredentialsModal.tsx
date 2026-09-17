@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { View, Modal, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Modal, TextInput, Pressable, StyleSheet } from 'react-native';
 import { VaultText as Text } from '../common/VaultText';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCustomAlert } from '../../context/AlertContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ReplaceCredentialsModalProps {
   visible: boolean;
@@ -21,8 +20,6 @@ export function ReplaceCredentialsModal({
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
   const { showAlert } = useCustomAlert();
-  const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -44,49 +41,44 @@ export function ReplaceCredentialsModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoid}
-        >
-          <View style={[styles.sheet, { paddingBottom: bottomInset + 16 }]}>
-            <Text style={[styles.sheetTitle, isRTL && styles.rtlText]}>{t('replaceCredentialsModalTitle')}</Text>
-            <Text style={[styles.sheetSubtitle, isRTL && styles.rtlText]}>
-              {t('replaceCredentialsModalSubtitle')}
-            </Text>
+        <View style={styles.sheet}>
+          <Text style={[styles.sheetTitle, isRTL && styles.rtlText]}>{t('replaceCredentialsModalTitle')}</Text>
+          <Text style={[styles.sheetSubtitle, isRTL && styles.rtlText]}>
+            {t('replaceCredentialsModalSubtitle')}
+          </Text>
 
-            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldNewPsnEmail')}</Text>
-            <TextInput
-              placeholder="new.psn.account@gmail.com"
-              placeholderTextColor={styles.placeholder.color}
-              value={newEmail}
-              onChangeText={setNewEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={[styles.textInput, isRTL && styles.rtlText]}
-            />
+          <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldNewPsnEmail')}</Text>
+          <TextInput
+            placeholder="new.psn.account@gmail.com"
+            placeholderTextColor={styles.placeholder.color}
+            value={newEmail}
+            onChangeText={setNewEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={[styles.textInput, isRTL && styles.rtlText]}
+          />
 
-            <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldNewPsnPassword')}</Text>
-            <TextInput
-              placeholder="NewPassword#2024"
-              placeholderTextColor={styles.placeholder.color}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              autoCapitalize="none"
-              secureTextEntry
-              style={[styles.textInput, styles.passwordInput, isRTL && styles.rtlText]}
-            />
+          <Text style={[styles.fieldLabel, isRTL && styles.rtlText]}>{t('fieldNewPsnPassword')}</Text>
+          <TextInput
+            placeholder="NewPassword#2024"
+            placeholderTextColor={styles.placeholder.color}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            autoCapitalize="none"
+            secureTextEntry
+            style={[styles.textInput, styles.passwordInput, isRTL && styles.rtlText]}
+          />
 
-            <View style={styles.buttonRow}>
-              <Pressable onPress={onClose} style={styles.cancelButton}>
-                <Text style={styles.cancelButtonText}>{t('btnCancel')}</Text>
-              </Pressable>
+          <View style={styles.buttonRow}>
+            <Pressable onPress={onClose} style={styles.cancelButton}>
+              <Text style={styles.cancelButtonText}>{t('btnCancel')}</Text>
+            </Pressable>
 
-              <Pressable onPress={handleSave} style={styles.saveButton}>
-                <Text style={styles.saveButtonText}>{t('btnSaveAndArchive')}</Text>
-              </Pressable>
-            </View>
+            <Pressable onPress={handleSave} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>{t('btnSaveAndArchive')}</Text>
+            </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
@@ -100,10 +92,6 @@ const createStyles = (colors: ThemeColors, _theme: ThemeMode) =>
     backdrop: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.6)',
-      justifyContent: 'flex-end',
-    },
-    keyboardAvoid: {
-      width: '100%',
       justifyContent: 'flex-end',
     },
     sheet: {

@@ -12,7 +12,6 @@ import {
 import { VaultText as Text } from '../common/VaultText';
 import { X, User, Phone, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Client, ContactPlatform } from '../../types/vault';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { ThemeColors, ThemeMode } from '../../context/ThemeContext';
@@ -36,8 +35,6 @@ export function ClientFormModal({
   const styles = useThemedStyles(createStyles);
   const { t, isRTL } = useLanguage();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
-  const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16);
 
   const [name, setName] = useState('');
   const [contactPlatform, setContactPlatform] = useState<ContactPlatform>('WhatsApp');
@@ -95,10 +92,10 @@ export function ClientFormModal({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardContainer}
       >
-        <View style={[styles.modalSheet, { paddingBottom: bottomInset + 16 }]}>
+        <View style={styles.modalSheet}>
           {/* HEADER */}
           <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
             <View style={[styles.headerTitleBlock, isRTL && { alignItems: 'flex-end' }]}>

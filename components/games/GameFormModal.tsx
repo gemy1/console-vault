@@ -13,7 +13,6 @@ import {
 import { Image } from 'expo-image';
 import { VaultText as Text } from '../common/VaultText';
 import * as Haptics from '@/utils/haptics';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeDownModal } from '../../hooks/useSwipeDownModal';
 import {
   Gamepad2,
@@ -94,8 +93,6 @@ export function GameFormModal({
   const { isSeller, currency } = usePersona();
   const { user } = useAuth();
   const isNativeRTL = Platform.OS !== 'web' && isRTL;
-  const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16);
 
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [title, setTitle] = useState('');
@@ -372,7 +369,7 @@ export function GameFormModal({
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={closeWithSlide}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardContainer}
       >
         {/* BACKDROP DISMISS ON TAP */}
@@ -384,10 +381,7 @@ export function GameFormModal({
             <View style={styles.sheetHandle} />
           </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomInset + 32 }]}
-          >
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* ── HEADER ── */}
             <View style={[styles.headerRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
               <View style={[styles.titleGroup, isNativeRTL && { flexDirection: 'row-reverse' }]}>
