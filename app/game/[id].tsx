@@ -410,7 +410,7 @@ export default function GameDetailsScreen() {
         <View style={styles.vignette} />
 
         {/* FLOATING HEADER DIRECTLY BELOW NOTIFICATION BAR */}
-        <View style={[styles.floatingHeader, { top: headerPaddingTop }]}>
+        <View style={[styles.floatingHeader, { top: headerPaddingTop }, isNativeRTL && { flexDirection: 'row-reverse' }]}>
           <Pressable
             onPress={() => router.back()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -434,7 +434,8 @@ export default function GameDetailsScreen() {
             )}
           </Pressable>
 
-          <View style={styles.headerRightActions}>
+          <View style={[styles.headerRightActions, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+            <MenuToggleButton size={48} />
             <Pressable
               onPress={() => {
                 try {
@@ -491,8 +492,6 @@ export default function GameDetailsScreen() {
                 strokeWidth={2.2}
               />
             </Pressable>
-
-            <MenuToggleButton size={48} />
           </View>
         </View>
       </View>

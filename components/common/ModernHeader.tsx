@@ -150,9 +150,9 @@ export function ModernHeader({
         )}
 
         {/* RIGHT: Actions */}
-        <View style={styles.actions}>
-          {rightAction}
+        <View style={[styles.actions, Platform.OS !== 'web' && isRTL && { flexDirection: 'row-reverse' }]}>
           {showMenuButton && <MenuToggleButton size={46} />}
+          {rightAction}
         </View>
       </View>
     </Animated.View>

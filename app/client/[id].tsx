@@ -221,7 +221,7 @@ export default function ClientDetailsScreen() {
         subtitle={t('headerClientDetailsSubtitle')}
         showBackButton={true}
         rightAction={
-          <View style={[styles.headerActionsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+          <View style={styles.headerActionsRow}>
             <Pressable
               onPress={() => {
                 try {

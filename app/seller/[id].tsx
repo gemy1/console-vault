@@ -151,7 +151,7 @@ export default function SellerDetailsScreen() {
         subtitle={seller.name}
         showBackButton={true}
         rightAction={
-          <View style={[styles.headerActionsRow, isNativeRTL && { flexDirection: 'row-reverse' }]}>
+          <View style={styles.headerActionsRow}>
             <Pressable
               onPress={() => {
                 try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
