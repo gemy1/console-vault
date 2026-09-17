@@ -19,6 +19,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.consolevault.app",
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
@@ -29,6 +30,7 @@
       }
     },
     "android": {
+      "package": "com.consolevault.app",
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
