@@ -352,15 +352,33 @@ export const SyncQueue = {
                     user_id: authUserId,
                     updated_at: new Date().toISOString(),
                   });
-                  knownSellerIds.add(safeSellerId);
                 }
               }
             }
           }
           if (missingSellerPayloads.length > 0) {
-            try {
-              await supabase.from('sellers').upsert(missingSellerPayloads);
-            } catch {}
+            let sellerUpsertSuccess = false;
+            const { error: sErr } = await supabase.from('sellers').upsert(missingSellerPayloads);
+            if (sErr) {
+              // Retry without contact_methods in case the remote Supabase table lacks that column
+              const cleanPayloads = missingSellerPayloads.map((p) => {
+                const copy = { ...p };
+                delete copy.contact_methods;
+                return copy;
+              });
+              const { error: sRetryErr } = await supabase.from('sellers').upsert(cleanPayloads);
+              if (!sRetryErr) {
+                sellerUpsertSuccess = true;
+              } else {
+                console.warn('[SyncQueue] Missing seller upsert failed:', sRetryErr.message);
+              }
+            } else {
+              sellerUpsertSuccess = true;
+            }
+
+            if (sellerUpsertSuccess) {
+              missingSellerPayloads.forEach((p) => knownSellerIds.add(p.id));
+            }
           }
         }
 

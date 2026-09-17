@@ -42,6 +42,7 @@ import {
 } from 'lucide-react-native';
 import { Game, Seller, AccountType, ConsolePlatform, ContactPlatform, SellerContactMethod } from '../../types/vault';
 import { OfflineVault } from '../../services/storage';
+import { SyncQueue } from '../../services/syncQueue';
 import { PlatformIcon } from '../common/PlatformIcon';
 import { SellerFormModal } from '../sellers/SellerFormModal';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
@@ -241,6 +242,11 @@ export function GameFormModal({
     };
 
     OfflineVault.addSeller(newSeller);
+    SyncQueue.enqueue({
+      entity: 'seller',
+      action: 'UPSERT',
+      payload: newSeller,
+    });
     loadSellers();
     setSellerMode('seller');
     setSellerId(newSeller.id);
