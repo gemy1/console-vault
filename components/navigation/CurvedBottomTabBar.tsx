@@ -96,8 +96,8 @@ export function CurvedBottomTabBar({
   );
 
   // Safe bottom padding with fallback to avoid layout snap
-  // Android gets +6px extra to ensure Arabic labels never clip under the device nav bar
-  const defaultDeviceBottom = Platform.OS === 'ios' ? 24 : 16;
+  // Android gets +10px extra to ensure Arabic labels never clip under the device nav bar
+  const defaultDeviceBottom = Platform.OS === 'ios' ? 24 : 20;
   const bottomPadding = Math.max(insets?.bottom ?? 0, defaultDeviceBottom);
   const totalBarHeight = 72 + bottomPadding;
 
@@ -311,7 +311,7 @@ const createStyles = (
       alignItems: "center",
       justifyContent: "center",
       paddingTop: 3,
-      paddingBottom: 6,
+      paddingBottom: 10,
     },
     activeCircle: {
       width: 54,
@@ -354,7 +354,7 @@ const createStyles = (
       alignItems: "center",
       justifyContent: "center",
       paddingTop: 12,
-      paddingBottom: 6,
+      paddingBottom: 10,
     },
     inactiveCircle: {
       width: 42,

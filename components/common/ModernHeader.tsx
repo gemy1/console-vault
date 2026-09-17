@@ -151,8 +151,9 @@ export function ModernHeader({
 
         {/* RIGHT: Actions */}
         <View style={styles.actions}>
-          {showMenuButton && <MenuToggleButton size={46} />}
+          {showMenuButton && isRTL && <MenuToggleButton size={46} />}
           {rightAction}
+          {showMenuButton && !isRTL && <MenuToggleButton size={46} />}
         </View>
       </View>
     </Animated.View>

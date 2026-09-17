@@ -435,7 +435,7 @@ export default function GameDetailsScreen() {
           </Pressable>
 
           <View style={styles.headerRightActions}>
-            <MenuToggleButton size={48} />
+            {isNativeRTL && <MenuToggleButton size={48} />}
             <Pressable
               onPress={() => {
                 try {
@@ -492,6 +492,7 @@ export default function GameDetailsScreen() {
                 strokeWidth={2.2}
               />
             </Pressable>
+            {!isNativeRTL && <MenuToggleButton size={48} />}
           </View>
         </View>
       </View>
